@@ -1,0 +1,37 @@
+[project]
+name = "llmscope"
+version = "0.1.0"
+description = "Tools for evaluating large language models on healthcare tasks."
+readme = "README.md"
+authors = [
+    { name = "Adam Dejl", email = "adam.dejl18@imperial.ac.uk" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "datasets>=3.2.0",
+    "evaluate>=0.4.3",
+    "matplotlib>=3.10.0",
+    "torch>=2.6.0",
+    "transformers>=4.48.3",
+    "typer>=0.15.1",
+]
+
+[project.optional-dependencies]
+interactive = [
+    "ipywidgets>=8.1.5",
+    "jupyterlab>=4.3.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.1.0",
+    "pre-commit-hooks>=5.0.0",
+    "ruff>=0.9.5",
+]
+
+[tool.ruff]
+line-length = 120
