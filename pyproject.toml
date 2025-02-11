@@ -23,7 +23,7 @@ interactive = [
 ]
 
 [project.scripts]
-llmscope = "llmscope.cli:app"
+llmscope = "llmscope.cli.main:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -31,10 +31,13 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.3",
+    "mkdocstrings[python]>=0.28.0",
     "pre-commit>=4.1.0",
     "pre-commit-hooks>=5.0.0",
     "ruff>=0.9.5",
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 88
