@@ -46,6 +46,10 @@ plugins:
         python:
           options:
             docstring_style: google
+            separate_signature: true
+            inherited_members: true
+            show_signature_annotations: true
+            summary: true
 markdown_extensions:
   - admonition
   - pymdownx.highlight:
@@ -61,3 +65,4 @@ nav:
   - Home: index.md
   - API Reference:
       - Datasets: api-reference/datasets.md
+      - Utils: api-reference/utils.md
