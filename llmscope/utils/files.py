@@ -7,7 +7,7 @@ import requests
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 from tqdm.auto import tqdm
 
-from llmscope.constants import USER_AGENT
+from llmscope.constants import USER_AGENT, DEFAULT_HASH_TYPE
 
 
 def to_safe_filename(name: str) -> str:
@@ -26,7 +26,7 @@ def to_safe_filename(name: str) -> str:
 
 
 def get_remote_file_headers(url: str, max_attempts: int = 2) -> dict:
-    """Gets the headers of a remote file.
+    """Gets the HTTP headers of a remote file.
 
     Args:
         url (str): The URL of the file.
@@ -43,7 +43,7 @@ def get_remote_file_headers(url: str, max_attempts: int = 2) -> dict:
     try:
         for attempt in Retrying(
             stop=stop_after_attempt(max_attempts),
-            wait=wait_exponential(multiplier=1, min=2, max=10),
+            wait=wait_exponential(multiplier=1, min=2, max=32),
             reraise=True,
         ):
             headers = {"User-Agent": USER_AGENT}
@@ -58,7 +58,7 @@ def verify_file(
     file_path: str | Path,
     expected_size: int | None = None,
     expected_hash: str | None = None,
-    hash_type: str = "sha256",
+    hash_type: str = DEFAULT_HASH_TYPE,
     show_progress: bool = True,
     chunk_size: int = 10 * 1024**2,
 ) -> bool:
@@ -126,7 +126,7 @@ def download_file(
     show_progress: bool = True,
     max_attempts: int = 2,
     expected_hash: str | None = None,
-    hash_type: str = "sha256",
+    hash_type: str = DEFAULT_HASH_TYPE,
     chunk_size: int = 10 * 1024**2,
 ) -> None:
     """Downloads a file from a URL.
@@ -157,7 +157,7 @@ def download_file(
     target_name = target_path.name
     target_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Try to determine the size of the downloaded file
+    # Try to determine the size of the downloaded file and resume support
     remote_file_headers = get_remote_file_headers(url, max_attempts=max_attempts)
     file_size = int(remote_file_headers.get("Content-Length", 0))
     supports_resume = "Accept-Ranges" in remote_file_headers
@@ -171,6 +171,7 @@ def download_file(
     ):
         return
 
+    # Check existing partial download
     temp_path = target_path.with_suffix(target_path.suffix + ".part")
     already_downloaded_size = (
         temp_path.stat().st_size
@@ -187,11 +188,11 @@ def download_file(
     )
     headers["User-Agent"] = USER_AGENT
 
+    # Try to download the file
     try:
-        # Try to download the file
         for attempt in Retrying(
             stop=stop_after_attempt(max_attempts),
-            wait=wait_exponential(multiplier=1, min=2, max=10),
+            wait=wait_exponential(multiplier=1, min=2, max=32),
             reraise=True,
         ):
             with (

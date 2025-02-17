@@ -2,27 +2,35 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
 
-from llmscope.constants import DATA_PATH
-from llmscope.utils import to_safe_filename
+from datasets import Dataset, DatasetDict, load_from_disk
+
+from llmscope.constants import DEFAULT_VERSION_NAME, DATA_PATH
+from llmscope.datasets.dataset_config import DatasetConfig
+from llmscope.utils.files import to_safe_filename, download_file
 
 
 class DatasetManager(ABC):
     """An abstract class for managing datasets."""
 
-    _DEFAULT_VERSION_DIR_NAME = "default"
-
     def __init__(
-        self, name: str, priority: int = 0, data_dir: str | None = None, **kwargs
+        self,
+        name: str,
+        version: str = DEFAULT_VERSION_NAME,
+        priority: int = 0,
+        data_dir: str | None = None,
+        **kwargs,
     ):
         """Initializes a new DatasetManager.
 
         Args:
             name (str): The name of the dataset.
+            version (str): The dataset version to retrieve.
             priority (int, optional): The priority of the dataset manager when
                 choosing between multiple possible managers. Recommended values
                 range from 0 to 10, with 0 (the lowest) being the default.
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
+            **kwargs: Additional keyword arguments.
 
         Attributes:
             name (str): The name of the dataset.
@@ -30,91 +38,114 @@ class DatasetManager(ABC):
             data_path (Path): The top-level directory for storing all datasets.
         """
         self.name = name
+        self.config = DatasetConfig(name)
+        self.version = version
         self.priority = priority
         if data_dir is not None:
             self.data_path = Path(data_dir)
         else:
             self.data_path = DATA_PATH
-        self.data_path.mkdir(parents=True, exist_ok=True)
 
     @property
     def dataset_path(self) -> Path:
-        """The directory for storing this dataset.
+        """The top-level directory for storing this dataset.
 
         Returns:
             (Path): The dataset directory.
         """
         return self.data_path / to_safe_filename(self.name)
 
-    def get_version_path(self, version: str | None = None) -> Path:
-        """Returns the directory for storing a specific version of this dataset.
-
-        Args:
-            version (str): The dataset version.
+    @property
+    def version_path(self) -> Path:
+        """The directory for storing a specific version of this dataset.
 
         Returns:
             (Path): The dataset version directory.
         """
-        if version is None:
-            return self.dataset_path / self._DEFAULT_VERSION_DIR_NAME
-        return self.dataset_path / to_safe_filename(version)
+        return self.dataset_path / to_safe_filename(self.version)
 
-    @abstractmethod
-    def _get_files(
-        self, version: str | None = None, splits: list[str] | None = None, **kwargs
-    ) -> None:
-        """Downloads and preprocesses dataset files.
+    @property
+    def main_data_path(self) -> Path:
+        """The path for storing the main dataset files for a specific version.
+
+        Returns:
+            (Path): The main dataset directory.
+        """
+        return self.version_path / "main"
+
+    def _download_files(self, splits: list[str] | None = None, **kwargs) -> None:
+        """Downloads  dataset files.
+
+        This method downloads all the dataset files for the specified splits
+        into the `self.version_path` directory.
 
         Args:
-            version (str, optional): The dataset version to retrieve.
             splits (list[str], optional): The dataset splits to retrieve.
+            **kwargs: Additional keyword arguments.
+        """
+        for remote_file in self.config.get_remote_files(self.version, splits):
+            download_file(
+                remote_file.url,
+                self.version_path / remote_file.filename,
+                expected_size=remote_file.size,
+                expected_hash=remote_file.hash,
+                hash_type=remote_file.hash_type,
+            )
+
+    @abstractmethod
+    def _preprocess_files(self, splits: list[str] | None = None, **kwargs) -> None:
+        """Preprocesses the downloaded dataset files.
+
+        This method preprocesses the downloaded dataset files and saves them
+        as a HuggingFace DatasetDict in the `self.main_data_path` directory.
+
+        Args:
+            splits (list[str], optional): The dataset splits to preprocess.
+            **kwargs: Additional keyword arguments.
         """
         pass
 
-    def get(
-        self, version: str | None = None, splits: list[str] | None = None, **kwargs
-    ) -> None:
+    def get(self, splits: list[str] | None = None, **kwargs) -> None:
         """Downloads and preprocesses a dataset.
 
         Args:
-            version (str, optional): The dataset version to retrieve.
             splits (list[str], optional): The dataset splits to retrieve.
+            **kwargs: Additional keyword arguments.
         """
-        self._get_files(version, splits, **kwargs)
+        self.version_path.mkdir(parents=True, exist_ok=True)
+        self._download_files(splits=splits, **kwargs)
+        self._preprocess_files(splits=splits, **kwargs)
 
-    def is_downloaded(self, version: str | None = None) -> bool:
-        """Checks if the dataset is already downloaded.
-
-        Args:
-            version (str, optional): The dataset version to check.
+    def is_downloaded(self) -> bool:
+        """Checks if the dataset at the specific version is already downloaded.
 
         Returns:
             (bool): True if the dataset exists locally, False otherwise.
         """
-        return self.get_version_path(version).exists()
+        return self.version_path.exists()
 
-    def remove(self, version: str | None = None) -> None:
-        """Deletes the dataset from disk.
+    def remove(self) -> None:
+        """Deletes the dataset at the specific version from disk."""
+        if self.version_path.exists():
+            shutil.rmtree(self.version_path)
 
-        Args:
-            version (str, optional): The dataset version to remove.
-        """
-        version_path = self.get_version_path(version)
-        if version_path.exists():
-            shutil.rmtree(version_path)
-
-    @abstractmethod
-    def load(self, version: str | None = None, splits: list[str] | None = None):
-        """Loads the dataset with task-specific preprocessing.
+    def load(self, splits: list[str] | None = None) -> DatasetDict | Dataset:
+        """Loads the dataset as a HuggingFace dataset.
 
         Args:
             version (str, optional): The dataset version to load.
             splits (list[str], optional): The dataset splits to load.
 
         Returns:
-            (DatasetDict | Dataset): The loaded dataset.
+            (DatasetDict): The loaded dataset.
         """
-        pass
+        hf_dataset = load_from_disk(self.main_data_path)
+        if splits is not None:
+            if len(splits) == 1:
+                hf_dataset = hf_dataset[splits[0]]
+            else:
+                hf_dataset = hf_dataset[splits]
+        return hf_dataset
 
     @classmethod
     @abstractmethod
