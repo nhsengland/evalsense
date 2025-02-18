@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal, Optional
 from typing_extensions import override
 import warnings
 
@@ -57,7 +57,7 @@ class FileMetadata(BaseModel):
     hash: str | None = None
     hash_type: str = DEFAULT_HASH_TYPE
     source: OnlineSource | LocalSource | None = None
-    parent: Any = None
+    parent: Optional["SplitMetadata"] = None
 
     @property
     def effective_source(self) -> OnlineSource | LocalSource:
@@ -86,7 +86,7 @@ class SplitMetadata(BaseModel):
     name: str
     files: dict[str, FileMetadata]
     source: OnlineSource | LocalSource | None = None
-    parent: Any = None
+    parent: Optional["VersionMetadata"] = None
 
     @field_validator("files", mode="before")
     @classmethod
@@ -127,7 +127,7 @@ class VersionMetadata(BaseModel):
     name: str
     splits: dict[str, SplitMetadata]
     source: OnlineSource | LocalSource | None = None
-    parent: Any = None
+    parent: Optional["DatasetMetadata"] = None
 
     @field_validator("splits", mode="before")
     @classmethod

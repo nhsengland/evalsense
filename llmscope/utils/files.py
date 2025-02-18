@@ -163,6 +163,10 @@ def download_file(
     remote_file_headers = get_remote_file_headers(url, max_attempts=max_attempts)
     file_size = int(remote_file_headers.get("Content-Length", 0))
     supports_resume = "Accept-Ranges" in remote_file_headers
+    content_encoding = remote_file_headers.get("Content-Encoding", "")
+    compression_encodings = ["gzip", "deflate", "br", "zstd"]
+    if any(encoding in content_encoding for encoding in compression_encodings):
+        supports_resume = False
 
     # Return early if file already downloaded
     if not force_download and verify_file(
