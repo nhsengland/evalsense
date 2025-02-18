@@ -3,40 +3,39 @@ description: "Dataset for benchmarking clinical note generation from doctor-pati
 config_version: "v1"
 default_version: "5d3cd4d8a25b4ebb5b2b87c3923a7b2b7150e33d"
 source:
+  online: true
   url_template: "https://raw.githubusercontent.com/wyim/aci-bench/{version}/data/challenge_data/{filename}"
   requires_auth: false
 versions:
-  5d3cd4d8a25b4ebb5b2b87c3923a7b2b7150e33d:
+  - name: 5d3cd4d8a25b4ebb5b2b87c3923a7b2b7150e33d
     splits:
-      train:
+      - name: train
         files:
-          train.csv:
+          - name: train.csv
             hash: "6c778d4ac5e6cc6f1964786f9286e8d765c210f22ed6b57f83aff8497409cea4"
-          train_metadata.csv:
+          - name: train_metadata.csv
             hash: "7da650e223f04ff6bf1666cb62d52ebd83ce71ecfc4b2311cbe64d9f3ab19d83"
-      valid:
+      - name: valid
         files:
-          valid.csv:
+          - name: valid.csv
             hash: "6629e89e3fb409d2b3eceab60dc7b32fe1d3fb8d4e07795039284965522aa4d0"
-          valid_metadata.csv:
+          - name: valid_metadata.csv
             hash: "ae4c7eef6fc97e22f447c33e4546691715821e2a671ab53d80eb1ee5598e2914"
-      test1:
+      - name: test1
         files:
-          clinicalnlp_taskB_test1.csv:
+          - name: clinicalnlp_taskB_test1.csv
             hash: "5cc4008e68545f84913744a8e493a58bdf17ba7e1b7a0be46d6943d6bfca9471"
-          clinicalnlp_taskB_test1_metadata.csv:
+          - name: clinicalnlp_taskB_test1_metadata.csv
             hash: "6960581701816c6dbe1aea8a53df6cff2f1ca92b24b036f6303242ca681cbafd"
-      test2:
+      - name: test2
         files:
-          clinicalnlp_taskC_test2.csv:
+          - name: clinicalnlp_taskC_test2.csv
             hash: "599e3330a14e25a0e056aee1365ffac7ebe50058f15821eae42a5513c2bb5a4f"
-          clinicalnlp_taskC_test2_metadata.csv:
+          - name: clinicalnlp_taskC_test2_metadata.csv
             hash: "60e799ee5033767e9f5c2e9c3d84f64366628e2aae8637cd5d96ca29ba01b83c"
-      test3:
+      - name: test3
         files:
-          clef_taskC_test3.csv:
+          - name: clef_taskC_test3.csv
             hash: "d3c18362a42124ea2bd1b2b4b66ba76a11bb123dfdb416471ae3b5924d1428ec"
-          clef_taskC_test3_metadata.csv:
+          - name: clef_taskC_test3_metadata.csv
             hash: "e1bec9323b2bed8e544ead77fae6251c4709bc9ffe2d0de346d843334760736b"
-          
-

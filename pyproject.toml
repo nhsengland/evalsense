@@ -13,6 +13,7 @@ dependencies = [
     "matplotlib>=3.10.0",
     "platformdirs>=4.3.6",
     "polars>=1.22.0",
+    "pydantic>=2.10.6",
     "pyyaml>=6.0.2",
     "tenacity>=9.0.0",
     "torch>=2.6.0",

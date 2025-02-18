@@ -30,25 +30,25 @@ class AciBenchDatasetManager(DatasetManager):
         )
 
     @override
-    def _preprocess_files(self, splits: list[str] | None = None, **kwargs) -> None:
+    def _preprocess_files(self, splits: list[str], **kwargs) -> None:
         """Preprocesses the downloaded dataset files.
 
         This method preprocesses the downloaded dataset files and saves them
         as a HuggingFace DatasetDict in the `self.main_data_path` directory.
 
         Args:
-            splits (list[str], optional): The dataset splits to preprocess.
+            splits (list[str]): The dataset splits to preprocess.
             **kwargs: Additional keyword arguments.
         """
         dataset_dict = {}
         for split in splits:
             # Join all data files into a single DataFrame
             data_df = None
-            for file in self.config.get_remote_files(self.version, [split]):
+            for file in self.config.get_files(self.version, [split]).values():
                 if data_df is None:
-                    data_df = pl.read_csv(self.version_path / file.filename)
+                    data_df = pl.read_csv(self.version_path / file.name)
                 else:
-                    other_df = pl.read_csv(self.version_path / file.filename)
+                    other_df = pl.read_csv(self.version_path / file.name)
                     data_df = data_df.join(
                         other_df, on=["dataset", "encounter_id"], how="inner"
                     )

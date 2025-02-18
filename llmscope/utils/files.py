@@ -20,8 +20,8 @@ def to_safe_filename(name: str) -> str:
         (str): The safe filename.
     """
     name = unicodedata.normalize("NFKD", name)
-    name = regex.sub(r"[^\w\s-_]", "-", name).lower()
-    name = regex.sub(r"[-\s]+", "-", name).strip("-_")
+    name = regex.sub(r"[^\w\s-_]", "-", name)
+    name = regex.sub(r"[-\s]+", "-", name)
     return name
 
 
@@ -104,6 +104,7 @@ def verify_file(
                 unit_divisor=1024,
                 disable=not show_progress,
                 desc=f"Verifying {file_name}",
+                leave=False,
             ) as progress,
         ):
             while chunk := f.read(chunk_size):
@@ -118,6 +119,7 @@ def verify_file(
     return True
 
 
+# TODO: Check resuming downloads for compressed files
 def download_file(
     url: str,
     target_path: str | Path,
@@ -212,6 +214,7 @@ def download_file(
                         unit_divisor=1024,
                         disable=not show_progress,
                         desc=f"Downloading {target_name}",
+                        leave=False,
                     ) as progress,
                 ):
                     for chunk in response.iter_content(chunk_size):
@@ -222,11 +225,10 @@ def download_file(
 
                 if not verify_file(
                     temp_path,
-                    expected_size=file_size,
                     expected_hash=expected_hash,
                     hash_type=hash_type,
                 ):
-                    temp_path.unlink()
+                    # temp_path.unlink()
                     raise RuntimeError(
                         f"Downloaded file {target_path} could not be verified."
                     )

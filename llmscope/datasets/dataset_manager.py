@@ -10,7 +10,13 @@ from llmscope.utils.files import to_safe_filename, download_file
 
 
 class DatasetManager(ABC):
-    """An abstract class for managing datasets."""
+    """An abstract class for managing datasets.
+
+    Attributes:
+        name (str): The name of the dataset.
+        priority (int): The priority of the dataset manager.
+        data_path (Path): The top-level directory for storing all datasets.
+    """
 
     def __init__(
         self,
@@ -31,11 +37,6 @@ class DatasetManager(ABC):
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
             **kwargs: Additional keyword arguments.
-
-        Attributes:
-            name (str): The name of the dataset.
-            priority (int): The priority of the dataset manager.
-            data_path (Path): The top-level directory for storing all datasets.
         """
         self.name = name
         self.config = DatasetConfig(name)
@@ -73,34 +74,39 @@ class DatasetManager(ABC):
         """
         return self.version_path / "main"
 
-    def _download_files(self, splits: list[str] | None = None, **kwargs) -> None:
-        """Downloads  dataset files.
+    def _retrieve_files(self, splits: list[str], **kwargs) -> None:
+        """Retrieves  dataset files.
 
-        This method downloads all the dataset files for the specified splits
+        This method retrieves all the dataset files for the specified splits
         into the `self.version_path` directory.
 
         Args:
-            splits (list[str], optional): The dataset splits to retrieve.
+            splits (list[str]): The dataset splits to retrieve.
             **kwargs: Additional keyword arguments.
         """
-        for remote_file in self.config.get_remote_files(self.version, splits):
-            download_file(
-                remote_file.url,
-                self.version_path / remote_file.filename,
-                expected_size=remote_file.size,
-                expected_hash=remote_file.hash,
-                hash_type=remote_file.hash_type,
-            )
+        for filename, file_metadata in self.config.get_files(
+            self.version, splits
+        ).items():
+            effective_source = file_metadata.effective_source
+            if effective_source is not None and effective_source.online:
+                download_file(
+                    effective_source.url_template.format(
+                        version=self.version, filename=filename
+                    ),
+                    self.version_path / filename,
+                    expected_hash=file_metadata.hash,
+                    hash_type=file_metadata.hash_type,
+                )
 
     @abstractmethod
-    def _preprocess_files(self, splits: list[str] | None = None, **kwargs) -> None:
+    def _preprocess_files(self, splits: list[str], **kwargs) -> None:
         """Preprocesses the downloaded dataset files.
 
-        This method preprocesses the downloaded dataset files and saves them
+        This method preprocesses the retrieved dataset files and saves them
         as a HuggingFace DatasetDict in the `self.main_data_path` directory.
 
         Args:
-            splits (list[str], optional): The dataset splits to preprocess.
+            splits (list[str]): The dataset splits to preprocess.
             **kwargs: Additional keyword arguments.
         """
         pass
@@ -112,17 +118,20 @@ class DatasetManager(ABC):
             splits (list[str], optional): The dataset splits to retrieve.
             **kwargs: Additional keyword arguments.
         """
+        if splits is None:
+            splits = self.config.get_splits(self.version).keys()
+
         self.version_path.mkdir(parents=True, exist_ok=True)
-        self._download_files(splits=splits, **kwargs)
+        self._retrieve_files(splits=splits, **kwargs)
         self._preprocess_files(splits=splits, **kwargs)
 
-    def is_downloaded(self) -> bool:
+    def is_retrieved(self) -> bool:
         """Checks if the dataset at the specific version is already downloaded.
 
         Returns:
             (bool): True if the dataset exists locally, False otherwise.
         """
-        return self.version_path.exists()
+        return self.main_data_path.exists()
 
     def remove(self) -> None:
         """Deletes the dataset at the specific version from disk."""

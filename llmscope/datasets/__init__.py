@@ -1,5 +1,22 @@
-from llmscope.datasets.dataset_config import DatasetConfig
+from llmscope.datasets.dataset_config import (
+    OnlineSource,
+    LocalSource,
+    FileMetadata,
+    SplitMetadata,
+    VersionMetadata,
+    DatasetMetadata,
+    DatasetConfig,
+)
 from llmscope.datasets.dataset_manager import DatasetManager
-from llmscope.datasets.remote_file import RemoteFile
 
-__all__ = ["DatasetConfig", "DatasetManager", "RemoteFile"]
+
+__all__ = [
+    "DatasetManager",
+    "DatasetConfig",
+    "OnlineSource",
+    "LocalSource",
+    "FileMetadata",
+    "SplitMetadata",
+    "VersionMetadata",
+    "DatasetMetadata",
+]
