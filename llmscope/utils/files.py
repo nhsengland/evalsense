@@ -119,7 +119,6 @@ def verify_file(
     return True
 
 
-# TODO: Check resuming downloads for compressed files
 def download_file(
     url: str,
     target_path: str | Path,

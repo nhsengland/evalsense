@@ -14,6 +14,7 @@ from llmscope.utils.dict import deep_update
 from llmscope.utils.files import to_safe_filename
 
 
+# TODO: Handle folders
 class OnlineSource(BaseModel):
     """The online source of the dataset file(s).
 
@@ -117,7 +118,8 @@ class VersionMetadata(BaseModel):
 
     Attributes:
         name (str): The name of the dataset version
-        splits (dict[str, SplitMetadata]): The dataset splits in the version
+        splits (dict[str, SplitMetadata], optional): The dataset splits in the version
+        files (dict[str, FileMetadata], optional): The dataset files in the version
         source (OnlineSource | LocalSource, optional): The immediate source of
             the dataset version (use `effective_source` to access the effective source,
             which may be inherited)
@@ -126,15 +128,16 @@ class VersionMetadata(BaseModel):
 
     name: str
     splits: dict[str, SplitMetadata]
+    files: dict[str, FileMetadata] | None = None
     source: OnlineSource | LocalSource | None = None
     parent: Optional["DatasetMetadata"] = None
 
-    @field_validator("splits", mode="before")
+    @field_validator("splits", "files", mode="before")
     @classmethod
-    def convert_list_to_dict(cls, splits):
-        if isinstance(splits, list):
-            return {split["name"]: split for split in splits}
-        return splits
+    def convert_list_to_dict(cls, vs):
+        if isinstance(vs, list):
+            return {v["name"]: v for v in vs}
+        return vs
 
     @override
     def model_post_init(self, _):
@@ -162,6 +165,8 @@ class VersionMetadata(BaseModel):
             (dict[str, FileMetadata]): The files for the splits.
         """
         files = {}
+        if self.files is not None:
+            files.update(self.files)
         for split_name in splits:
             if split_name not in self.splits:
                 raise ValueError(
@@ -224,7 +229,7 @@ class DatasetMetadata(BaseModel):
         return self.versions[version].get_files(splits)
 
     def get_splits(self, version: str) -> dict[str, SplitMetadata]:
-        """Gets the splits for the specified version.
+        """Gets the dataset splits for the specified version.
 
         Args:
             version (str): The name of the version.
@@ -280,7 +285,7 @@ class DatasetConfig:
         return self.dataset_metadata.get_files(version, splits)
 
     def get_splits(self, version: str) -> dict[str, SplitMetadata]:
-        """Gets the splits for the specified version.
+        """Gets the dataset splits for the specified version.
 
         Args:
             version (str): The name of the version.

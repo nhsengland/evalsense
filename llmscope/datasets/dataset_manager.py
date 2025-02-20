@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
+from typing import Any
 
 from datasets import Dataset, DatasetDict, load_from_disk
 
@@ -9,11 +10,14 @@ from llmscope.datasets.dataset_config import DatasetConfig
 from llmscope.utils.files import to_safe_filename, download_file
 
 
+# TODO: Consider making the config optional by splitting out ConfigDatasetManager
 class DatasetManager(ABC):
     """An abstract class for managing datasets.
 
     Attributes:
         name (str): The name of the dataset.
+        config (DatasetConfig): The configuration for the dataset.
+        version (str): The used dataset version.
         priority (int): The priority of the dataset manager.
         data_path (Path): The top-level directory for storing all datasets.
     """
@@ -36,7 +40,7 @@ class DatasetManager(ABC):
                 range from 0 to 10, with 0 (the lowest) being the default.
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
-            **kwargs: Additional keyword arguments.
+            **kwargs (Any): Additional keyword arguments.
         """
         self.name = name
         self.config = DatasetConfig(name)
@@ -82,7 +86,7 @@ class DatasetManager(ABC):
 
         Args:
             splits (list[str]): The dataset splits to retrieve.
-            **kwargs: Additional keyword arguments.
+            **kwargs (Any): Additional keyword arguments.
         """
         for filename, file_metadata in self.config.get_files(
             self.version, splits
@@ -107,7 +111,7 @@ class DatasetManager(ABC):
 
         Args:
             splits (list[str]): The dataset splits to preprocess.
-            **kwargs: Additional keyword arguments.
+            **kwargs (Any): Additional keyword arguments.
         """
         pass
 
@@ -116,7 +120,7 @@ class DatasetManager(ABC):
 
         Args:
             splits (list[str], optional): The dataset splits to retrieve.
-            **kwargs: Additional keyword arguments.
+            **kwargs (Any): Additional keyword arguments.
         """
         if splits is None:
             splits = self.config.get_splits(self.version).keys()
@@ -142,7 +146,6 @@ class DatasetManager(ABC):
         """Loads the dataset as a HuggingFace dataset.
 
         Args:
-            version (str, optional): The dataset version to load.
             splits (list[str], optional): The dataset splits to load.
 
         Returns:
