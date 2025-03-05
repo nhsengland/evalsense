@@ -8,7 +8,7 @@ class PromptFormatter(Protocol):
         """Formats inuts into a prompt.
 
         Args:
-            **kwargs: Arguments for constructing the prompt.
+            **kwargs (dict): Arguments for constructing the prompt.
 
         Returns:
             (dict): The formatted prompt in the HuggingFace chat messages format.

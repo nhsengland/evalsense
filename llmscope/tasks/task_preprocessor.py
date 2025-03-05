@@ -1,9 +1,8 @@
-from typing import Protocol, runtime_checkable
+from typing import Protocol
 
 from datasets import Dataset, DatasetDict
 
 
-@runtime_checkable
 class TaskPreprocessor(Protocol):
     """A protocol for preprocessing datasets for a specific task."""
 
@@ -14,7 +13,7 @@ class TaskPreprocessor(Protocol):
 
         Args:
             dataset (Dataset | DatasetDict): The input dataset to preprocess.
-            **kwargs: Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
 
         Returns:
             (Dataset | DatasetDict): The preprocessed dataset.

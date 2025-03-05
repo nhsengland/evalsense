@@ -4,6 +4,7 @@ from datasets import Dataset, DatasetDict
 import polars as pl
 
 from llmscope.datasets import DatasetManager
+from llmscope.utils.huggingface import disable_dataset_progress_bars
 
 
 class AciBenchDatasetManager(DatasetManager):
@@ -23,7 +24,7 @@ class AciBenchDatasetManager(DatasetManager):
             version (str, optional): The dataset version to retrieve.
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
-            **kwargs: Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
         """
         super().__init__(
             self._DATASET_NAME, version=version, priority=7, data_dir=data_dir, **kwargs
@@ -38,7 +39,7 @@ class AciBenchDatasetManager(DatasetManager):
 
         Args:
             splits (list[str]): The dataset splits to preprocess.
-            **kwargs: Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
         """
         dataset_dict = {}
         for split in splits:
@@ -56,8 +57,9 @@ class AciBenchDatasetManager(DatasetManager):
             dataset_dict[split] = dataset
 
         # Save the dataset to disk
-        hf_dataset = DatasetDict(dataset_dict)
-        hf_dataset.save_to_disk(self.main_data_path)
+        with disable_dataset_progress_bars():
+            hf_dataset = DatasetDict(dataset_dict)
+            hf_dataset.save_to_disk(self.main_data_path)
 
     @classmethod
     @override

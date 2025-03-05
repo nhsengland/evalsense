@@ -7,6 +7,12 @@ from llmscope.llms import LlmManager
 
 
 class HuggingFaceLlmManager(LlmManager):
+    """A manager for HuggingFace models.
+
+    Attributes:
+        pipeline (transformers.Pipeline): The HuggingFace model pipeline.
+    """
+
     def __init__(
         self,
         model_name: str,
@@ -61,7 +67,7 @@ class HuggingFaceLlmManager(LlmManager):
         generated_text_only=True,
         **kwargs,
     ) -> str:
-        """Generates a chat completion for the given message.
+        """Generates a chat completion for the given messages.
 
         Args:
             messages (dict): The chat messages to generate completion for.
@@ -72,9 +78,8 @@ class HuggingFaceLlmManager(LlmManager):
             temperature (float, optional): The sampling temperature. Defaults to 0.7.
             top_p (float, optional): The nucleus sampling parameter. Defaults to 0.95.
             repetition_penalty (float, optional): The repetition penalty. Defaults to 1.0.
-            trim_response (bool, optional): Whether to trim the response. Defaults to True.
             generated_text_only (bool, optional): Whether to return only the generated text. Defaults to True.
-            **kwargs: Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
 
         Returns:
             (str): The generated chat completion.

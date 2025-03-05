@@ -32,7 +32,7 @@ class LlmManager(ABC):
             top_p (float, optional): The nucleus sampling parameter. Defaults to 0.95.
             repetition_penalty (float, optional): The repetition penalty. Defaults to 1.0.
             generated_text_only (bool, optional): Whether to return only the generated text. Defaults to True.
-            **kwargs: Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
 
         Returns:
             (str): The generated chat completion.
@@ -43,8 +43,8 @@ class LlmManager(ABC):
         """Generates a chat completion for the given message.
 
         Args:
-            *args: Positional arguments (see `chat_completion`).
-            **kwargs: Keyword arguments (see `chat_completion`).
+            *args (dict): Positional arguments (see `chat_completion`).
+            **kwargs (dict): Keyword arguments (see `chat_completion`).
         Returns:
             (str): The generated chat completion.
         """

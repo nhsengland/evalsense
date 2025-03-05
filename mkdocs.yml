@@ -64,5 +64,17 @@ markdown_extensions:
 nav:
   - Home: index.md
   - API Reference:
-      - Datasets: api-reference/datasets.md
-      - Utils: api-reference/utils.md
+      - Datasets:
+        - datasets: api-reference/datasets/base.md
+        - datasets.managers: api-reference/datasets/managers.md
+      - LLMs:
+        - llms: api-reference/LLMs/base.md
+        - llms.managers: api-reference/LLMs/managers.md
+      - Pipelines:
+        - pipelines: api-reference/pipelines/base.md
+      - Prompts:
+        - prompts: api-reference/prompts/base.md
+      - Tasks:
+        - tasks: api-reference/tasks/base.md
+      - Utils:
+        - utils: api-reference/utils/base.md

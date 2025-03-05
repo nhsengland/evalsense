@@ -39,7 +39,7 @@ class DatasetManager(ABC):
                 range from 0 to 10, with 10 (the highest) being the default.
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
-            **kwargs (Any): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
         """
         self.name = name
         self.config = DatasetConfig(name)
@@ -85,7 +85,7 @@ class DatasetManager(ABC):
 
         Args:
             splits (list[str]): The dataset splits to retrieve.
-            **kwargs (Any): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
         """
         for filename, file_metadata in self.config.get_files(
             self.version, splits
@@ -110,7 +110,7 @@ class DatasetManager(ABC):
 
         Args:
             splits (list[str]): The dataset splits to preprocess.
-            **kwargs (Any): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
         """
         pass
 
@@ -119,7 +119,7 @@ class DatasetManager(ABC):
 
         Args:
             splits (list[str], optional): The dataset splits to retrieve.
-            **kwargs (Any): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
         """
         if splits is None:
             splits = self.config.get_splits(self.version).keys()
@@ -173,7 +173,7 @@ class DatasetManager(ABC):
             splits (list[str], optional): The dataset splits to load.
             retrieve (bool, optional): Whether to retrieve the dataset if it
                 does not exist locally. Defaults to True.
-            **kwargs (Any): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
 
         Returns:
             (DatasetDict): The loaded dataset.
