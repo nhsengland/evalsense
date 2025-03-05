@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 import shutil
-from typing import Any
 
 from datasets import Dataset, DatasetDict, load_from_disk
 
@@ -26,7 +25,7 @@ class DatasetManager(ABC):
         self,
         name: str,
         version: str = DEFAULT_VERSION_NAME,
-        priority: int = 0,
+        priority: int = 10,
         data_dir: str | None = None,
         **kwargs,
     ):
@@ -37,7 +36,7 @@ class DatasetManager(ABC):
             version (str): The dataset version to retrieve.
             priority (int, optional): The priority of the dataset manager when
                 choosing between multiple possible managers. Recommended values
-                range from 0 to 10, with 0 (the lowest) being the default.
+                range from 0 to 10, with 10 (the highest) being the default.
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
             **kwargs (Any): Additional keyword arguments.
@@ -142,15 +141,21 @@ class DatasetManager(ABC):
         if self.version_path.exists():
             shutil.rmtree(self.version_path)
 
-    def load(self, splits: list[str] | None = None) -> DatasetDict | Dataset:
+    def load(
+        self, splits: list[str] | None = None, retrieve=True
+    ) -> DatasetDict | Dataset:
         """Loads the dataset as a HuggingFace dataset.
 
         Args:
             splits (list[str], optional): The dataset splits to load.
+            retrieve (bool, optional): Whether to retrieve the dataset if it
+                does not exist locally. Defaults to True.
 
         Returns:
             (DatasetDict): The loaded dataset.
         """
+        if not self.is_retrieved() and retrieve:
+            self.get(splits=splits)
         hf_dataset = load_from_disk(self.main_data_path)
         if splits is not None:
             if len(splits) == 1:
@@ -158,6 +163,22 @@ class DatasetManager(ABC):
             else:
                 hf_dataset = hf_dataset[splits]
         return hf_dataset
+
+    def __call__(
+        self, splits: list[str] | None = None, retrieve=True, **kwargs
+    ) -> DatasetDict | Dataset:
+        """Loads the dataset as a HuggingFace dataset.
+
+        Args:
+            splits (list[str], optional): The dataset splits to load.
+            retrieve (bool, optional): Whether to retrieve the dataset if it
+                does not exist locally. Defaults to True.
+            **kwargs (Any): Additional keyword arguments.
+
+        Returns:
+            (DatasetDict): The loaded dataset.
+        """
+        return self.load(splits=splits, **kwargs)
 
     @classmethod
     @abstractmethod
