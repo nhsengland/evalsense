@@ -1,11 +1,12 @@
 from datasets import Dataset, DatasetDict
 from tqdm.auto import tqdm
 
-from llmscope.constants import OUTPUT_COLUMN
+from llmscope.constants import INPUT_COLUMN, OUTPUT_COLUMN
 from llmscope.datasets import DatasetManager
 from llmscope.llms import LlmManager
 from llmscope.prompts import PromptFormatter
 from llmscope.tasks import TaskPreprocessor
+from llmscope.utils.huggingface import disable_dataset_progress_bars
 
 
 class SimplePipeline:
@@ -49,17 +50,24 @@ class SimplePipeline:
             (Dataset): The dataset including the LLM outputs in the `output` column.
         """
 
-        def map_sample(sample: dict) -> dict:
-            messages = self.prompt_formatter(**sample)
-            output = self.llm_manager(messages)
-            sample[OUTPUT_COLUMN] = output
+        def map_sample(sample: dict, prompt_formatter: PromptFormatter) -> dict:
+            messages = prompt_formatter(**sample)
+            sample[INPUT_COLUMN] = messages
             return sample
 
-        return dataset.map(
-            map_sample,
-            batched=False,
-            desc="Generating outputs",
+        with disable_dataset_progress_bars():
+            dataset = dataset.map(
+                map_sample,
+                fn_kwargs={"prompt_formatter": self.prompt_formatter},
+                batched=False,
+            )
+
+        outputs = self.llm_manager(
+            dataset[INPUT_COLUMN],
+            show_progress=show_progress,
         )
+        dataset = dataset.add_column(OUTPUT_COLUMN, outputs)  # type: ignore
+        return dataset
 
     def run(self, show_progress=True) -> Dataset | DatasetDict:
         """Runs the pipeline.

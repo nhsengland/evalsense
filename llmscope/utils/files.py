@@ -55,7 +55,7 @@ def get_remote_file_headers(
                 return response.headers
     except Exception as e:
         raise RuntimeError(f"Failed to get headers for {url}: {e}")
-    assert False, "Unreachable code"
+    assert False, "Unreachable code (included as a hint for type checking)"
 
 
 def verify_file(
