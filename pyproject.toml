@@ -12,16 +12,18 @@ dependencies = [
     "datasets>=3.2.0",
     "evaluate>=0.4.3",
     "matplotlib>=3.10.0",
+    "numpy<2.0.0",
     "openai>=1.65.3",
     "platformdirs>=4.3.6",
     "polars>=1.22.0",
     "pydantic>=2.10.6",
     "pyyaml>=6.0.2",
     "tenacity>=9.0.0",
-    "torch>=2.6.0",
+    "torch<2.6",
     "tqdm>=4.67.1",
     "transformers>=4.48.3",
     "typer>=0.15.1",
+    "vllm>=0.7.3",
 ]
 
 [project.optional-dependencies]

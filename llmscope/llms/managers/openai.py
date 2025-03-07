@@ -1,5 +1,7 @@
 from llmscope.constants import OPENAI_API_KEY
 from openai import OpenAI
+from tenacity import Retrying, stop_after_attempt, wait_random_exponential
+from tqdm.auto import tqdm
 
 from llmscope.llms import LlmManager
 
@@ -37,48 +39,78 @@ class OpenAiLlmManager(LlmManager):
 
     def chat_completion(
         self,
-        messages,
-        print_output=False,
-        seed=42,
-        max_new_tokens=1024,
-        temperature=0.7,
-        top_p=0.95,
-        repetition_penalty=1.0,
+        messages: list,
+        print_output: bool = False,
+        seed: int = 42,
+        max_new_tokens: int = 1024,
+        temperature: float = 0.7,
+        top_p: float = 0.95,
+        repetition_penalty: float = 1.0,
+        show_progress: bool = True,
+        generated_text_only: bool = True,
         **kwargs,
     ):
         """Generates a chat completion for the given messages.
 
         Args:
-            messages (dict): The chat messages to generate completion for.
+            messages (list): The chat conversation(s) to generate completion(s) for,
+                in HuggingFace chat format. Can be a list of multiple conversations.
             print_output (bool, optional): Whether to print the model output. Defaults to False.
             seed (int, optional): The random seed. Defaults to 42.
             max_new_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1024.
             temperature (float, optional): The sampling temperature. Defaults to 0.7.
-            top_p (float, optional): The nucleus sampling parameter. Defaults to 0.95.
+            top_p (float, optional): Only the smallest set of most probable tokens with probabilities
+                summing to `top_p` or higher are kept for generation. Defaults to 0.95.
             repetition_penalty (float, optional): The repetition penalty. Defaults to 1.0.
+            show_progress (bool, optional): Whether to show progress. Defaults to True.
+            generated_text_only (bool, optional): Whether to return only the generated text. Defaults to True.
             **kwargs (dict): Additional keyword arguments.
 
         Returns:
             (str): The generated chat completion.
         """
-        for message in messages:
-            if message["role"] == "system":
-                message["role"] = "developer"
+        if isinstance(messages[0], dict):
+            messages = [messages]
 
-        completion = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            seed=seed,
-            temperature=temperature,
-            max_tokens=max_new_tokens,
-            top_p=top_p,
-            presence_penalty=repetition_penalty,
-            **kwargs,
-        )
+        for conversation in messages:
+            for message in conversation:
+                if message["role"] == "system":
+                    message["role"] = "developer"
 
-        response = completion.choices[0].message.content
+        completions = []
+        for conversation in tqdm(
+            messages, desc="Generating outputs", disable=not show_progress
+        ):
+            for attempt in Retrying(
+                wait=wait_random_exponential(min=1, max=60),
+                stop=stop_after_attempt(6),
+                reraise=True,
+            ):
+                with attempt as _:
+                    completion = self.client.chat.completions.create(
+                        model=self.model_name,
+                        messages=conversation,
+                        seed=seed,
+                        temperature=temperature,
+                        max_tokens=max_new_tokens,
+                        top_p=top_p,
+                        presence_penalty=repetition_penalty,
+                        **kwargs,
+                    )
+                    completions.append(completion)
+
+        if generated_text_only:
+            completions = [c.choices[0].message.content for c in completions]
+        else:
+            completions = [
+                m + [{"role": "assistant", "content": c.choices[0].message.content}]
+                for m, c in zip(messages, completions)
+            ]
+
+        if len(completions) == 1:
+            completions = completions[0]
 
         if print_output:
-            print(response, flush=True)
+            print(completions, flush=True)
 
-        return response
+        return completions

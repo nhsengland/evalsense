@@ -1,6 +1,8 @@
+from datasets import Dataset
 import torch
 import transformers
 from transformers import BitsAndBytesConfig
+from tqdm.auto import tqdm
 
 from llmscope.constants import MODELS_PATH
 from llmscope.llms import LlmManager
@@ -17,6 +19,7 @@ class HuggingFaceLlmManager(LlmManager):
         self,
         model_name: str,
         quantization: str = "none",
+        device_map: str = "auto",
         model_kwargs: dict = {},
     ):
         """
@@ -45,7 +48,7 @@ class HuggingFaceLlmManager(LlmManager):
         self.pipeline = transformers.pipeline(
             "text-generation",
             model=model_name,
-            device_map="auto",
+            device_map=device_map,
             model_kwargs={
                 "torch_dtype": "auto",
                 "quantization_config": quantization_config,
@@ -56,7 +59,7 @@ class HuggingFaceLlmManager(LlmManager):
 
     def chat_completion(
         self,
-        messages: dict,
+        messages: list,
         print_output: bool = False,
         seed: int = 42,
         max_new_tokens: int = 1024,
@@ -64,45 +67,59 @@ class HuggingFaceLlmManager(LlmManager):
         temperature: float = 0.7,
         top_p: float = 0.95,
         repetition_penalty: float = 1.0,
+        show_progress: bool = True,
         generated_text_only=True,
         **kwargs,
-    ) -> str:
+    ) -> str | list[str]:
         """Generates a chat completion for the given messages.
 
         Args:
-            messages (dict): The chat messages to generate completion for.
+            messages (list): The chat conversation(s) to generate completion(s) for,
+                in HuggingFace chat format. Can be a list of multiple conversations.
             print_output (bool, optional): Whether to print the model output. Defaults to False.
             seed (int, optional): The random seed. Defaults to 42.
             max_new_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1024.
             do_sample (bool, optional): Whether to sample the output. Defaults to True.
             temperature (float, optional): The sampling temperature. Defaults to 0.7.
-            top_p (float, optional): The nucleus sampling parameter. Defaults to 0.95.
+            top_p (float, optional): Only the smallest set of most probable tokens with probabilities
+                summing to `top_p` or higher are kept for generation. Defaults to 0.95.
             repetition_penalty (float, optional): The repetition penalty. Defaults to 1.0.
+            show_progress (bool, optional): Whether to show progress. Defaults to True.
             generated_text_only (bool, optional): Whether to return only the generated text. Defaults to True.
-            **kwargs (dict): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments to generation.
 
         Returns:
-            (str): The generated chat completion.
+            (str | list[str]): The generated chat completion(s).
         """
         transformers.set_seed(seed)
-        prompt = self.pipeline.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
-        response = self.pipeline(
-            prompt,
-            max_new_tokens=max_new_tokens,
-            do_sample=do_sample,
-            temperature=temperature,
-            top_p=top_p,
-            repetition_penalty=repetition_penalty,
-            pad_token_id=self.pipeline.tokenizer.eos_token_id,
-            **kwargs,
-        )[0]["generated_text"]
+
+        if isinstance(messages[0], dict):
+            messages = [messages]
+
+        responses = []
+        for conversation in tqdm(
+            messages, desc="Generating outputs", disable=not show_progress
+        ):
+            response = self.pipeline(
+                conversation,
+                max_new_tokens=max_new_tokens,
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+                repetition_penalty=repetition_penalty,
+                pad_token_id=self.pipeline.tokenizer.eos_token_id,
+                **kwargs,
+            )
+            responses.append(response)
+
+        responses = [r[0]["generated_text"] for r in responses]
+        if generated_text_only:
+            responses = [r[-1]["content"] for r in responses]
+
+        if len(responses) == 1:
+            responses = responses[0]
 
         if print_output:
-            print(response, flush=True)
+            print(responses, flush=True)
 
-        if generated_text_only:
-            response = response.replace(prompt, "", 1).strip()
-
-        return response
+        return responses
