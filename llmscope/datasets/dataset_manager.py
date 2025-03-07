@@ -125,7 +125,6 @@ class DatasetManager(ABC):
         """Downloads and preprocesses a dataset.
 
         Args:
-            splits (list[str], optional): The dataset splits to retrieve.
             **kwargs (dict): Additional keyword arguments.
         """
         self.version_path.mkdir(parents=True, exist_ok=True)

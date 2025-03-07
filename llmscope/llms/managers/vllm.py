@@ -22,7 +22,6 @@ class VLlmManager(LlmManager):
 
         Args:
             model_name (str): The vLLM model name.
-            visible_devices (str, optional): The visible devices for the model. Defaults to all GPUs.
             max_model_len (int, optional): The maximum length of the model. Defaults to 16384.
             model_kwargs (dict, optional): Additional model keyword arguments. Defaults to {}.
         """
@@ -55,7 +54,6 @@ class VLlmManager(LlmManager):
             print_output (bool, optional): Whether to print the model output. Defaults to False.
             seed (int, optional): The random seed. Defaults to 42.
             max_new_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1024.
-            do_sample (bool, optional): Whether to sample the output. Defaults to True.
             temperature (float, optional): The sampling temperature. Defaults to 0.7.
             top_p (float, optional): Only the smallest set of most probable tokens with probabilities
                 summing to `top_p` or higher are kept for generation. Defaults to 0.95.

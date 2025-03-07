@@ -1,4 +1,4 @@
-# Generative AI Evaluation
+# LLM Evaluation in Healthcare
 ## NHSX Analytics Unit - PhD Internship Project
 
 ### About the Project
@@ -25,20 +25,20 @@ _**Note:** Only public or fake data are shared in this repository._
 
 ### Getting Started
 
-#### Installation
+#### Installation for Development
 
-To get a local copy up and running follow these simple steps.
+To install the project for local development, you can follow the steps below:
 
 To clone the repo:
 
-`git clone https://github.com/nhsx/{REPO NAME}`
+`git clone git@github.com:nhsengland/llmscope.git`
 
-To create a suitable environment:
-- ```python -m venv _env```
-- `source _env/bin/activate`
-- `pip install -r requirements.txt`
+To setup the environment for the project
 
-{ADDITIONAL TECHNICAL SUPPORT AND NEEDS}
+- Install [uv](https://github.com/astral-sh/uv) if it's not installed already
+- `uv sync --all-extras`
+- `source .venv/bin/activate`
+- `pre-commit install`
 
 ### Usage
 {DESCRIPTION OF CODE}
