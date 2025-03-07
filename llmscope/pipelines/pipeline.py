@@ -1,7 +1,7 @@
-from copy import deepcopy
 from datasets import Dataset, DatasetDict
 from tqdm.auto import tqdm
 
+from llmscope.constants import OUTPUT_COLUMN
 from llmscope.datasets import DatasetManager
 from llmscope.llms import LlmManager
 from llmscope.prompts import PromptFormatter
@@ -39,7 +39,7 @@ class SimplePipeline:
         self.prompt_formatter = prompt_formatter
         self.llm_manager = llm_manager
 
-    def _run_dataset(self, dataset: Dataset, show_progress=True) -> list[str]:
+    def _run_dataset(self, dataset: Dataset, show_progress=True) -> Dataset:
         """Runs the pipeline on a dataset.
 
         Args:
@@ -49,10 +49,10 @@ class SimplePipeline:
             (Dataset): The dataset including the LLM outputs in the `output` column.
         """
 
-        def map_sample(sample):
+        def map_sample(sample: dict) -> dict:
             messages = self.prompt_formatter(**sample)
             output = self.llm_manager(messages)
-            sample["output"] = output
+            sample[OUTPUT_COLUMN] = output
             return sample
 
         return dataset.map(

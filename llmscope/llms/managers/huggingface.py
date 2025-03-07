@@ -1,4 +1,3 @@
-from datasets import Dataset
 import torch
 import transformers
 from transformers import BitsAndBytesConfig
@@ -107,7 +106,7 @@ class HuggingFaceLlmManager(LlmManager):
                 temperature=temperature,
                 top_p=top_p,
                 repetition_penalty=repetition_penalty,
-                pad_token_id=self.pipeline.tokenizer.eos_token_id,
+                pad_token_id=self.pipeline.tokenizer.eos_token_id,  # type: ignore
                 **kwargs,
             )
             responses.append(response)

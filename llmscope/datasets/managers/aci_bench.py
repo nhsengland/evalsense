@@ -15,6 +15,7 @@ class AciBenchDatasetManager(DatasetManager):
     def __init__(
         self,
         version: str = "5d3cd4d8a25b4ebb5b2b87c3923a7b2b7150e33d",
+        splits: list[str] | None = None,
         data_dir: str | None = None,
         **kwargs,
     ):
@@ -22,27 +23,32 @@ class AciBenchDatasetManager(DatasetManager):
 
         Args:
             version (str, optional): The dataset version to retrieve.
+            splits (list[str], optional): The dataset splits to retrieve.
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
             **kwargs (dict): Additional keyword arguments.
         """
         super().__init__(
-            self._DATASET_NAME, version=version, priority=7, data_dir=data_dir, **kwargs
+            self._DATASET_NAME,
+            version=version,
+            splits=splits,
+            priority=7,
+            data_dir=data_dir,
+            **kwargs,
         )
 
     @override
-    def _preprocess_files(self, splits: list[str], **kwargs) -> None:
+    def _preprocess_files(self, **kwargs) -> None:
         """Preprocesses the downloaded dataset files.
 
         This method preprocesses the downloaded dataset files and saves them
         as a HuggingFace DatasetDict in the `self.main_data_path` directory.
 
         Args:
-            splits (list[str]): The dataset splits to preprocess.
             **kwargs (dict): Additional keyword arguments.
         """
         dataset_dict = {}
-        for split in splits:
+        for split in self.splits:
             # Join all data files into a single DataFrame
             data_df = None
             for file in self.config.get_files(self.version, [split]).values():
@@ -53,6 +59,8 @@ class AciBenchDatasetManager(DatasetManager):
                     data_df = data_df.join(
                         other_df, on=["dataset", "encounter_id"], how="inner"
                     )
+            if data_df is None:
+                raise RuntimeError(f"No data found for split '{split}'.")
             dataset = Dataset.from_polars(data_df)
             dataset_dict[split] = dataset
 

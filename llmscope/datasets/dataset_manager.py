@@ -5,7 +5,7 @@ import shutil
 from datasets import Dataset, DatasetDict, load_from_disk
 
 from llmscope.constants import DEFAULT_VERSION_NAME, DATA_PATH
-from llmscope.datasets.dataset_config import DatasetConfig
+from llmscope.datasets.dataset_config import DatasetConfig, OnlineSource
 from llmscope.utils.files import to_safe_filename, download_file
 
 
@@ -17,6 +17,7 @@ class DatasetManager(ABC):
         name (str): The name of the dataset.
         config (DatasetConfig): The configuration for the dataset.
         version (str): The used dataset version.
+        splits (list[str]): The dataset splits to retrieve.
         priority (int): The priority of the dataset manager.
         data_path (Path): The top-level directory for storing all datasets.
     """
@@ -25,6 +26,7 @@ class DatasetManager(ABC):
         self,
         name: str,
         version: str = DEFAULT_VERSION_NAME,
+        splits: list[str] | None = None,
         priority: int = 10,
         data_dir: str | None = None,
         **kwargs,
@@ -34,6 +36,7 @@ class DatasetManager(ABC):
         Args:
             name (str): The name of the dataset.
             version (str): The dataset version to retrieve.
+            splits (list[str], optional): The dataset splits to retrieve.
             priority (int, optional): The priority of the dataset manager when
                 choosing between multiple possible managers. Recommended values
                 range from 0 to 10, with 10 (the highest) being the default.
@@ -49,6 +52,10 @@ class DatasetManager(ABC):
             self.data_path = Path(data_dir)
         else:
             self.data_path = DATA_PATH
+
+        if splits is None:
+            splits = list(self.config.get_splits(self.version).keys())
+        self.splits = splits
 
     @property
     def dataset_path(self) -> Path:
@@ -77,21 +84,22 @@ class DatasetManager(ABC):
         """
         return self.version_path / "main"
 
-    def _retrieve_files(self, splits: list[str], **kwargs) -> None:
+    def _retrieve_files(self, **kwargs) -> None:
         """Retrieves  dataset files.
 
         This method retrieves all the dataset files for the specified splits
         into the `self.version_path` directory.
 
         Args:
-            splits (list[str]): The dataset splits to retrieve.
             **kwargs (dict): Additional keyword arguments.
         """
         for filename, file_metadata in self.config.get_files(
-            self.version, splits
+            self.version, self.splits
         ).items():
             effective_source = file_metadata.effective_source
-            if effective_source is not None and effective_source.online:
+            if effective_source is not None and isinstance(
+                effective_source, OnlineSource
+            ):
                 download_file(
                     effective_source.url_template.format(
                         version=self.version, filename=filename
@@ -102,31 +110,27 @@ class DatasetManager(ABC):
                 )
 
     @abstractmethod
-    def _preprocess_files(self, splits: list[str], **kwargs) -> None:
+    def _preprocess_files(self, **kwargs) -> None:
         """Preprocesses the downloaded dataset files.
 
         This method preprocesses the retrieved dataset files and saves them
         as a HuggingFace DatasetDict in the `self.main_data_path` directory.
 
         Args:
-            splits (list[str]): The dataset splits to preprocess.
             **kwargs (dict): Additional keyword arguments.
         """
         pass
 
-    def get(self, splits: list[str] | None = None, **kwargs) -> None:
+    def get(self, **kwargs) -> None:
         """Downloads and preprocesses a dataset.
 
         Args:
             splits (list[str], optional): The dataset splits to retrieve.
             **kwargs (dict): Additional keyword arguments.
         """
-        if splits is None:
-            splits = self.config.get_splits(self.version).keys()
-
         self.version_path.mkdir(parents=True, exist_ok=True)
-        self._retrieve_files(splits=splits, **kwargs)
-        self._preprocess_files(splits=splits, **kwargs)
+        self._retrieve_files(**kwargs)
+        self._preprocess_files(**kwargs)
 
     def is_retrieved(self) -> bool:
         """Checks if the dataset at the specific version is already downloaded.
@@ -141,13 +145,10 @@ class DatasetManager(ABC):
         if self.version_path.exists():
             shutil.rmtree(self.version_path)
 
-    def load(
-        self, splits: list[str] | None = None, retrieve=True
-    ) -> DatasetDict | Dataset:
+    def load(self, retrieve=True) -> DatasetDict | Dataset:
         """Loads the dataset as a HuggingFace dataset.
 
         Args:
-            splits (list[str], optional): The dataset splits to load.
             retrieve (bool, optional): Whether to retrieve the dataset if it
                 does not exist locally. Defaults to True.
 
@@ -155,22 +156,21 @@ class DatasetManager(ABC):
             (DatasetDict): The loaded dataset.
         """
         if not self.is_retrieved() and retrieve:
-            self.get(splits=splits)
+            self.get()
         hf_dataset = load_from_disk(self.main_data_path)
-        if splits is not None:
-            if len(splits) == 1:
-                hf_dataset = hf_dataset[splits[0]]
+        if self.splits is not None:
+            if isinstance(hf_dataset, Dataset):
+                raise ValueError("Cannot load specific splits with a single dataset.")
+            if len(self.splits) == 1:
+                hf_dataset = hf_dataset[self.splits[0]]
             else:
-                hf_dataset = hf_dataset[splits]
+                hf_dataset = hf_dataset[self.splits]
         return hf_dataset
 
-    def __call__(
-        self, splits: list[str] | None = None, retrieve=True, **kwargs
-    ) -> DatasetDict | Dataset:
+    def __call__(self, retrieve=True, **kwargs) -> DatasetDict | Dataset:
         """Loads the dataset as a HuggingFace dataset.
 
         Args:
-            splits (list[str], optional): The dataset splits to load.
             retrieve (bool, optional): Whether to retrieve the dataset if it
                 does not exist locally. Defaults to True.
             **kwargs (dict): Additional keyword arguments.
@@ -178,7 +178,7 @@ class DatasetManager(ABC):
         Returns:
             (DatasetDict): The loaded dataset.
         """
-        return self.load(splits=splits, **kwargs)
+        return self.load(retrieve=retrieve, **kwargs)
 
     @classmethod
     @abstractmethod

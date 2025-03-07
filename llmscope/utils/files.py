@@ -3,6 +3,7 @@ from pathlib import Path
 import unicodedata
 import regex
 import requests
+from requests.utils import CaseInsensitiveDict
 
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 from tqdm.auto import tqdm
@@ -25,7 +26,9 @@ def to_safe_filename(name: str) -> str:
     return name
 
 
-def get_remote_file_headers(url: str, max_attempts: int = 2) -> dict:
+def get_remote_file_headers(
+    url: str, max_attempts: int = 2
+) -> CaseInsensitiveDict[str]:
     """Gets the HTTP headers of a remote file.
 
     Args:
@@ -34,7 +37,7 @@ def get_remote_file_headers(url: str, max_attempts: int = 2) -> dict:
             Defaults to 2.
 
     Returns:
-        (dict): The headers of the file.
+        (CaseInsensitiveDict[str]): The headers of the file.
 
     Raises:
         RuntimeError: If the headers cannot be determined in the maximum
@@ -52,6 +55,7 @@ def get_remote_file_headers(url: str, max_attempts: int = 2) -> dict:
                 return response.headers
     except Exception as e:
         raise RuntimeError(f"Failed to get headers for {url}: {e}")
+    assert False, "Unreachable code"
 
 
 def verify_file(

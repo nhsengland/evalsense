@@ -69,6 +69,8 @@ class FileMetadata(BaseModel):
         """
         if self.source is not None:
             return self.source
+        if self.parent is None:
+            raise RuntimeError("Parent metadata not filled. Please report this issue.")
         return self.parent.effective_source
 
 
@@ -110,6 +112,8 @@ class SplitMetadata(BaseModel):
         """
         if self.source is not None:
             return self.source
+        if self.parent is None:
+            raise RuntimeError("Parent metadata not filled. Please report this issue.")
         return self.parent.effective_source
 
 
@@ -153,6 +157,8 @@ class VersionMetadata(BaseModel):
         """
         if self.source is not None:
             return self.source
+        if self.parent is None:
+            raise RuntimeError("Parent metadata not filled. Please report this issue.")
         return self.parent.effective_source
 
     def get_files(self, splits: list[str]) -> dict[str, FileMetadata]:
