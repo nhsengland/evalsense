@@ -1,7 +1,7 @@
 from abc import abstractmethod
-from typing import Protocol
+from typing import Protocol, overload
 
-from datasets import Dataset, DatasetDict, concatenate_datasets
+from datasets import Dataset, DatasetDict
 
 from llmscope.columns import ColumnConfig
 from llmscope.evaluation.evaluation_result import EvaluationResult
@@ -78,11 +78,26 @@ class Evaluator(Protocol):
                 extracted_columns[base_name] = dataset[column.column_name]
         return extracted_columns
 
+    @overload
+    def evaluate(
+        self,
+        dataset: Dataset,
+        column_config: ColumnConfig = ColumnConfig(),
+        **kwargs,
+    ) -> list[EvaluationResult]: ...
+
+    @overload
+    def evaluate(
+        self,
+        dataset: DatasetDict,
+        column_config: ColumnConfig = ColumnConfig(),
+        **kwargs,
+    ) -> dict[str, list[EvaluationResult]]: ...
+
     def evaluate(
         self,
         dataset: Dataset | DatasetDict,
         column_config: ColumnConfig = ColumnConfig(),
-        merge_splits: bool = True,
         **kwargs,
     ) -> list[EvaluationResult] | dict[str, list[EvaluationResult]]:
         """Evaluates the LLM outputs on a dataset.
@@ -93,20 +108,15 @@ class Evaluator(Protocol):
             column_config (ColumnsConfig, optional): The column configuration to
                 use during evaluation. Defaults to the default `ColumnConfig`
                 from `llmscope.columns`.
-            merge_splits (bool): Specifies whether to merge the dataset splits into
-                a single dataset.
             **kwargs: Additional keyword arguments.
 
         Returns:
             (list[EvaluationResult] | dict[str, list[EvaluationResult]]):
-                The evaluation results. If a single Dataset is provided or
-                `merge_splits` is True, a single list[EvaluationResult] is returned.
-                Otherwise, a dict of list[EvaluationResult] is returned, with the keys
+                The evaluation results. If a single Dataset is provided,
+                a single list[EvaluationResult] is returned. Otherwise,
+                a dict of list[EvaluationResult] is returned, with the keys
                 corresponding to the dataset splits.
         """
-        if merge_splits and isinstance(dataset, DatasetDict):
-            dataset = concatenate_datasets(list(dataset.values()))
-
         if isinstance(dataset, DatasetDict):
             results = {}
             for split, ds in dataset.items():

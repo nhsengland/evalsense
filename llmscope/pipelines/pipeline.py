@@ -120,10 +120,6 @@ class SimplePipeline:
             )
 
         evaluation_results = self.evaluator.evaluate(outputs, self.column_config)
-        if not isinstance(evaluation_results, list):
-            raise NotImplementedError(
-                "Aggregating results for multiple splits is not yet supported."
-            )
         for result in evaluation_results:
             self.result_aggregator.add_result(
                 result=result,
