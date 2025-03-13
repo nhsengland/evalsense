@@ -16,7 +16,7 @@ class HuggingFaceLlmManager(LlmManager):
 
     def __init__(
         self,
-        model_name: str,
+        name: str,
         quantization: str = "none",
         device_map: str = "auto",
         model_kwargs: dict = {},
@@ -25,7 +25,7 @@ class HuggingFaceLlmManager(LlmManager):
         Initializes an LLM manager for HuggingFace models.
 
         Args:
-            model_name (str): The HuggingFace model name.
+            name (str): The HuggingFace model name.
             quantization (str, optional): The quantization method to use. Defaults to "none".
             model_kwargs (dict, optional): Additional model keyword arguments. Defaults to {}.
         """
@@ -44,9 +44,10 @@ class HuggingFaceLlmManager(LlmManager):
         else:
             raise ValueError(f"Invalid quantization value {quantization}")
 
+        self.name = name
         self.pipeline = transformers.pipeline(
             "text-generation",
-            model=model_name,
+            model=name,
             device_map=device_map,
             model_kwargs={
                 "torch_dtype": "auto",

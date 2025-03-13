@@ -6,6 +6,8 @@ class LlmManager(ABC):
     An abstract class for LLM manager objects.
     """
 
+    name: str
+
     @abstractmethod
     def chat_completion(
         self,

@@ -11,8 +11,6 @@ USER_AGENT = "LLMScope/0.1.0"
 # Datasets
 DEFAULT_VERSION_NAME = "default"
 DEFAULT_HASH_TYPE = "sha256"
-INPUT_COLUMN = "llmscope_model_input"
-OUTPUT_COLUMN = "llmscope_model_output"
 
 if "OPENAI_API_KEY" in os.environ:
     OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]

@@ -13,7 +13,7 @@ class VLlmManager(LlmManager):
 
     def __init__(
         self,
-        model_name: str,
+        name: str,
         max_model_len: int = 16384,
         model_kwargs: dict = {},
     ):
@@ -21,13 +21,14 @@ class VLlmManager(LlmManager):
         Initializes an LLM manager for vLLM models.
 
         Args:
-            model_name (str): The vLLM model name.
+            name (str): The vLLM model name.
             max_model_len (int, optional): The maximum length of the model. Defaults to 16384.
             model_kwargs (dict, optional): Additional model keyword arguments. Defaults to {}.
         """
         super().__init__()
+        self.name = name
         self.llm = LLM(
-            model_name,
+            name,
             max_model_len=max_model_len,
             download_dir=MODELS_PATH,
             **model_kwargs,
