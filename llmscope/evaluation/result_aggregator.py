@@ -1,10 +1,9 @@
 from abc import abstractmethod
 from enum import Enum
-from typing import Protocol, TypeVar
-
-from datasets import Dataset
+from typing import Protocol
 
 from llmscope.evaluation.evaluation_result import EvaluationResult
+from llmscope.evaluation.experiment import ExperimentId
 
 
 class ResultCategory(Enum):
@@ -17,10 +16,7 @@ class ResultCategory(Enum):
     OTHER = "other"
 
 
-T = TypeVar("T", covariant=True)
-
-
-class ResultAggregator(Protocol[T]):
+class ResultAggregator[T](Protocol):
     """A protocol for aggregating evaluation results."""
 
     @abstractmethod
@@ -28,21 +24,17 @@ class ResultAggregator(Protocol[T]):
         self,
         *,
         result: EvaluationResult,
-        dataset: Dataset,
-        dataset_name: str,
-        task_name: str,
-        prompt_name: str,
-        model_name: str,
+        experiment_id: ExperimentId,
+        exist_ok: bool = False,
     ) -> None:
         """Adds a result to the aggregator.
 
         Args:
             result (EvaluationResult): The evaluation result to add.
-            dataset (Dataset): The dataset associated with the result.
-            dataset_name (str): The name of the dataset.
-            task_name (str): The name of the task.
-            prompt_name (str): The name of the prompt.
-            model_name (str): The name of the model.
+            experiment_id (ExperimentId): The ID data of the experiment associated
+                with the result.
+            exist_ok (bool, optional): Whether to allow adding the same result
+                multiple times. Defaults to False.
         """
         ...
 

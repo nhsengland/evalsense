@@ -1,5 +1,14 @@
 from dataclasses import dataclass, field
-from typing import Any
+
+type EvaluationValue = (
+    str
+    | int
+    | float
+    | bool
+    | None
+    | list["EvaluationValue"]
+    | dict[str, "EvaluationValue"]
+)
 
 
 @dataclass
@@ -8,7 +17,7 @@ class EvaluationResult:
 
     name: str
     category: str
-    overall_result: Any
-    overall_metadata: dict[str, Any] = field(default_factory=dict)
-    instance_results: list[Any] = field(default_factory=list)
-    instance_metadata: dict[str, list[Any]] = field(default_factory=dict)
+    overall_result: EvaluationValue
+    overall_metadata: dict[str, EvaluationValue] = field(default_factory=dict)
+    instance_results: list[EvaluationValue] = field(default_factory=list)
+    instance_metadata: dict[str, list[EvaluationValue]] = field(default_factory=dict)

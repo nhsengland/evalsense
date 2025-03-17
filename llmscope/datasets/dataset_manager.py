@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from pathlib import Path
 import shutil
+from typing import Protocol
 
 from datasets import Dataset, DatasetDict, load_from_disk
 
@@ -10,7 +11,7 @@ from llmscope.utils.files import to_safe_filename, download_file
 
 
 # TODO: Consider making the config optional by splitting out ConfigDatasetManager
-class DatasetManager(ABC):
+class DatasetManager(Protocol):
     """An abstract class for managing datasets.
 
     Attributes:
@@ -21,6 +22,13 @@ class DatasetManager(ABC):
         priority (int): The priority of the dataset manager.
         data_path (Path): The top-level directory for storing all datasets.
     """
+
+    name: str
+    config: DatasetConfig
+    version: str
+    splits: list[str]
+    priority: int
+    data_path: Path
 
     def __init__(
         self,
@@ -165,19 +173,6 @@ class DatasetManager(ABC):
             else:
                 hf_dataset = hf_dataset[self.splits]
         return hf_dataset
-
-    def __call__(self, retrieve=True, **kwargs) -> DatasetDict | Dataset:
-        """Loads the dataset as a HuggingFace dataset.
-
-        Args:
-            retrieve (bool, optional): Whether to retrieve the dataset if it
-                does not exist locally. Defaults to True.
-            **kwargs (dict): Additional keyword arguments.
-
-        Returns:
-            (DatasetDict): The loaded dataset.
-        """
-        return self.load(retrieve=retrieve, **kwargs)
 
     @classmethod
     @abstractmethod

@@ -1,12 +1,21 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+from typing import Protocol
 
 
-class LlmManager(ABC):
+class LlmManager(Protocol):
     """
     An abstract class for LLM manager objects.
     """
 
     name: str
+
+    def __init__(self, name: str) -> None:
+        """Initializes the LLM manager.
+
+        Args:
+            name (str): The name of the LLM manager.
+        """
+        self.name = name
 
     @abstractmethod
     def chat_completion(

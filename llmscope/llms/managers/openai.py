@@ -25,14 +25,15 @@ class OpenAiLlmManager(LlmManager):
             name (str): The OpenAI model name.
             api_key (str, optional): The OpenAI API key. Defaults to OPENAI_API_KEY value.
         """
+        if "openai:" in name:
+            name = name.replace("openai:", "", 1)
+        super().__init__(name)
+
         if api_key is None:
             if OPENAI_API_KEY is not None:
                 api_key = OPENAI_API_KEY
             else:
                 raise ValueError("API key is required for OpenAI models.")
-        if "openai:" in name:
-            name = name.replace("openai:", "", 1)
-        self.name = name
         self.client = OpenAI(
             api_key=api_key,
         )

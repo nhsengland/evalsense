@@ -8,7 +8,7 @@ from llmscope.evaluation.evaluation_result import EvaluationResult
 
 
 class Evaluator(Protocol):
-    """A protocol defining the interface for LLM output evaluators.
+    """A protocol for LLM output evaluators.
 
     Attributes:
         name (str): The name of the evaluator.
@@ -51,6 +51,7 @@ class Evaluator(Protocol):
         """
         ...
 
+    # TODO: Move to ColumnConfig?
     def _extract_columns(
         self,
         dataset: Dataset,
@@ -79,7 +80,7 @@ class Evaluator(Protocol):
         return extracted_columns
 
     @overload
-    def evaluate(
+    def __call__(
         self,
         dataset: Dataset,
         column_config: ColumnConfig = ColumnConfig(),
@@ -87,27 +88,29 @@ class Evaluator(Protocol):
     ) -> list[EvaluationResult]: ...
 
     @overload
-    def evaluate(
+    def __call__(
         self,
         dataset: DatasetDict,
         column_config: ColumnConfig = ColumnConfig(),
         **kwargs,
     ) -> dict[str, list[EvaluationResult]]: ...
 
-    def evaluate(
+    def __call__(
         self,
         dataset: Dataset | DatasetDict,
-        column_config: ColumnConfig = ColumnConfig(),
+        column_config: ColumnConfig | None = None,
         **kwargs,
     ) -> list[EvaluationResult] | dict[str, list[EvaluationResult]]:
         """Evaluates the LLM outputs on a dataset.
 
         Args:
-            dataset (Dataset | DatasetDict): The dataset to evaluate.
+            dataset (Dataset | DatasetDict): The dataset containing the data
+                and LLM outputs to evaluate.
             output_column (str): The column containing the LLM outputs.
             column_config (ColumnsConfig, optional): The column configuration to
-                use during evaluation. Defaults to the default `ColumnConfig`
-                from `llmscope.columns`.
+                use during evaluation. Specifies the mapping between the dataset
+                columns and the parameters of the evaluation function.
+                Defaults to the built-in `ColumnConfig` from `llmscope.columns`.
             **kwargs: Additional keyword arguments.
 
         Returns:
@@ -117,6 +120,9 @@ class Evaluator(Protocol):
                 a dict of list[EvaluationResult] is returned, with the keys
                 corresponding to the dataset splits.
         """
+        if column_config is None:
+            column_config = ColumnConfig()
+
         if isinstance(dataset, DatasetDict):
             results = {}
             for split, ds in dataset.items():

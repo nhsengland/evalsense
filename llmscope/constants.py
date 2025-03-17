@@ -23,6 +23,7 @@ else:
     CACHE_PATH = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
 DATA_PATH = CACHE_PATH / "datasets"
 MODELS_PATH = CACHE_PATH / "models"
+PROJECTS_PATH = CACHE_PATH / "projects"
 
 DATASET_CONFIG_PATHS = [Path(__file__).parent / "dataset_config"]
 if "DATASET_CONFIG_PATH" in os.environ:

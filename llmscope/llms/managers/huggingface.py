@@ -29,7 +29,7 @@ class HuggingFaceLlmManager(LlmManager):
             quantization (str, optional): The quantization method to use. Defaults to "none".
             model_kwargs (dict, optional): Additional model keyword arguments. Defaults to {}.
         """
-        super().__init__()
+        super().__init__(name)
         if quantization == "4bit":
             quantization_config = BitsAndBytesConfig(
                 load_in_4bit=True,
@@ -44,7 +44,6 @@ class HuggingFaceLlmManager(LlmManager):
         else:
             raise ValueError(f"Invalid quantization value {quantization}")
 
-        self.name = name
         self.pipeline = transformers.pipeline(
             "text-generation",
             model=name,

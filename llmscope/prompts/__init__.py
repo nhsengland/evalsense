@@ -1,3 +1,3 @@
-from llmscope.prompts.prompt_formatter import PromptFormatter
+from llmscope.prompts.prompt_formatter import PromptFormattingFunction, PromptFormatter
 
-__all__ = ["PromptFormatter"]
+__all__ = ["PromptFormattingFunction", "PromptFormatter"]

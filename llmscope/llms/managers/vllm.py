@@ -25,8 +25,7 @@ class VLlmManager(LlmManager):
             max_model_len (int, optional): The maximum length of the model. Defaults to 16384.
             model_kwargs (dict, optional): Additional model keyword arguments. Defaults to {}.
         """
-        super().__init__()
-        self.name = name
+        super().__init__(name)
         self.llm = LLM(
             name,
             max_model_len=max_model_len,
