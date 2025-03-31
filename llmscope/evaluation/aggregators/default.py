@@ -4,7 +4,7 @@ from datasets import Dataset
 import polars as pl
 
 from llmscope.evaluation.result_aggregator import EvaluationResult, ResultAggregator
-from llmscope.evaluation.experiment import ExperimentId
+from llmscope.workflow.experiment import ExperimentId
 
 
 # TODO: Support returning more detailed results

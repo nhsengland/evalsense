@@ -1,16 +1,30 @@
 from abc import abstractmethod
 from pathlib import Path
 import shutil
-from typing import Protocol
+from typing import Protocol, cast
 
-from datasets import Dataset, DatasetDict, load_from_disk
+from datasets import Dataset, DatasetDict, concatenate_datasets, load_from_disk
+from pydantic import BaseModel
 
 from llmscope.constants import DEFAULT_VERSION_NAME, DATA_PATH
 from llmscope.datasets.dataset_config import DatasetConfig, OnlineSource
 from llmscope.utils.files import to_safe_filename, download_file
 
 
-# TODO: Consider making the config optional by splitting out ConfigDatasetManager
+class DatasetRecord(BaseModel, frozen=True):
+    """A record identifying a dataset.
+
+    Attributes:
+        name (str): The name of the dataset.
+        version (str): The version of the dataset.
+        splits (list[str]): The used dataset splits.
+    """
+
+    name: str
+    version: str
+    splits: tuple[str, ...]
+
+
 class DatasetManager(Protocol):
     """An abstract class for managing datasets.
 
@@ -21,6 +35,7 @@ class DatasetManager(Protocol):
         splits (list[str]): The dataset splits to retrieve.
         priority (int): The priority of the dataset manager.
         data_path (Path): The top-level directory for storing all datasets.
+        dataset (Dataset | None): The loaded dataset.
     """
 
     name: str
@@ -29,6 +44,8 @@ class DatasetManager(Protocol):
     splits: list[str]
     priority: int
     data_path: Path
+    dataset: Dataset | None = None
+    dataset_dict: DatasetDict | None = None
 
     def __init__(
         self,
@@ -63,7 +80,7 @@ class DatasetManager(Protocol):
 
         if splits is None:
             splits = list(self.config.get_splits(self.version).keys())
-        self.splits = splits
+        self.splits = sorted(splits)
 
     @property
     def dataset_path(self) -> Path:
@@ -85,12 +102,25 @@ class DatasetManager(Protocol):
 
     @property
     def main_data_path(self) -> Path:
-        """The path for storing the main dataset files for a specific version.
+        """The path for storing the preprocessed dataset files for a specific version.
 
         Returns:
             (Path): The main dataset directory.
         """
         return self.version_path / "main"
+
+    @property
+    def record(self) -> DatasetRecord:
+        """Returns a record identifying the dataset.
+
+        Returns:
+            (DatasetRecord): The dataset record.
+        """
+        return DatasetRecord(
+            name=self.name,
+            version=self.version,
+            splits=tuple(self.splits),
+        )
 
     def _retrieve_files(self, **kwargs) -> None:
         """Retrieves  dataset files.
@@ -152,27 +182,101 @@ class DatasetManager(Protocol):
         if self.version_path.exists():
             shutil.rmtree(self.version_path)
 
-    def load(self, retrieve=True) -> DatasetDict | Dataset:
+    def load(
+        self, retrieve: bool = True, cache: bool = True, force_retrieve: bool = False
+    ) -> Dataset:
         """Loads the dataset as a HuggingFace dataset.
+
+        If multiple splits are specified, they are concatenated into a single
+        dataset. See the `load_dict` method if you wish to load the dataset as a
+        `DatasetDict`.
 
         Args:
             retrieve (bool, optional): Whether to retrieve the dataset if it
                 does not exist locally. Defaults to True.
+            cache (bool, optional): Whether to cache the dataset in memory.
+                Defaults to True.
+            force_retrieve (bool, optional): Whether to force retrieving and
+                reloading the dataset even if it is already cached. Overrides
+                the `retrieve` flag if set to True. Defaults to False.
 
         Returns:
-            (DatasetDict): The loaded dataset.
+            (Dataset): The loaded dataset.
         """
-        if not self.is_retrieved() and retrieve:
+        if self.dataset is not None and not force_retrieve:
+            return self.dataset
+
+        if (not self.is_retrieved() and retrieve) or force_retrieve:
             self.get()
+        elif not self.is_retrieved():
+            raise ValueError(
+                f"Dataset {self.name} is not available locally and "
+                "retrieve is set to False. Either `get` the dataset first or "
+                "set the retrieve flag to True."
+            )
         hf_dataset = load_from_disk(self.main_data_path)
-        if self.splits is not None:
-            if isinstance(hf_dataset, Dataset):
-                raise ValueError("Cannot load specific splits with a single dataset.")
-            if len(self.splits) == 1:
-                hf_dataset = hf_dataset[self.splits[0]]
+        if isinstance(hf_dataset, Dataset) and self.splits is not None:
+            raise ValueError(
+                f"Cannot load specific splits for an unpartitioned dataset {self.name}."
+            )
+        if isinstance(hf_dataset, DatasetDict):
+            if self.splits is not None:
+                hf_dataset = concatenate_datasets([hf_dataset[s] for s in self.splits])
             else:
-                hf_dataset = hf_dataset[self.splits]
+                hf_dataset = concatenate_datasets(list(hf_dataset.values()))
+        if cache:
+            self.dataset = hf_dataset
         return hf_dataset
+
+    def unload(self) -> None:
+        """Unloads the dataset from memory."""
+        self.dataset = None
+
+    def load_dict(
+        self, retrieve: bool = True, cache: bool = True, force_retrieve: bool = False
+    ) -> DatasetDict:
+        """Loads the dataset as a HuggingFace dataset dictionary.
+
+        See the `load` method if you wish to concatenate the splits into
+        a single dataset.
+
+        Args:
+            retrieve (bool, optional): Whether to retrieve the dataset if it
+                does not exist locally. Defaults to True.
+            cache (bool, optional): Whether to cache the dataset in memory.
+                Defaults to True.
+            force_retrieve (bool, optional): Whether to force retrieving and
+                reloading the dataset even if it is already cached. Overrides
+                the `retrieve` flag if set to True. Defaults to False.
+
+        Returns:
+            (DatasetDict): The loaded dataset dictionary.
+        """
+        if self.dataset_dict is not None and not force_retrieve:
+            return self.dataset_dict
+
+        if (not self.is_retrieved() and retrieve) or force_retrieve:
+            self.get()
+        elif not self.is_retrieved():
+            raise ValueError(
+                f"Dataset {self.name} is not available locally and "
+                "retrieve is set to False. Either `get` the dataset first or "
+                "set the retrieve flag to True."
+            )
+        hf_dataset = load_from_disk(self.main_data_path)
+        if isinstance(hf_dataset, Dataset):
+            raise ValueError(
+                f"Cannot load an unpartitioned dataset {self.name} as dict."
+            )
+        if self.splits is not None:
+            hf_dataset = cast(DatasetDict, hf_dataset[self.splits])
+        if cache:
+            self.dataset_dict = hf_dataset
+        return hf_dataset
+
+    def unload_dict(self) -> None:
+        """Unloads the dataset dictionary from memory."""
+        self.dataset_dict = None
 
     @classmethod
     @abstractmethod

@@ -1,5 +1,3 @@
-from llmscope.evaluation.evaluators.bleu import BleuEvaluator
+from llmscope.evaluation.evaluators.bleu import bleu_evaluator
 
-__all__ = [
-    "BleuEvaluator",
-]
+__all__ = ["bleu_evaluator"]

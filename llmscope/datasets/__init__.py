@@ -7,11 +7,12 @@ from llmscope.datasets.dataset_config import (
     DatasetMetadata,
     DatasetConfig,
 )
-from llmscope.datasets.dataset_manager import DatasetManager
+from llmscope.datasets.dataset_manager import DatasetManager, DatasetRecord
 
 
 __all__ = [
     "DatasetManager",
+    "DatasetRecord",
     "DatasetConfig",
     "OnlineSource",
     "LocalSource",

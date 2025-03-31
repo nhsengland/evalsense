@@ -1,156 +1,71 @@
-from dataclasses import asdict, dataclass
-import json
 from pathlib import Path
 import shutil
+from typing import Literal
 
-from datasets import load_from_disk, Dataset, DatasetDict
+from inspect_ai.log import EvalLog, read_eval_log
+from pydantic import BaseModel, field_serializer, model_validator
 
 from llmscope.constants import PROJECTS_PATH
 from llmscope.evaluation import (
-    EvaluationResult,
-    ResultAggregator,
-    ExperimentId,
-    ResultId,
+    EvaluationRecord,
+    GenerationRecord,
+    ResultRecord,
+    # ResultAggregator,
 )
-from llmscope.evaluation.aggregators import DefaultAggregator
-from llmscope.utils.huggingface import disable_dataset_progress_bars
+
+# from llmscope.evaluation.aggregators import DefaultAggregator
+from llmscope.logging import get_logger
 from llmscope.utils.files import to_safe_filename
 
+logger = get_logger(__name__)
 
-@dataclass
-class CachedGenerations:
-    experiment_id: ExperimentId
-    generations_dataset: Dataset
 
-    def save_to_disk(self, generations_path: Path, exist_ok: bool = False) -> None:
-        """Saves the cached generations to a file.
+class ProjectRecords(BaseModel):
+    """Metadata for generation and evaluation records associated with a project."""
 
-        Args:
-            generations_path (Path): The path to save the cached generations.
-            exist_ok (bool): Whether to allow overwriting an existing file.
-        """
-        generations_path.mkdir(parents=True, exist_ok=True)
-        filename = to_safe_filename(str(self.experiment_id))
-        metadata_file = generations_path / f"{filename}.json"
-        if metadata_file.exists() and not exist_ok:
-            raise ValueError(
-                f"Generations with ID {filename} already exists. "
-                "Either choose a different name or set exist_ok=True."
-            )
+    generation: dict[GenerationRecord, ResultRecord] = {}
+    evaluation: dict[EvaluationRecord, ResultRecord] = {}
 
-        with disable_dataset_progress_bars():
-            self.generations_dataset.save_to_disk(generations_path / "data" / filename)
-        with open(metadata_file, "w") as f:
-            json.dump(asdict(self.experiment_id), f, indent=4)
+    @field_serializer("generation")
+    def serialise_generation(
+        self,
+        value: dict[GenerationRecord, ResultRecord],
+    ) -> list[tuple[dict, dict]]:
+        """Convert generation records to a serializable format."""
+        return [(k.model_dump(), v.model_dump()) for k, v in value.items()]
 
-    def remove_from_disk(self, generations_path: Path) -> None:
-        """Removes the cached generations from disk.
+    @field_serializer("evaluation")
+    def serialise_evaluation(
+        self,
+        value: dict[EvaluationRecord, ResultRecord],
+    ) -> list[tuple[dict, dict]]:
+        """Converts evaluation records to a serializable format."""
+        return [(k.model_dump(), v.model_dump()) for k, v in value.items()]
 
-        Args:
-            generations_path (Path): The path to the cached generations.
-        """
-        filename = to_safe_filename(str(self.experiment_id))
-        metadata_file = generations_path / f"{filename}.json"
-        data_folder = generations_path / "data" / f"{filename}"
-        if metadata_file.exists():
-            metadata_file.unlink()
-        if data_folder.exists():
-            shutil.rmtree(data_folder)
-
+    @model_validator(mode="before")
     @classmethod
-    def load_from_disk(cls, metadata_file_path: Path) -> "CachedGenerations":
-        """Loads the cached generations from a file.
-
-        Args:
-            metadata_file_path (Path): The path to the metadata file.
-
-        Returns:
-            (CachedGenerations): The loaded cached generations.
-        """
-        generations_path = metadata_file_path.parent
-
-        with open(metadata_file_path, "r") as f:
-            json_data = json.load(f)
-        experiment_id = ExperimentId(**json_data)
-
-        filename = to_safe_filename(str(experiment_id))
-        with disable_dataset_progress_bars():
-            generations_dataset = load_from_disk(generations_path / "data" / filename)
-        if isinstance(generations_dataset, DatasetDict):
-            raise ValueError(
-                "Intended to cache a single Dataset, but loaded a DatasetDict. "
-                "If you are using a standard Pipeline, please report this issue."
-            )
-
-        return cls(experiment_id=experiment_id, generations_dataset=generations_dataset)
-
-
-@dataclass
-class CachedEvaluationResult:
-    result_id: ResultId
-    evaluation_result: EvaluationResult
-
-    def save_to_disk(self, results_path: Path, exist_ok: bool = False) -> None:
-        """Saves the cached evaluation result to a file.
-
-        Args:
-            results_path (Path): The path to save the cached evaluation result.
-            exist_ok (bool): Whether to allow overwriting an existing file.
-        """
-        results_path.mkdir(parents=True, exist_ok=True)
-        filename = to_safe_filename(str(self.result_id))
-        metadata_file = results_path / f"{filename}.json"
-        if metadata_file.exists() and not exist_ok:
-            raise ValueError(
-                f"Result with ID {filename} already exists. "
-                "Either choose a different name or set exist_ok=True."
-            )
-
-        output_dict = {
-            "result_id": asdict(self.result_id),
-            "evaluation_result": asdict(self.evaluation_result),
+    def transform_lists_to_dicts(cls, values: dict) -> dict:
+        """Converts serialized lists back into dictionaries."""
+        values["generation"] = {
+            GenerationRecord.model_validate(k): ResultRecord.model_validate(v)
+            for k, v in values.get("generation", [])
         }
-        with open(metadata_file, "w") as f:
-            json.dump(output_dict, f, indent=4)
-
-    def remove_from_disk(self, results_path: Path) -> None:
-        """Removes the cached evaluation result from disk.
-
-        Args:
-            results_path (Path): The path to the cached evaluation result.
-        """
-        filename = to_safe_filename(str(self.result_id))
-        metadata_file = results_path / f"{filename}.json"
-        if metadata_file.exists():
-            metadata_file.unlink()
-
-    @classmethod
-    def load_from_disk(cls, metadata_file_path: Path) -> "CachedEvaluationResult":
-        """Loads the cached evaluation result from a file.
-
-        Args:
-            metadata_file_path (Path): The path to the metadata file.
-
-        Returns:
-            (CachedEvaluationResult): The loaded cached evaluation result.
-        """
-        with open(metadata_file_path, "r") as f:
-            json_data = json.load(f)
-        result_id = ResultId(**json_data["result_id"])
-        evaluation_result = EvaluationResult(**json_data["evaluation_result"])
-
-        return cls(result_id=result_id, evaluation_result=evaluation_result)
+        values["evaluation"] = {
+            EvaluationRecord.model_validate(k): ResultRecord.model_validate(v)
+            for k, v in values.get("evaluation", [])
+        }
+        return values
 
 
 class Project[T]:
     """An LLMScope project, tracking the performed experiments and their results."""
 
+    METADATA_FILE = "metadata.json"
+
     def __init__(
         self,
         name: str,
-        result_aggregator: ResultAggregator[T] | None = None,
-        cache_generations: bool = True,
-        cache_results: bool = True,
+        # result_aggregator: ResultAggregator[T] | None = None,
         load_existing: bool = True,
         reset_project: bool = False,
     ) -> None:
@@ -170,11 +85,9 @@ class Project[T]:
         """
         PROJECTS_PATH.mkdir(parents=True, exist_ok=True)
         self.name = name
-        if result_aggregator is None:
-            result_aggregator = DefaultAggregator()
-        self.result_aggregator = result_aggregator
-        self.cache_generations = cache_generations
-        self.cache_results = cache_results
+        # if result_aggregator is None:
+        #     result_aggregator = DefaultAggregator()
+        # self.result_aggregator = result_aggregator
 
         if reset_project:
             self.remove()
@@ -187,31 +100,9 @@ class Project[T]:
             )
         elif project_exists:
             self._load_existing_project()
-
-    def _load_existing_project(self) -> None:
-        """Loads an existing project from disk."""
-        for metadata_file in self.generations_path.glob("*.json"):
-            cached_generations = CachedGenerations.load_from_disk(metadata_file)
-            self.add_generations(
-                generations_dataset=cached_generations.generations_dataset,
-                experiment_id=cached_generations.experiment_id,
-                save_to_disk=False,
-                exist_ok=False,
-            )
-
-        for metadata_file in self.results_path.glob("*.json"):
-            cached_result = CachedEvaluationResult.load_from_disk(metadata_file)
-            self.add_result(
-                result=cached_result.evaluation_result,
-                experiment_id=cached_result.result_id,
-                save_to_disk=False,
-                exist_ok=False,
-            )
-
-    def remove(self) -> None:
-        """Removes the project from disk."""
-        if self.project_path.exists():
-            shutil.rmtree(self.project_path)
+        else:
+            self.records = ProjectRecords()
+            self._save()
 
     @property
     def project_path(self) -> Path:
@@ -219,189 +110,247 @@ class Project[T]:
         return PROJECTS_PATH / to_safe_filename(self.name)
 
     @property
-    def generations_path(self) -> Path:
-        """Returns the path to the generations directory."""
-        return self.project_path / "generations"
+    def generation_log_path(self) -> Path:
+        """Returns the path to the generation log directory."""
+        return self.project_path / "generation_logs"
 
     @property
-    def results_path(self) -> Path:
-        """Returns the path to the evaluation results directory."""
-        return self.project_path / "results"
+    def evaluation_log_path(self) -> Path:
+        """Returns the path to the evaluation log directory."""
+        return self.project_path / "evaluation_logs"
 
-    def add_generations(
-        self,
-        generations_dataset: Dataset,
-        experiment_id: ExperimentId,
-        save_to_disk: bool = True,
-        exist_ok: bool = False,
-    ) -> None:
-        """Adds generations to the project.
-
-        Args:
-            generations_dataset (Dataset): The dataset of generations to add.
-            experiment_id (ExperimentId): The ID data of the experiment associated
-                with the generations.
-            save_to_disk (bool, optional): Whether to save the generations to disk.
-                Defaults to True. This flag is ignored if `self.cache_generations` is
-                False.
-            exist_ok (bool, optional): Specifies whether to allow adding the generations
-                with the same ID multiple times when saving to disk (otherwise, the flag
-                has no effect). Defaults to False.
-        """
-        if save_to_disk and self.cache_generations:
-            cached_generations = CachedGenerations(
-                experiment_id=experiment_id,
-                generations_dataset=generations_dataset,
-            )
-            cached_generations.save_to_disk(self.generations_path, exist_ok=exist_ok)
-
-    def _retrieve_generations(
-        self, experiment_id: ExperimentId
-    ) -> CachedGenerations | None:
-        """Retrieves the generations for a given experiment ID, if they exist.
-
-        Args:
-            experiment_id (ExperimentId): The ID data of the experiment.
-
-        Returns:
-            (CachedGenerations | None): The cached generations, or None if not found.
-        """
-        filename = to_safe_filename(str(experiment_id))
-        metadata_file = self.generations_path / f"{filename}.json"
+    def _load_existing_project(self) -> None:
+        """Loads an existing project from disk."""
+        metadata_file = self.project_path / self.METADATA_FILE
         if not metadata_file.exists():
-            return None
-        cached_generations = CachedGenerations.load_from_disk(metadata_file)
-        return cached_generations
+            raise ValueError(f"Attempting to load a non-existent project {self.name}.")
 
-    def get_generations(self, experiment_id: ExperimentId) -> Dataset:
-        """Retrieves the generations for a given experiment ID, if they exist.
+        with open(metadata_file, "r", encoding="utf-8") as f:
+            self.records = ProjectRecords.model_validate_json(f.read())
+        self.cleanup_incomplete_logs()
 
-        Args:
-            experiment_id (ExperimentId): The ID data of the experiment.
+    def _save(self) -> None:
+        """Saves the project metadata to disk."""
+        self.project_path.mkdir(parents=True, exist_ok=True)
+        metadata_file = self.project_path / self.METADATA_FILE
+        with open(metadata_file, "w", encoding="utf-8") as f:
+            f.write(self.records.model_dump_json(indent=4))
 
-        Returns:
-            (Dataset): The dataset of generations, or None if not found.
-        """
-        cached_generations = self._retrieve_generations(experiment_id)
-        if cached_generations is None:
-            raise ValueError(
-                f"Generations for experiment {experiment_id} do not exist."
-            )
-        return cached_generations.generations_dataset
+    def remove(self) -> None:
+        """Removes the project from disk."""
+        if self.project_path.exists():
+            shutil.rmtree(self.project_path)
 
-    def remove_generations(self, experiment_id: ExperimentId) -> None:
-        """Removes the generations for a given experiment ID, if they exist.
-
-        Args:
-            experiment_id (ExperimentId): The ID data of the experiment.
-        """
-        cached_generations = self._retrieve_generations(experiment_id)
-        if cached_generations is not None:
-            cached_generations.remove_from_disk(self.generations_path)
-
-    def has_generations(self, experiment_id: ExperimentId) -> bool:
-        """Checks if generations exist for a given experiment ID.
-
-        Args:
-            experiment_id (ExperimentId): The ID data of the experiment.
-
-        Returns:
-            (bool): True if generations exist, False otherwise.
-        """
-        filename = to_safe_filename(str(experiment_id))
-        metadata_file = self.generations_path / f"{filename}.json"
-        return metadata_file.exists()
-
-    def add_result(
+    def _remove_log_file(
         self,
-        result: EvaluationResult,
-        experiment_id: ExperimentId,
-        save_to_disk: bool = True,
-        exist_ok: bool = False,
-    ) -> None:
-        """Adds a result to the project.
+        record: ResultRecord | None,
+    ):
+        """Removes the log file associated with the record, if it exists.
 
         Args:
-            result (EvaluationResult): The evaluation result to add.
-            experiment_id (ExperimentId): The ID data of the experiment associated
-                with the result.
-            save_to_disk (bool, optional): Whether to save the result to disk.
-                Defaults to True. This flag is ignored if `self.cache_results` is
-                False.
-            exist_ok (bool, optional): Specifies whether to allow adding the same
-                result multiple times when saving to disk (otherwise, the flag
-                has no effect). Defaults to False.
+            record (ResultRecord | None): The record associated with the log file.
         """
-        if save_to_disk and self.cache_results:
-            cached_result = CachedEvaluationResult(
-                result_id=experiment_id.to_result_id(metric_name=result.name),
-                evaluation_result=result,
+        if record is not None and record.log_location is not None:
+            log_path = Path(record.log_location)
+            if log_path.exists():
+                log_path.unlink()
+
+    def update_record(
+        self,
+        record_key: GenerationRecord | EvaluationRecord,
+        record_value: ResultRecord,
+    ):
+        """Updates the generation or evaluation record with the specified result.
+
+        Args:
+            record_key (GenerationRecord | EvaluationRecord): The generation
+                or evaluation record to update.
+            record_value (ResultRecord): The generation or evaluation result.
+        """
+        current_record = self.get_record(record_key)
+        if (
+            current_record is not None
+            and current_record.log_location is not None
+            and current_record.log_location != record_value.log_location
+        ):
+            self._remove_log_file(current_record)
+
+        if type(record_key) is GenerationRecord:
+            self.records.generation[record_key] = record_value
+        elif type(record_key) is EvaluationRecord:
+            self.records.evaluation[record_key] = record_value
+        else:
+            raise TypeError(f"Invalid record type: {type(record_key)}")
+        self._save()
+
+    def remove_record(
+        self,
+        record_key: GenerationRecord | EvaluationRecord,
+    ):
+        """Removes the generation or evaluation record.
+
+        Args:
+            record_key (GenerationRecord | EvaluationRecord): The generation
+                or evaluation record to remove.
+        """
+        if type(record_key) is GenerationRecord:
+            record = self.records.generation.pop(record_key, None)
+        elif type(record_key) is EvaluationRecord:
+            record = self.records.evaluation.pop(record_key, None)
+        else:
+            raise TypeError(f"Invalid record type: {type(record_key)}")
+
+        self._remove_log_file(record)
+        self._save()
+
+    def _retrieve_verify_record(self, record_key: GenerationRecord | EvaluationRecord):
+        """Retrieves and verifies the generation or evaluation record.
+
+        Args:
+            record_key (GenerationRecord | EvaluationRecord): The generation
+                or evaluation record to retrieve.
+
+        Returns:
+            ResultRecord | None: The generation or evaluation result, or None if
+                a valid record does not exist.
+        """
+        if type(record_key) is GenerationRecord:
+            retrieved_record = self.records.generation.get(record_key, None)
+        elif type(record_key) is EvaluationRecord:
+            retrieved_record = self.records.evaluation.get(record_key, None)
+        else:
+            raise TypeError(f"Invalid record type: {type(record_key)}")
+
+        if retrieved_record is not None and retrieved_record.log_location is not None:
+            log_path = Path(retrieved_record.log_location)
+            if not log_path.exists():
+                # Stale record, remove it
+                logger.warning(
+                    f"⚠️  Log file {log_path} does not exist. Removing stale record."
+                )
+                self.remove_record(record_key)
+                retrieved_record = None
+        return retrieved_record
+
+    def get_record(
+        self,
+        record_key: GenerationRecord | EvaluationRecord,
+    ) -> ResultRecord | None:
+        """Returns the generation or evaluation record for the given key.
+
+        Note: Calling this method may initialise a new evaluation record from
+        the matching generation record if the evaluation record does not exist
+        yet.
+
+        Args:
+            record_key (GenerationRecord | EvaluationRecord): The generation
+                or evaluation record to retrieve.
+
+        Returns:
+            ResultRecord | None: The generation or evaluation result, or None if
+                a valid record does not exist.
+        """
+        if type(record_key) is GenerationRecord:
+            return self._retrieve_verify_record(record_key)
+        elif type(record_key) is EvaluationRecord:
+            retrieved_eval_record = self._retrieve_verify_record(record_key)
+            if retrieved_eval_record is not None:
+                return retrieved_eval_record
+
+            generation_result = self._retrieve_verify_record(
+                record_key.generation_record
             )
-            cached_result.save_to_disk(self.results_path, exist_ok=exist_ok)
-        self.result_aggregator.add_result(
-            result=result,
-            experiment_id=experiment_id,
-            exist_ok=exist_ok,
-        )
+            if generation_result is None:
+                return None
+            if (
+                generation_result.status != "success"
+                or generation_result.log_location is None
+            ):
+                self.records.evaluation[record_key] = generation_result
+                self._save()
+                return generation_result
 
-    def _retrieve_result(self, result_id: ResultId) -> CachedEvaluationResult | None:
-        """Retrieves the result for a given experiment ID and metric name, if it exists.
+            # Create a new evaluation log based on the generation log
+            log_path = Path(generation_result.log_location)
+            evaluator_name = record_key.evaluator_name
+            log_time, core_name, random_id = log_path.stem.split("_", 2)
+            new_log_path = (
+                self.evaluation_log_path
+                / f"{log_time}_{core_name}-{evaluator_name}_{random_id}{log_path.suffix}"
+            )
+            new_log_path.parent.mkdir(parents=True, exist_ok=True)
+            if not new_log_path.exists():
+                shutil.copy(log_path, new_log_path)
+            new_record = ResultRecord(
+                log_location=str(new_log_path),
+            )
+            self.records.evaluation[record_key] = new_record
+            self._save()
+            return new_record
+        else:
+            raise TypeError(f"Invalid record type: {type(record_key)}")
 
-        Args:
-            result_id (ResultId): The ID data of the result to retrieve.
-
-        Returns:
-            (CachedEvaluationResult | None): The cached evaluation result.
-        """
-        filename = to_safe_filename(str(result_id))
-        metadata_file = self.results_path / f"{filename}.json"
-        if not metadata_file.exists():
-            return None
-        cached_result = CachedEvaluationResult.load_from_disk(metadata_file)
-        return cached_result
-
-    def get_result(self, result_id: ResultId) -> EvaluationResult:
-        """Retrieves the result for a given experiment ID and metric name.
-
-        Args:
-            result_id (ResultId | None): The ID data of the result to retrieve.
-                If None, the method will return None.
-
-        Returns:
-            (EvaluationResult): The evaluation result, or None if not found.
-        """
-        cached_result = self._retrieve_result(result_id)
-        if cached_result is None:
-            raise ValueError(f"Result with ID {result_id} does not exist.")
-        return cached_result.evaluation_result
-
-    def remove_result(self, result_id: ResultId) -> None:
-        """Removes the result for a given experiment ID and metric name, if it exists.
+    def get_eval_log(
+        self,
+        record_key: GenerationRecord | EvaluationRecord,
+    ) -> EvalLog | None:
+        """Returns the evaluation log for the given record key.
 
         Args:
-            result_id (ResultId): The ID data of the result to remove.
-        """
-        cached_result = self._retrieve_result(result_id)
-        if cached_result is not None:
-            cached_result.remove_from_disk(self.results_path)
-
-    def has_result(self, result_id: ResultId) -> bool:
-        """Checks if a result exists for a given experiment ID and metric name.
-
-        Args:
-            result_id (ResultId): The ID data of the result to check.
+            record_key (GenerationRecord | EvaluationRecord): The generation
+                or evaluation record to retrieve.
 
         Returns:
-            (bool): True if the result exists, False otherwise.
+            EvalLog | None: The evaluation log, or None if a valid log does not
+                exist.
         """
-        filename = to_safe_filename(str(result_id))
-        metadata_file = self.results_path / f"{filename}.json"
-        return metadata_file.exists()
+        record = self.get_record(record_key)
+        if record is not None and record.log_location is not None:
+            log_path = Path(record.log_location)
+            if log_path.exists():
+                return read_eval_log(str(log_path))
 
-    def get_result_summary(self) -> T:
-        """Returns a summary of the results.
+    def get_incomplete_logs(
+        self,
+        type: Literal["generation", "evaluation"],
+    ) -> list[EvalLog]:
+        """Returns a list of incomplete logs in the project directory.
 
         Returns:
-            (T): The summary of the results.
+            list[EvalLog]: A list of incomplete logs.
         """
-        return self.result_aggregator.return_results()
+        if type == "generation":
+            log_path = self.generation_log_path
+            known_logs = [
+                v.log_location
+                for v in self.records.generation.values()
+                if v.log_location
+            ]
+        elif type == "evaluation":
+            log_path = self.evaluation_log_path
+            known_logs = [
+                v.log_location
+                for v in self.records.evaluation.values()
+                if v.log_location
+            ]
+        else:
+            raise ValueError(f"Invalid log type: {type}")
+
+        incomplete_logs = []
+        extensions = [".json", ".eval"]
+        for ext in extensions:
+            for log_file in log_path.glob(f"*{ext}"):
+                if str(log_file) not in known_logs:
+                    loaded_log = read_eval_log(str(log_file))
+                    incomplete_logs.append(loaded_log)
+        return incomplete_logs
+
+    def cleanup_incomplete_logs(self):
+        """Removes all incomplete logs in the project directory."""
+        incomplete_logs = self.get_incomplete_logs(
+            "generation"
+        ) + self.get_incomplete_logs("evaluation")
+        for log in incomplete_logs:
+            log_path = Path(log.location)
+            if log_path.exists():
+                log_path.unlink()
