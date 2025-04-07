@@ -1,0 +1,14 @@
+[
+  {
+    "id": "summarization",
+    "name": "Summarization",
+    "description": "Generating concise summaries from longer text.",
+    "type": "task"
+  },
+  {
+    "id": "qa",
+    "name": "Question Answering",
+    "description": "Answering questions based on provided context.",
+    "type": "task"
+  }
+]

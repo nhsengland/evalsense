@@ -1,0 +1,14 @@
+[
+  {
+    "id": "automated",
+    "name": "Automated",
+    "description": "Fully automated evaluation metric.",
+    "type": "category"
+  },
+  {
+    "id": "human-eval",
+    "name": "Human Evaluation",
+    "description": "Manual review by human evaluators.",
+    "type": "category"
+  }
+]

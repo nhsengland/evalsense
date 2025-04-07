@@ -1,0 +1,52 @@
+[
+  {
+    "id": "rouge-l",
+    "name": "ROUGE-L",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Measures longest common subsequence between output and reference.",
+    "description_long_file": "rouge-l.md",
+    "link_implementation": "https://pypi.org/project/rouge-score/",
+    "reference_requirement": "required",
+    "supported_tasks": ["summarization"],
+    "assessed_qualities": [
+      { "id": "accuracy", "coverage": "Partial" },
+      { "id": "fluency", "coverage": "Poor" }
+    ],
+    "identified_risks": [],
+    "output_values": "F1 score between 0 and 1. Higher is better.",
+    "advantages": ["Automated", "Fast", "Widely used benchmark"],
+    "disadvantages": [
+      "Poor correlation with human judgment",
+      "Doesn't capture factual errors well"
+    ],
+    "references": [
+      { "name": "Lin, 2004", "url": "https://aclanthology.org/W04-1013/" }
+    ]
+  },
+  {
+    "id": "expert-accuracy-review",
+    "name": "Expert Accuracy Review",
+    "type": "method",
+    "category": "human-eval",
+    "description_short": "Clinicians review output for factual correctness.",
+    "description_long_file": "expert-accuracy.md",
+    "link_implementation": null,
+    "reference_requirement": "optional",
+    "supported_tasks": ["summarization", "q_and_a"],
+    "assessed_qualities": [{ "id": "accuracy", "coverage": "Very Good" }],
+    "identified_risks": [{ "id": "hallucination", "coverage": "Good" }],
+    "output_values": "Likert scale (1-5) or binary (Correct/Incorrect). Defined by rubric.",
+    "advantages": [
+      "Gold standard for clinical accuracy",
+      "Can catch nuanced errors"
+    ],
+    "disadvantages": [
+      "Slow",
+      "Expensive",
+      "Requires expert time",
+      "Subjectivity possible"
+    ],
+    "references": []
+  }
+]

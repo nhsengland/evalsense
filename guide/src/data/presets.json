@@ -1,0 +1,32 @@
+[
+  {
+    "id": "preset_summarization_accuracy",
+    "name": "Medical Summary Accuracy",
+    "description": "Focuses on ensuring factual accuracy in clinical note summarization.",
+    "guideState": {
+      "activeStepId": "suggestions",
+      "answers": {
+        "q_task_type": "summarization",
+        "q_qualities": ["accuracy"],
+        "q_risks": ["hallucination"],
+        "q_references": "yes"
+      },
+      "selectedMethodIds": []
+    }
+  },
+  {
+    "id": "preset_patient_qa_safety",
+    "name": "Patient Q&A Safety",
+    "description": "Prioritizes safety and avoids harmful content in patient-facing Q&A.",
+    "guideState": {
+      "activeStepId": "suggestions",
+      "answers": {
+        "q_task_type": "q_and_a",
+        "q_qualities": ["accuracy"],
+        "q_risks": ["harmful-content", "bias"],
+        "q_references": "no"
+      },
+      "selectedMethodIds": []
+    }
+  }
+]

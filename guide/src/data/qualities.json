@@ -1,0 +1,14 @@
+[
+  {
+    "id": "accuracy",
+    "name": "Correctness/Factuality",
+    "description": "Correctness of the generated information.",
+    "type": "quality"
+  },
+  {
+    "id": "fluency",
+    "name": "Fluency/Readability",
+    "description": "How natural and understandable the output is.",
+    "type": "quality"
+  }
+]
