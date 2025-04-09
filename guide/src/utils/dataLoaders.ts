@@ -19,9 +19,25 @@ const riskData: Risk[] = riskDataJson as Risk[];
 const categoryData: Category[] = categoryDataJson as Category[];
 const methodData: Method[] = methodDataJson as Method[];
 
-type DataKey = "tasks" | "qualities" | "risks" | "categories" | "methods";
+type DataLookup = {
+  tasks: Map<string, Task>;
+  qualities: Map<string, Quality>;
+  risks: Map<string, Risk>;
+  categories: Map<string, Category>;
+  methods: Map<string, Method>;
+};
 
-const dataMap: Record<DataKey, BaseItem[]> = {
+type DataMap = {
+  tasks: Task[];
+  qualities: Quality[];
+  risks: Risk[];
+  categories: Category[];
+  methods: Method[];
+};
+
+type MapValue<T> = T extends Map<string, infer V> ? V : never;
+
+const dataMap: DataMap = {
   tasks: taskData,
   qualities: qualityData,
   risks: riskData,
@@ -29,7 +45,7 @@ const dataMap: Record<DataKey, BaseItem[]> = {
   methods: methodData,
 };
 
-const dataLookups: Record<DataKey, Map<string, BaseItem>> = {
+const dataLookups: DataLookup = {
   tasks: new Map(taskData.map((item) => [item.id, item])),
   qualities: new Map(qualityData.map((item) => [item.id, item])),
   risks: new Map(riskData.map((item) => [item.id, item])),
@@ -37,28 +53,23 @@ const dataLookups: Record<DataKey, Map<string, BaseItem>> = {
   methods: new Map(methodData.map((item) => [item.id, item])),
 };
 
-export function getData(key: DataKey): BaseItem[] {
-  return dataMap[key] || [];
+export function getData<K extends keyof DataMap>(key: K): DataMap[K] {
+  return dataMap[key];
 }
 
-export function getItemById<T extends BaseItem>(
-  key: DataKey,
+export function getItemById<K extends keyof DataLookup>(
+  key: K,
   id: string
-): T | undefined {
-  return dataLookups[key]?.get(id) as T | undefined;
+): MapValue<DataLookup[K]> | undefined {
+  const map = dataLookups[key] as Map<string, MapValue<DataLookup[K]>>;
+  return map.get(id);
 }
 
-export function getItems<T extends BaseItem>(key: DataKey): T[] {
-  const data = dataMap[key];
-  return data.map((item) => item as T);
-}
-
-export function getItemsByIds<T extends BaseItem>(
-  key: DataKey,
-  ids: string[] | undefined
-): T[] {
-  if (!Array.isArray(ids)) return [];
-  const lookup = dataLookups[key];
+export function getItemsByIds<K extends keyof DataLookup>(
+  key: K,
+  ids: string[]
+): MapValue<DataLookup[K]>[] {
+  const lookup = dataLookups[key] as Map<string, MapValue<DataLookup[K]>>;
   if (!lookup) return [];
-  return ids.map((id) => lookup.get(id)).filter(Boolean) as T[];
+  return ids.map((id) => lookup.get(id)).filter(Boolean);
 }

@@ -7,7 +7,7 @@ import Alert from "@mui/material/Alert";
 
 import CatalogueFilter from "@site/src/components/CatalogueFilter/CatalogueFilter";
 import MethodCard from "@site/src/components/MethodCard/MethodCard";
-import methodsDataJson from "@site/src/data/methods.json";
+import { getData } from "@site/src/utils/dataLoaders";
 import { Method } from "@site/src/types/evaluation.types";
 
 // Define filter state type
@@ -18,8 +18,6 @@ interface CatalogueFilters {
   risks?: string[];
   categories?: string[];
 }
-
-const methodsData: Method[] = methodsDataJson as Method[];
 
 export default function CataloguePage() {
   const [filters, setFilters] = useState<CatalogueFilters>({});
@@ -33,7 +31,7 @@ export default function CataloguePage() {
       categories = [],
     } = filters;
 
-    return methodsData.filter((method) => {
+    return getData("methods").filter((method) => {
       // Text search
       if (searchText) {
         const lowerSearch = searchText.toLowerCase();

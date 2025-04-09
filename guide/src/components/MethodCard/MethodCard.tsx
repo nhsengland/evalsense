@@ -32,7 +32,7 @@ const MethodCard: React.FC<MethodCardProps> = ({
 
   if (!method) return null;
 
-  const category = getItemById<Category>("categories", method.category);
+  const category = getItemById("categories", method.category);
   const categoryName = category?.name || method.category;
 
   let coverageInfo: string | null = null;

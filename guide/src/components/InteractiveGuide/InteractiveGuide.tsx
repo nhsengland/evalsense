@@ -22,7 +22,6 @@ import {
   StepLabel,
   Tooltip,
   Snackbar,
-  SnackbarContent,
 } from "@mui/material";
 import ReplayIcon from "@mui/icons-material/Replay";
 

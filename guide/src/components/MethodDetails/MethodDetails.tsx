@@ -10,6 +10,7 @@ import Link from "@mui/material/Link";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import ReactMarkdown from "react-markdown";
+import { getItemById } from "@site/src/utils/dataLoaders";
 
 // Basic styling for the modal content
 const style = {
@@ -27,16 +28,10 @@ const style = {
   overflowY: "auto",
 };
 
-// Placeholder for category lookup - ideally load dynamically
-const categoryLookup = {
-  "auto-ref-based": { name: "Automated Reference-Based" },
-  "human-expert": { name: "Human Expert Evaluation" },
-};
-
 export default function MethodDetailsModal({ method, open, onClose }) {
   if (!method) return null;
 
-  const categoryName = categoryLookup[method.category]?.name || method.category;
+  const categoryName = getItemById("categories", method.category).name;
 
   // TODO: Implement loading long description from MD file if needed
   const longDescription = method.description_long_file

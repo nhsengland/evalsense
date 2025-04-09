@@ -47,10 +47,7 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
   }): string => {
     if (option.label) return option.label;
     if (questionConfig.source_data_key) {
-      const item = getItemById<BaseItem>(
-        questionConfig.source_data_key,
-        option.value
-      );
+      const item = getItemById(questionConfig.source_data_key, option.value);
       return item?.name || option.value;
     }
     return option.value;

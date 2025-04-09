@@ -25,11 +25,8 @@ export function filterAndRankMethods(answers: GuideAnswers): SuggestionsData {
   const taskType = answers.q_task_type as string | undefined;
   const noReference = answers.q_references === "no";
 
-  const desiredQualities = getItemsByIds<Quality>(
-    "qualities",
-    desiredQualityIds
-  );
-  const desiredRisks = getItemsByIds<Risk>("risks", desiredRiskIds);
+  const desiredQualities = getItemsByIds("qualities", desiredQualityIds);
+  const desiredRisks = getItemsByIds("risks", desiredRiskIds);
 
   const filtered = allMethods.filter((method) => {
     // 1. Task suitability check
@@ -84,7 +81,7 @@ export function calculateCoverage(
   desiredQualities: Quality[],
   desiredRisks: Risk[]
 ): CoverageResult {
-  const selectedMethods = getItemsByIds<Method>("methods", selectedMethodIds);
+  const selectedMethods = getItemsByIds("methods", selectedMethodIds);
   const coverageMap: CoverageMap = {};
   const uncovered: UncoveredItems = {
     qualities: [...desiredQualities],
