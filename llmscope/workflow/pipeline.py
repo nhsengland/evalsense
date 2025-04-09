@@ -315,7 +315,7 @@ class Pipeline[T]:
                 eval_retry_kwargs=eval_retry_kwargs,
             )
         self._cleanup_active_model()
-        logger.info("ℹ️  Generation tasks completed.")
+        logger.info("✨  Generation tasks completed.")
 
     def evaluate(
         self,
@@ -429,7 +429,7 @@ class Pipeline[T]:
                 raise KeyboardInterrupt()
 
         self._cleanup_active_model()
-        logger.info("ℹ️  Evaluation tasks completed.")
+        logger.info("✨  Evaluation tasks completed.")
 
     def run(
         self,

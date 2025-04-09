@@ -93,7 +93,7 @@ def main():
         evaluators=[bleu_evaluator],
     )
 
-    aci_project = Project(name="ACI-Bench Evaluation")
+    aci_project = Project(name="ACI-Bench Evaluation", reset_project=True)
 
     aci_pipeline = Pipeline(
         experiments=experiment_config,

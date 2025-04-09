@@ -21,16 +21,6 @@ class ModelRecord(BaseModel, frozen=True):
     model_args_json: str = "{}"
     generation_args_json: str = "{}"
 
-    @property
-    def model_args(self) -> dict[str, Any]:
-        """Returns the model arguments as a dictionary."""
-        return json.loads(self.model_args_json)
-
-    @property
-    def generation_args(self) -> dict[str, Any]:
-        """Returns the generation arguments as a dictionary."""
-        return json.loads(self.generation_args_json)
-
 
 @dataclass
 class ModelConfig:
@@ -50,16 +40,29 @@ class ModelConfig:
     @property
     def record(self) -> ModelRecord:
         """Returns a record of the model configuration."""
+        # Remove arguments not directly affecting the used model or generation
+        # procedure, so that we can match equivalent records.
+        filtered_model_args = {
+            k: v
+            for k, v in self.model_args.items()
+            if k not in {"device", "gpu_memory_utilization", "download_dir"}
+        }
+        filtered_generation_args = {
+            k: v
+            for k, v in self.generation_args.items()
+            if k not in {"max_connections"}
+        }
+
         return ModelRecord(
             name=self.name,
             model_args_json=json.dumps(
-                self.model_args,
+                filtered_model_args,
                 default=str,
                 sort_keys=True,
                 ensure_ascii=True,
             ),
             generation_args_json=json.dumps(
-                dict(**self.generation_args),
+                filtered_generation_args,
                 default=str,
                 sort_keys=True,
                 ensure_ascii=True,
