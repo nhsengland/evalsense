@@ -24,21 +24,6 @@ from llmscope.workflow.project import Project
 logger = get_logger(__name__)
 
 
-@task
-def create_task(experiment: ExperimentConfig, dataset: Dataset) -> Task:
-    """Creates an Inspect AI task for the experiment.
-
-    Args:
-        experiment (ExperimentConfig): The experiment configuration.
-        dataset (Dataset): The dataset to process.
-    """
-    return Task(
-        dataset=dataset,
-        solver=experiment.generation_steps.solver,
-        name=to_safe_filename(experiment.generation_record.label),
-    )
-
-
 class Pipeline[T]:
     """A pipeline for evaluating LLMs."""
 
@@ -157,28 +142,32 @@ class Pipeline[T]:
         """
         prev_record = self.project.get_record(experiment.generation_record)
         interrupted = False
+
+        @task
+        def create_task(task_name: str) -> Task:
+            """Creates an Inspect AI task for the experiment.
+
+            Args:
+                task_name (str): The name of the task.
+
+            Returns:
+                Task: The Inspect AI task.
+            """
+            return Task(
+                dataset=inspect_dataset,
+                solver=experiment.generation_steps.solver,
+                name=task_name,
+            )
+
         # We need to create the task even when resuming from a previous log,
         # otherwise Inspect will not be able to resolve it.
-        task = create_task(
-            experiment=experiment,
-            dataset=inspect_dataset,
-        )
-        # TODO: Full implementation of resuming from logs is currently blocked
-        # by issues with Inspect AI. See:
-        # #1556 https://github.com/UKGovernmentBEIS/inspect_ai/issues/1556
-        # #1565 https://github.com/UKGovernmentBEIS/inspect_ai/issues/1565
-        RESUMING_FROM_LOG_NOT_YET_IMPLEMENTED = True
-        if (
-            prev_record is None
-            or prev_record.log_location is None
-            or force_rerun
-            or RESUMING_FROM_LOG_NOT_YET_IMPLEMENTED
-        ):
+        inspect_task = create_task(to_safe_filename(experiment.generation_record.label))
+        if prev_record is None or prev_record.log_location is None or force_rerun:
             self.project.remove_record(experiment.generation_record)
             self.project.update_record(experiment.generation_record, ResultRecord())
             try:
                 eval_logs = eval(
-                    tasks=task,
+                    tasks=inspect_task,
                     model=self._active_model,
                     log_dir=str(self.project.generation_log_path),
                     score=False,
@@ -224,6 +213,11 @@ class Pipeline[T]:
             elif eval_log.status == "cancelled":
                 error_message = "Generation was cancelled."
                 logger.error("❌  Generation was cancelled.")
+            elif eval_log.status == "started":
+                error_message = "Generation was started but did not run to completion."
+                logger.error(
+                    "❌  Generation was started but did not run to completion."
+                )
             elif eval_log.status == "success":
                 status = "success"
                 error_message = None

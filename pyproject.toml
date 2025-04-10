@@ -12,7 +12,7 @@ dependencies = [
     "datasets>=3.2.0",
     "evaluate>=0.4.3",
     "flashinfer-python<0.2.3",
-    "inspect-ai>=0.3.85",
+    "inspect-ai>=0.3.87",
     "matplotlib>=3.10.0",
     "numpy<2.0.0",
     "openai>=1.65.3",
