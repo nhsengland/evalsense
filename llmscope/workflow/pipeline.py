@@ -10,22 +10,16 @@ from tqdm.auto import tqdm
 
 from llmscope.evaluation import (
     Evaluator,
-    ExperimentConfig,
     ExperimentBatchConfig,
+    ExperimentConfig,
+    ExperimentDefinitions,
     ResultRecord,
     ScorerFactory,
 )
-
 from llmscope.logging import get_logger
 from llmscope.generation import ModelConfig
 from llmscope.utils.files import to_safe_filename
 from llmscope.workflow.project import Project
-
-type ExperimentDefinitions = (
-    ExperimentConfig
-    | ExperimentBatchConfig
-    | list[ExperimentConfig | ExperimentBatchConfig]
-)
 
 logger = get_logger(__name__)
 

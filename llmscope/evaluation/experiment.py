@@ -10,6 +10,11 @@ from llmscope.generation import GenerationSteps, ModelConfig, ModelRecord
 from llmscope.tasks import DefaultTaskPreprocessor, TaskPreprocessor
 
 type RecordStatus = Literal["started", "success", "cancelled", "error"]
+type ExperimentDefinitions = (
+    ExperimentConfig
+    | ExperimentBatchConfig
+    | list[ExperimentConfig | ExperimentBatchConfig]
+)
 
 
 class ResultRecord(BaseModel, frozen=True):

@@ -1,14 +1,14 @@
 from llmscope.evaluation.evaluator import Evaluator, ScorerFactory
 from llmscope.evaluation.experiment import (
     EvaluationRecord,
-    ExperimentConfig,
     ExperimentBatchConfig,
+    ExperimentConfig,
+    ExperimentDefinitions,
     GenerationRecord,
     RecordStatus,
     ResultRecord,
     TaskConfig,
 )
-# from llmscope.evaluation.result_aggregator import ResultAggregator, ResultCategory
 
 __all__ = [
     "Evaluator",
@@ -16,10 +16,9 @@ __all__ = [
     "EvaluationRecord",
     "ExperimentConfig",
     "ExperimentBatchConfig",
+    "ExperimentDefinitions",
     "GenerationRecord",
     "RecordStatus",
     "ResultRecord",
     "TaskConfig",
-    # "ResultAggregator",
-    # "ResultCategory",
 ]
