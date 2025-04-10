@@ -1,9 +1,5 @@
 name: Guide
-on:
-  push:
-    branches: [main]
-  pull_request:
-    types: [opened, reopened]
+on: [push, pull_request]
 
 jobs:
   typecheck:
@@ -30,7 +26,7 @@ jobs:
         with:
           node-version: '23'
       - run: npm ci
-      - run: npx eslint src/
+      - run: npx eslint src/ --max-warnings=0
 
   build:
     runs-on: ubuntu-latest

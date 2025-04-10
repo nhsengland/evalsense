@@ -50,7 +50,7 @@ dev = [
     "objgraph>=3.6.2",
     "pre-commit>=4.1.0",
     "pre-commit-hooks>=5.0.0",
-    "ruff>=0.9.5",
+    "ruff>=0.11.4",
 ]
 
 [tool.ruff]
