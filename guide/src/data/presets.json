@@ -1,6 +1,6 @@
 [
   {
-    "id": "preset_summarization_accuracy",
+    "id": "preset-summarisation-accuracy",
     "name": "Medical Summary Accuracy",
     "description": "Focuses on ensuring factual accuracy in clinical note summarization.",
     "guideState": {
@@ -15,7 +15,7 @@
     }
   },
   {
-    "id": "preset_patient_qa_safety",
+    "id": "preset-patient-qa-safety",
     "name": "Patient Q&A Safety",
     "description": "Prioritizes safety and avoids harmful content in patient-facing Q&A.",
     "guideState": {

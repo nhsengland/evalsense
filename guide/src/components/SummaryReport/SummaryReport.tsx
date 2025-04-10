@@ -1,4 +1,3 @@
-import React from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -12,20 +11,32 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { getItemById, getItemsByIds } from "@site/src/utils/dataLoaders";
 import { calculateCoverage } from "@site/src/utils/evaluationLogic";
+import { GuideAnswers } from "@site/src/types/evaluation.types";
 
-export default function SummaryReport({ answers, selectedMethodIds }) {
-  const task = getItemById("tasks", answers.q_task_type);
+interface SummaryReportProps {
+  answers: GuideAnswers;
+  selectedMethodIds: string[];
+}
+
+export default function SummaryReport({
+  answers,
+  selectedMethodIds,
+}: SummaryReportProps) {
+  const task = getItemById("tasks", answers.q_task_type as string);
   const desiredQualities = getItemsByIds(
     "qualities",
-    answers.q_qualities || []
+    (answers.q_qualities as string[]) || [],
   );
-  const desiredRisks = getItemsByIds("risks", answers.q_risks || []);
+  const desiredRisks = getItemsByIds(
+    "risks",
+    (answers.q_risks as string[]) || [],
+  );
   const selectedMethods = getItemsByIds("methods", selectedMethodIds);
 
   const { coverage, uncovered } = calculateCoverage(
     selectedMethodIds,
     desiredQualities,
-    desiredRisks
+    desiredRisks,
   );
 
   return (

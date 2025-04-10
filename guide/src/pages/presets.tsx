@@ -1,4 +1,3 @@
-import React from "react";
 import Layout from "@theme/Layout";
 import Container from "@mui/material/Container";
 import Typography from "@mui/material/Typography";
@@ -10,6 +9,7 @@ import Button from "@mui/material/Button";
 import presetData from "@site/src/data/presets.json";
 import { setPresetToLoad } from "@site/src/utils/localStorage";
 import useBaseUrl from "@docusaurus/useBaseUrl";
+import BrowserOnly from "@docusaurus/BrowserOnly";
 
 export default function PresetsPage() {
   const guideUrl = useBaseUrl("/guide"); // Get correct base URL for navigation
@@ -51,9 +51,18 @@ export default function PresetsPage() {
                   </Typography>
                 </CardContent>
                 <CardActions>
-                  <Button size="small" onClick={() => handleLoadPreset(preset)}>
-                    Load Preset
-                  </Button>
+                  <BrowserOnly>
+                    {() => {
+                      return (
+                        <Button
+                          size="small"
+                          onClick={() => handleLoadPreset(preset)}
+                        >
+                          Load Preset
+                        </Button>
+                      );
+                    }}
+                  </BrowserOnly>
                 </CardActions>
               </Card>
             </Grid>

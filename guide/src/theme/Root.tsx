@@ -1,6 +1,10 @@
-import React from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import { CssBaseline } from "@mui/material";
+import { ReactNode } from "react";
+
+interface RootProps {
+  children: ReactNode;
+}
 
 const theme = createTheme({
   colorSchemes: {
@@ -35,7 +39,7 @@ const theme = createTheme({
   },
 });
 
-export default function Root({ children }) {
+export default function Root({ children }: RootProps) {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

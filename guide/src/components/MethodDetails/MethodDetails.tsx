@@ -1,4 +1,3 @@
-import React from "react";
 import Modal from "@mui/material/Modal";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
@@ -11,9 +10,17 @@ import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import ReactMarkdown from "react-markdown";
 import { getItemById } from "@site/src/utils/dataLoaders";
+import { Method } from "@site/src/types/evaluation.types";
+
+// Define interface for component props
+interface MethodDetailsModalProps {
+  method: Method | undefined;
+  open: boolean;
+  onClose: () => void;
+}
 
 // Basic styling for the modal content
-const style = {
+const modalStyle = {
   position: "absolute",
   top: "50%",
   left: "50%",
@@ -28,7 +35,11 @@ const style = {
   overflowY: "auto",
 };
 
-export default function MethodDetailsModal({ method, open, onClose }) {
+export default function MethodDetailsModal({
+  method,
+  open,
+  onClose,
+}: MethodDetailsModalProps) {
   if (!method) return null;
 
   const categoryName = getItemById("categories", method.category).name;
@@ -36,7 +47,7 @@ export default function MethodDetailsModal({ method, open, onClose }) {
   // TODO: Implement loading long description from MD file if needed
   const longDescription = method.description_long_file
     ? `*Long description content from ${method.description_long_file} would go here.*`
-    : method.description_long || method.description_short; // Fallback
+    : method.description_short; // Fallback
 
   return (
     <Modal
@@ -45,7 +56,7 @@ export default function MethodDetailsModal({ method, open, onClose }) {
       aria-labelledby="method-details-title"
       aria-describedby="method-details-description"
     >
-      <Box sx={style}>
+      <Box sx={modalStyle}>
         <IconButton
           aria-label="close"
           onClick={onClose}

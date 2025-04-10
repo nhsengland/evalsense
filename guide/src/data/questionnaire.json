@@ -1,8 +1,8 @@
 {
-  "initial_question": "q_task_type",
+  "initial_question": "q-task-type",
   "questions": {
     "q_task_type": {
-      "id": "q_task_type",
+      "id": "q-task-type",
       "text": "What is the primary task of the LLM?",
       "type": "single-select",
       "source_data_key": "tasks",
@@ -10,8 +10,8 @@
       "maps_to": "supported_tasks",
       "next": "q_qualities"
     },
-    "q_qualities": {
-      "id": "q_qualities",
+    "q-qualities": {
+      "id": "q-qualities",
       "text": "Which qualities are most important to assess?",
       "type": "multi-select",
       "source_data_key": "qualities",
@@ -19,8 +19,8 @@
       "maps_to": "assessed_qualities",
       "next": "q_risks"
     },
-    "q_risks": {
-      "id": "q_risks",
+    "q-risks": {
+      "id": "q-risks",
       "text": "Which potential risks are you most concerned about?",
       "type": "multi-select",
       "source_data_key": "risks",
@@ -28,8 +28,8 @@
       "maps_to": "identified_risks",
       "next": "q_references"
     },
-    "q_references": {
-      "id": "q_references",
+    "q-references": {
+      "id": "q-references",
       "text": "Do you have gold-standard reference outputs available for evaluation?",
       "type": "single-select",
       "options": [

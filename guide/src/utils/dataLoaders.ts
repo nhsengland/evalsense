@@ -10,7 +10,6 @@ import {
   Risk,
   Category,
   Method,
-  BaseItem,
 } from "../types/evaluation.types";
 
 const taskData: Task[] = taskDataJson as Task[];
@@ -59,7 +58,7 @@ export function getData<K extends keyof DataMap>(key: K): DataMap[K] {
 
 export function getItemById<K extends keyof DataLookup>(
   key: K,
-  id: string
+  id: string,
 ): MapValue<DataLookup[K]> | undefined {
   const map = dataLookups[key] as Map<string, MapValue<DataLookup[K]>>;
   return map.get(id);
@@ -67,7 +66,7 @@ export function getItemById<K extends keyof DataLookup>(
 
 export function getItemsByIds<K extends keyof DataLookup>(
   key: K,
-  ids: string[]
+  ids: string[],
 ): MapValue<DataLookup[K]>[] {
   const lookup = dataLookups[key] as Map<string, MapValue<DataLookup[K]>>;
   if (!lookup) return [];

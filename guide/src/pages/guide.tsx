@@ -1,4 +1,3 @@
-import React from "react";
 import Layout from "@theme/Layout";
 import InteractiveGuide from "@site/src/components/InteractiveGuide/InteractiveGuide";
 import Typography from "@mui/material/Typography";

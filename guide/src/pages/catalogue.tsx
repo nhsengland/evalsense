@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Layout from "@theme/Layout";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
@@ -8,16 +8,7 @@ import Alert from "@mui/material/Alert";
 import CatalogueFilter from "@site/src/components/CatalogueFilter/CatalogueFilter";
 import MethodCard from "@site/src/components/MethodCard/MethodCard";
 import { getData } from "@site/src/utils/dataLoaders";
-import { Method } from "@site/src/types/evaluation.types";
-
-// Define filter state type
-interface CatalogueFilters {
-  searchText?: string;
-  tasks?: string[];
-  qualities?: string[];
-  risks?: string[];
-  categories?: string[];
-}
+import { CatalogueFilters } from "../types/evaluation.types";
 
 export default function CataloguePage() {
   const [filters, setFilters] = useState<CatalogueFilters>({});
@@ -55,7 +46,7 @@ export default function CataloguePage() {
       if (
         qualities.length > 0 &&
         !qualities.some((qualId) =>
-          method.assessed_qualities.some((q) => q.id === qualId)
+          method.assessed_qualities.some((q) => q.id === qualId),
         )
       ) {
         return false;
@@ -65,7 +56,7 @@ export default function CataloguePage() {
       if (
         risks.length > 0 &&
         !risks.some((riskId) =>
-          method.identified_risks.some((r) => r.id === riskId)
+          method.identified_risks.some((r) => r.id === riskId),
         )
       ) {
         return false;

@@ -1,4 +1,4 @@
-import React, { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 import ColorModeToggle from "@theme-original/ColorModeToggle";
 import type ColorModeToggleType from "@theme/ColorModeToggle";
 import type { WrapperProps } from "@docusaurus/types";

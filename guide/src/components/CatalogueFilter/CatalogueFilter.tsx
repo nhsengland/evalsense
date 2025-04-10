@@ -1,9 +1,14 @@
-import React from "react";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import Checkbox from "@mui/material/Checkbox";
 import { getData } from "@site/src/utils/dataLoaders";
+import { CatalogueFilters } from "@site/src/types/evaluation.types";
+
+interface CatalogueFilterProps {
+  filters: CatalogueFilters;
+  onFilterChange: (filters: CatalogueFilters) => void;
+}
 
 // Load data for filter options
 const taskOptions = getData("tasks");
@@ -11,7 +16,10 @@ const qualityOptions = getData("qualities");
 const riskOptions = getData("risks");
 const categoryOptions = getData("categories");
 
-export default function CatalogueFilter({ filters, onFilterChange }) {
+export default function CatalogueFilter({
+  filters,
+  onFilterChange,
+}: CatalogueFilterProps) {
   const handleAutocompleteChange = (field) => (event, newValue) => {
     // newValue is an array of selected option objects
     onFilterChange({

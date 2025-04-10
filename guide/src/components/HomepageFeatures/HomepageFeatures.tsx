@@ -2,6 +2,9 @@ import type { ReactNode } from "react";
 import clsx from "clsx";
 import Heading from "@theme/Heading";
 import styles from "./styles.module.css";
+import InteractiveGuideSvg from "@site/static/img/undraw_setup-wizard_wzp9.svg";
+import EvaluationMethodSvg from "@site/static/img/undraw_metrics_02ml.svg";
+import EvaluationPresetsSvg from "@site/static/img/undraw_select-option_a16s.svg";
 
 type FeatureItem = {
   title: string;
@@ -12,7 +15,7 @@ type FeatureItem = {
 const FeatureList: FeatureItem[] = [
   {
     title: "Interactive Guide",
-    Svg: require("@site/static/img/undraw_setup-wizard_wzp9.svg").default,
+    Svg: InteractiveGuideSvg,
     description: (
       <>
         Interactive guide helping you select the right evaluation methods for
@@ -22,7 +25,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: "Evaluation Method Catalogue",
-    Svg: require("@site/static/img/undraw_metrics_02ml.svg").default,
+    Svg: EvaluationMethodSvg,
     description: (
       <>
         Extensive catalogue of evaluation methods, including descriptions,
@@ -32,7 +35,7 @@ const FeatureList: FeatureItem[] = [
   },
   {
     title: "Evaluation Presets",
-    Svg: require("@site/static/img/undraw_select-option_a16s.svg").default,
+    Svg: EvaluationPresetsSvg,
     description: (
       <>
         Pre-configured presets for common use-cases, simplifying the selection

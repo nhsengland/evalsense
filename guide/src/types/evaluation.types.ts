@@ -8,11 +8,10 @@ export interface BaseItem {
   description?: string;
   type: ItemType;
 }
-
-export interface Category extends BaseItem {}
-export interface Task extends BaseItem {}
-export interface Quality extends BaseItem {}
-export interface Risk extends BaseItem {}
+export type Category = BaseItem;
+export type Task = BaseItem;
+export type Quality = BaseItem;
+export type Risk = BaseItem;
 
 export interface MethodQualityCoverage {
   id: string;
@@ -94,6 +93,15 @@ export interface Preset {
   name: string;
   description: string;
   guideState: Partial<GuideState>;
+}
+
+// --- Catalogue Types ---
+export interface CatalogueFilters {
+  searchText?: string;
+  tasks?: string[];
+  qualities?: string[];
+  risks?: string[];
+  categories?: string[];
 }
 
 // --- Coverage Analysis Types ---

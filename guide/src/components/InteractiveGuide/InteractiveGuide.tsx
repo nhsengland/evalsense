@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import Box from "@mui/material/Box";
 import Stepper from "@mui/material/Stepper";
 import Button from "@mui/material/Button";
@@ -48,18 +48,8 @@ const initialState = {
 };
 
 export default function InteractiveGuide() {
-  const [guideState, setGuideState] = useState(() => {
-    const presetState = loadAndClearPreset();
-    if (presetState) {
-      if (presetState.activeStepId === "suggestions") {
-        const results = filterAndRankMethods(presetState.answers);
-        presetState.suggestionsData = results;
-      }
-      return { ...initialState, ...presetState };
-    }
-    const loadedState = loadGuideState();
-    return loadedState || initialState;
-  });
+  const [guideInitialized, setGuideInitialized] = useState(false);
+  const [guideState, setGuideState] = useState(initialState);
 
   const { activeStepId, answers, selectedMethodIds, suggestionsData } =
     guideState;
@@ -69,6 +59,22 @@ export default function InteractiveGuide() {
 
   const activeStepIndex = steps.findIndex((step) => step.id === activeStepId);
   const currentQuestionConfig = getQuestionConfig(activeStepId);
+
+  useEffect(() => {
+    if (!guideInitialized) {
+      const presetState = loadAndClearPreset();
+      if (presetState) {
+        if (presetState.activeStepId === "suggestions") {
+          const results = filterAndRankMethods(presetState.answers);
+          presetState.suggestionsData = results;
+        }
+        return { ...initialState, ...presetState };
+      }
+      const loadedState = loadGuideState();
+      setGuideInitialized(true);
+      setGuideState(loadedState || initialState);
+    }
+  }, [guideInitialized]);
 
   useEffect(() => {
     saveGuideState({
@@ -90,7 +96,12 @@ export default function InteractiveGuide() {
       updateState({ suggestionsData: results });
       setIsLoadingSuggestions(false);
     }
-  }, [guideState.activeStepId]);
+  }, [
+    guideState.activeStepId,
+    guideState.suggestionsData,
+    guideState.answers,
+    isLoadingSuggestions,
+  ]);
 
   const updateState = (newState) => {
     setGuideState((prevState) => ({ ...prevState, ...newState }));

@@ -8,11 +8,7 @@ import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import Box from "@mui/material/Box";
 import { getItemById } from "@site/src/utils/dataLoaders";
-import {
-  Question,
-  GuideAnswers,
-  BaseItem,
-} from "@site/src/types/evaluation.types";
+import { Question, GuideAnswers } from "@site/src/types/evaluation.types";
 
 interface QuestionStepProps {
   questionConfig: Question;
@@ -72,7 +68,7 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
                 key={option.value}
                 value={option.value}
                 control={<Radio />}
-                label={getOptionLabel(option)} // Use dynamic label getter
+                label={getOptionLabel(option)}
               />
             ))}
           </RadioGroup>
@@ -93,7 +89,7 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
                     value={option.value}
                   />
                 }
-                label={getOptionLabel(option)} // Use dynamic label getter
+                label={getOptionLabel(option)}
               />
             ))}
           </FormGroup>

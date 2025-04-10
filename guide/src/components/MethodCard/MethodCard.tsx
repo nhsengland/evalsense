@@ -7,12 +7,7 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 
 import MethodDetails from "@site/src/components/MethodDetails/MethodDetails";
-import {
-  Method,
-  Quality,
-  Risk,
-  Category,
-} from "@site/src/types/evaluation.types";
+import { Method, Quality, Risk } from "@site/src/types/evaluation.types";
 import { getItemById } from "@site/src/utils/dataLoaders";
 
 interface MethodCardProps {
