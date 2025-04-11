@@ -1,31 +1,40 @@
-# LLM Evaluation in Healthcare
-## NHSX Analytics Unit - PhD Internship Project
-
-### About the Project
+# LLMScope: LLM Evaluation
+<div align="center">
 
 [![status: experimental](https://github.com/GIScience/badges/raw/master/status/experimental.svg)](https://github.com/GIScience/badges#experimental)
+[![license: MIT](https://img.shields.io/badge/License-MIT-brightgreen)](https://github.com/nhsengland/llmscope/blob/main/LICENCE)
+[![LLMScope status](https://github.com/nhsengland/llmscope/actions/workflows/llmscope.yml/badge.svg)](https://github.com/nhsengland/llmscope/actions/workflows/llmscope.yml)
+[![Guide status](https://github.com/nhsengland/llmscope/actions/workflows/guide.yml/badge.svg)](https://github.com/nhsengland/llmscope/actions/workflows/guide.yml)
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff)](https://www.python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=white&style=flat)](https://react.dev/)
 
-This repository holds code for the {PROJECT NAME} {SHORT DESCRIPTION}
+</div>
+<div align="center">
 
-[Link to original project propsoal](https://nhsx.github.io/nhsx-internship-projects/)
+[![Python v3.12](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org/downloads/)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
+[![ESLint](https://img.shields.io/badge/ESLint-3A33D1?logo=eslint)](https://eslint.org/)
+
+</div>
+
+## About
+This repository holds a Python package enabling systematic evaluation of large language models (LLMs) on open-ended generation tasks, with a particular focus on healthcare and summarisation. It also includes supplementary documentation and assets related to the NHS England project on LLM evaluation, such as the code for an interactive LLM evaluation guide (located in the `guide/` directory`). You can find more information about the project in the [original project proposal](https://nhsx.github.io/nhsx-internship-projects/genai-eval/).
 
 _**Note:** Only public or fake data are shared in this repository._
 
-### Project Stucture
+## Project Stucture
 
-- The main code is found in the root of the repository (see Usage below for more information)
-- The accompanying [report](./reports/report.pdf) is also available in the `reports` folder
-- More information about the code usage can be found in the [model card](./model_card.md)
-- {OTHER REPO STRUCTURE}
+- The main code for the LLMScope Python package can be found under [`llmscope/`](https://github.com/nhsengland/llmscope/tree/main/llmscope).
+- The accompanying documentation is available in the [`docs/`](https://github.com/nhsengland/llmscope/tree/main/docs) folder.
+- Code for the interactive LLM evaluation guide is located under [`guide/`](https://github.com/nhsengland/llmscope/tree/main/guide).
+- Jupyter notebooks with the evaluation experiments and examples are located under [`notebooks/`](https://github.com/nhsengland/llmscope/tree/main/notebooks).
 
-### Built With
+## Getting Started
 
-[![Python v3.12.8](https://img.shields.io/badge/python-v3.12.8-blue.svg)](https://www.python.org/downloads/release/python-3128/)
-- {LIST OF MAIN PACKAGE VERSIONS}
-
-### Getting Started
-
-#### Installation for Development
+### Installation for Development
 
 To install the project for local development, you can follow the steps below:
 
@@ -33,31 +42,33 @@ To clone the repo:
 
 `git clone git@github.com:nhsengland/llmscope.git`
 
-To setup the environment for the project
+To setup the Python environment for the project:
 
 - Install [uv](https://github.com/astral-sh/uv) if it's not installed already
 - `uv sync --all-extras`
 - `source .venv/bin/activate`
 - `pre-commit install`
 
-### Usage
+To setup the Node environment for the LLM evaluation guide (located under [`guide/`](https://github.com/nhsengland/llmscope/tree/main/guide)):
+
+- Install [node](https://nodejs.org/en/download) if it's not installed already
+- `npm install` in the `guide/` directory
+- `npm run start` to run the development server
+
+## Usage
 {DESCRIPTION OF CODE}
 
-#### Outputs
+### Outputs
 {LIST AND DESCRIPTION OF OUTPUTS}
 
 {NOTES ON REPRODUCIBILITY OF RESULTS}
 
-#### Datasets
+### Datasets
 {DESCRIPTION AND LINKS TO DATASETS}
 
 {LINK TO FAKE DATA TO SUPPORT INITAIL CODE RUNS}
 
-### Roadmap
-
-See the {LINK TO REPO ISSUES} for a list of proposed features (and known issues).
-
-### Contributing
+## Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
@@ -69,7 +80,7 @@ Contributions are what make the open source community such an amazing place to l
 
 _See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidance._
 
-### License
+## License
 
 Unless stated otherwise, the codebase is released under [the MIT Licence][mit].
 This covers both the codebase and any sample code in the documentation.
@@ -85,6 +96,6 @@ of the [Open Government 3.0][ogl] licence.
 
 ### Contact
 
-To find out more about the [Analytics Unit](https://www.nhsx.nhs.uk/key-tools-and-info/nhsx-analytics-unit/) visit our [project website](https://nhsx.github.io/AnalyticsUnit/projects.html) or get in touch at [england.tdau@nhs.net](mailto:england.tdau@nhs.net).
+To find out more about the [NHS England Data Science](https://nhsengland.github.io/datascience/) visit our [project website](https://nhsengland.github.io/datascience/our_work/) or get in touch at [datascience@nhs.net](mailto:datascience@nhs.net).
 
 <!-- ### Acknowledgements -->
