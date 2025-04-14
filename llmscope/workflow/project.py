@@ -1,6 +1,6 @@
 from pathlib import Path
 import shutil
-from typing import Literal
+from typing import Literal, overload
 
 from inspect_ai.log import EvalLog, read_eval_log
 from pydantic import BaseModel, field_serializer, model_validator
@@ -9,11 +9,9 @@ from llmscope.constants import PROJECTS_PATH
 from llmscope.evaluation import (
     EvaluationRecord,
     GenerationRecord,
+    RecordStatus,
     ResultRecord,
-    # ResultAggregator,
 )
-
-# from llmscope.evaluation.aggregators import DefaultAggregator
 from llmscope.logging import get_logger
 from llmscope.utils.files import to_safe_filename
 
@@ -57,7 +55,7 @@ class ProjectRecords(BaseModel):
         return values
 
 
-class Project[T]:
+class Project:
     """An LLMScope project, tracking the performed experiments and their results."""
 
     METADATA_FILE = "metadata.json"
@@ -65,7 +63,6 @@ class Project[T]:
     def __init__(
         self,
         name: str,
-        # result_aggregator: ResultAggregator[T] | None = None,
         load_existing: bool = True,
         reset_project: bool = False,
     ) -> None:
@@ -85,9 +82,6 @@ class Project[T]:
         """
         PROJECTS_PATH.mkdir(parents=True, exist_ok=True)
         self.name = name
-        # if result_aggregator is None:
-        #     result_aggregator = DefaultAggregator()
-        # self.result_aggregator = result_aggregator
 
         if reset_project:
             self.remove()
@@ -159,6 +153,8 @@ class Project[T]:
         self,
         record_key: GenerationRecord | EvaluationRecord,
         record_value: ResultRecord,
+        *,
+        init_eval_record_from_generations: bool = False,
     ):
         """Updates the generation or evaluation record with the specified result.
 
@@ -166,8 +162,14 @@ class Project[T]:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to update.
             record_value (ResultRecord): The generation or evaluation result.
+            init_for_evaluation (bool): Whether to initialise a new evaluation
+                record if the evaluation record does not exist. Defaults to False.
+                This is only applicable if the record_key is an EvaluationRecord.
         """
-        current_record = self.get_record(record_key)
+        current_record = self.get_record(
+            record_key,
+            init_eval_record_from_generations=init_eval_record_from_generations,
+        )
         if (
             current_record is not None
             and current_record.log_location is not None
@@ -235,16 +237,22 @@ class Project[T]:
     def get_record(
         self,
         record_key: GenerationRecord | EvaluationRecord,
+        *,
+        init_eval_record_from_generations: bool = False,
     ) -> ResultRecord | None:
         """Returns the generation or evaluation record for the given key.
 
         Note: Calling this method may initialise a new evaluation record from
         the matching generation record if the evaluation record does not exist
-        yet.
+        yet and `init_eval_record_from_generations` is set to True.
 
         Args:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to retrieve.
+            init_eval_record_from_generations (bool): Whether to initialise a new
+                evaluation record if the evaluation record does not exist.
+                Defaults to False. This is only applicable if the record_key is
+                an EvaluationRecord.
 
         Returns:
             ResultRecord | None: The generation or evaluation result, or None if
@@ -254,7 +262,10 @@ class Project[T]:
             return self._retrieve_verify_record(record_key)
         elif type(record_key) is EvaluationRecord:
             retrieved_eval_record = self._retrieve_verify_record(record_key)
-            if retrieved_eval_record is not None:
+            if (
+                retrieved_eval_record is not None
+                or not init_eval_record_from_generations
+            ):
                 return retrieved_eval_record
 
             generation_result = self._retrieve_verify_record(
@@ -290,31 +301,90 @@ class Project[T]:
         else:
             raise TypeError(f"Invalid record type: {type(record_key)}")
 
-    def get_eval_log(
+    def get_log(
         self,
         record_key: GenerationRecord | EvaluationRecord,
+        *,
+        init_eval_record_from_generations: bool = False,
     ) -> EvalLog | None:
         """Returns the evaluation log for the given record key.
 
         Args:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to retrieve.
+            init_eval_record_from_generations (bool): Whether to initialise a new
+                evaluation record if the evaluation record does not exist. Defaults
+                to False. This is only applicable if the record_key is an
+                EvaluationRecord.
 
         Returns:
             EvalLog | None: The evaluation log, or None if a valid log does not
                 exist.
         """
-        record = self.get_record(record_key)
+        record = self.get_record(
+            record_key,
+            init_eval_record_from_generations=init_eval_record_from_generations,
+        )
         if record is not None and record.log_location is not None:
             log_path = Path(record.log_location)
             if log_path.exists():
                 return read_eval_log(str(log_path))
+
+    @overload
+    def get_logs(
+        self,
+        type: Literal["generation"],
+        status: RecordStatus | None = None,
+    ) -> dict[GenerationRecord, EvalLog]: ...
+    @overload
+    def get_logs(
+        self,
+        type: Literal["evaluation"],
+        status: RecordStatus | None = None,
+    ) -> dict[EvaluationRecord, EvalLog]: ...
+    def get_logs(
+        self,
+        type: Literal["generation", "evaluation"],
+        status: RecordStatus | None = None,
+    ) -> dict[GenerationRecord, EvalLog] | dict[EvaluationRecord, EvalLog]:
+        """Returns a dictionary of logs for the given type and status.
+
+        Args:
+            type (Literal["generation", "evaluation"]): The type of logs to retrieve.
+            status (RecordStatus | None): The status of the logs to retrieve.
+                Defaults to None.
+
+        Returns:
+            dict[GenerationRecord | EvaluationRecord, EvalLog]: A dictionary of logs.
+        """
+        if type == "generation":
+            records = self.records.generation
+        elif type == "evaluation":
+            records = self.records.evaluation
+        else:
+            raise ValueError(f"Invalid log type: {type}")
+
+        results = {}
+        for key, value in records.items():
+            if status is not None and value.status != status:
+                continue
+            if value.log_location is not None:
+                log_path = Path(value.log_location)
+                if log_path.exists():
+                    eval_log = read_eval_log(str(log_path))
+                    if eval_log is not None:
+                        results[key] = eval_log
+
+        return results
 
     def get_incomplete_logs(
         self,
         type: Literal["generation", "evaluation"],
     ) -> list[EvalLog]:
         """Returns a list of incomplete logs in the project directory.
+
+        Args:
+            type (Literal["generation", "evaluation"]): The type of logs to retrieve.
 
         Returns:
             list[EvalLog]: A list of incomplete logs.

@@ -24,13 +24,13 @@ from llmscope.workflow.project import Project
 logger = get_logger(__name__)
 
 
-class Pipeline[T]:
+class Pipeline:
     """A pipeline for evaluating LLMs."""
 
     def __init__(
         self,
         experiments: ExperimentDefinitions,
-        project: Project[T],
+        project: Project,
         maintain_order: bool = False,
     ):
         """Initializes a new Pipeline.
@@ -60,6 +60,18 @@ class Pipeline[T]:
         self.project = project
         self._active_model_config: ModelConfig | None = None
         self._active_model: Model | None = None
+
+    @property
+    def generation_experiments(self):
+        """Returns unique generation stages of the experiments."""
+        experiments = {e.generation_record: e for e in self.experiments}
+        return list(experiments.values())
+
+    @property
+    def evaluation_experiments(self):
+        """Returns unique evaluation stages of the experiments."""
+        experiments = {e.evaluation_record: e for e in self.experiments}
+        return list(experiments.values())
 
     def _cleanup_active_model(self):
         """Cleans up the active model if it exists."""
@@ -143,6 +155,8 @@ class Pipeline[T]:
         prev_record = self.project.get_record(experiment.generation_record)
         interrupted = False
 
+        # Inspect AI logs can only include serialisible task arguments, so we
+        # need to use a closure to pass the dataset and solvers to the task.
         @task
         def create_task(task_name: str) -> Task:
             """Creates an Inspect AI task for the experiment.
@@ -163,8 +177,9 @@ class Pipeline[T]:
         # otherwise Inspect will not be able to resolve it.
         inspect_task = create_task(to_safe_filename(experiment.generation_record.label))
         if prev_record is None or prev_record.log_location is None or force_rerun:
-            self.project.remove_record(experiment.generation_record)
             self.project.update_record(experiment.generation_record, ResultRecord())
+
+            # Try generating the model outputs.
             try:
                 eval_logs = eval(
                     tasks=inspect_task,
@@ -181,6 +196,8 @@ class Pipeline[T]:
                 f"🔁  Retrying generation using log: {prev_record.log_location}"
             )
             prev_log = read_eval_log(prev_record.log_location)
+
+            # Retry generation using the previous log
             try:
                 eval_logs = eval_retry(
                     tasks=prev_log,
@@ -191,6 +208,7 @@ class Pipeline[T]:
                 eval_logs = self.project.get_incomplete_logs(type="generation")
                 interrupted = isinstance(e, KeyboardInterrupt)
 
+        # Check generation status and update the project record
         status = "error"
         error_message = "Unknown error"
         log_location = None
@@ -232,6 +250,7 @@ class Pipeline[T]:
             ),
         )
 
+        # If user interrupted the generation, raise KeyboardInterrupt
         if interrupted:
             logger.critical("🛑  Execution was interrupted.")
             raise KeyboardInterrupt()
@@ -249,7 +268,7 @@ class Pipeline[T]:
         Args:
             show_progress (bool, optional): Whether to show a progress bar.
                 Defaults to True.
-            force_rerun (bool, optional): Whether to force rerun the experiments.
+            force_rerun (bool, optional): Whether to force rerunning the experiments.
                 Defaults to False.
             force_reload (bool, optional): Whether to force reloading and
                 reprocessing the datasets. Defaults to False.
@@ -261,18 +280,27 @@ class Pipeline[T]:
                 Defaults to empty dictionary when None.
         """
         for experiment in tqdm(
-            self.experiments, disable=not show_progress, desc="Experiment Generation"
+            self.generation_experiments,
+            disable=not show_progress,
+            desc="Experiment Generation",
         ):
             logger.info(
                 f"🔄  Starting generation for {experiment.generation_record.label}"
             )
+
+            # Check if we we already have existing generations
             prev_record = self.project.get_record(
                 experiment.generation_record,
             )
-            if prev_record is not None and prev_record.status == "success":
+            if (
+                prev_record is not None
+                and prev_record.status == "success"
+                and not force_rerun
+            ):
                 logger.info("⏭️  Generation skipped — already completed.")
                 continue
 
+            # Load the dataset
             logger.info(f"▶️  Loading dataset {experiment.dataset_manager.name}.")
             dataset_manager = experiment.dataset_manager
             hf_dataset = dataset_manager.load(
@@ -281,6 +309,7 @@ class Pipeline[T]:
                 force_retrieve=force_reload,
             )
 
+            # Preprocess the dataset
             logger.info(
                 "▶️  Preprocessing dataset with task preprocessor "
                 f"{experiment.task_preprocessor.name}."
@@ -324,7 +353,7 @@ class Pipeline[T]:
         """
         experiments_to_evaluate = [
             experiment
-            for experiment in self.experiments
+            for experiment in self.evaluation_experiments
             if experiment.evaluator is not None
         ]
         for experiment in tqdm(
@@ -335,13 +364,16 @@ class Pipeline[T]:
             logger.info(
                 f"🔄  Starting evaluation for {experiment.evaluation_record.label}"
             )
+
+            # Check if we have a record from the generations.
             prev_record = self.project.get_record(
                 experiment.evaluation_record,
+                init_eval_record_from_generations=True,
             )
             if prev_record is None or prev_record.log_location is None:
                 logger.error("❌  Evaluation skipped — no valid generations found.")
                 continue
-            if prev_record.status == "success":
+            if prev_record.status == "success" and not force_rerun:
                 logger.info("⏭️  Evaluation skipped — already completed.")
                 continue
 
@@ -357,7 +389,8 @@ class Pipeline[T]:
                     continue
                 scorer = scorer.create_scorer(self._load_model(evaluator.model_config))
 
-            init_score_log = self.project.get_eval_log(
+            # Retrieve the initial evaluation log.
+            init_score_log = self.project.get_log(
                 experiment.evaluation_record,
             )
             if init_score_log is None:
@@ -366,17 +399,22 @@ class Pipeline[T]:
                 )
                 continue
 
+            # Try scoring the model outputs in the log
             exception = None
             try:
                 score_log = score(
-                    log=init_score_log, scorers=scorer, action="overwrite"
+                    log=init_score_log,
+                    scorers=scorer,
+                    action="overwrite",
+                    **(score_kwargs or dict()),
                 )
             except BaseException as e:
-                score_log = self.project.get_eval_log(experiment.evaluation_record)
+                score_log = self.project.get_log(experiment.evaluation_record)
                 exception = e
             score_log = cast(EvalLog, score_log)
             write_eval_log(score_log, location=score_log.location)
 
+            # Check scoring status and update the project record
             status = "error"
             error_message = "Unknown error"
             log_location = None
@@ -412,6 +450,7 @@ class Pipeline[T]:
                 ),
             )
 
+            # If user interrupted the evaluation, raise KeyboardInterrupt
             if isinstance(exception, KeyboardInterrupt):
                 logger.critical("🛑  Execution was interrupted.")
                 raise KeyboardInterrupt()
