@@ -17,13 +17,13 @@ if "OPENAI_API_KEY" in os.environ:
 else:
     OPENAI_API_KEY = None
 
-if "LLMSCOPE_CACHE_DIR" in os.environ:
-    CACHE_PATH = Path(os.environ["LLMSCOPE_CACHE_DIR"])
+if "LLMSCOPE_STORAGE_DIR" in os.environ:
+    STORAGE_PATH = Path(os.environ["LLMSCOPE_STORAGE_DIR"])
 else:
-    CACHE_PATH = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
-DATA_PATH = CACHE_PATH / "datasets"
-MODELS_PATH = CACHE_PATH / "models"
-PROJECTS_PATH = CACHE_PATH / "projects"
+    STORAGE_PATH = Path(user_cache_dir(APP_NAME, APP_AUTHOR))
+DATA_PATH = STORAGE_PATH / "datasets"
+MODELS_PATH = STORAGE_PATH / "models"
+PROJECTS_PATH = STORAGE_PATH / "projects"
 
 DATASET_CONFIG_PATHS = [Path(__file__).parent / "dataset_config"]
 if "DATASET_CONFIG_PATH" in os.environ:
