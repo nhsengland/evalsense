@@ -1,7 +1,7 @@
 [project]
 name = "llmscope"
 version = "0.1.0"
-description = "Tools for evaluating large language models on healthcare tasks."
+description = "Tools for evaluating large language models."
 readme = "README.md"
 authors = [
     { name = "Adam Dejl", email = "adam.dejl18@imperial.ac.uk" }
@@ -21,6 +21,7 @@ dependencies = [
     "polars>=1.22.0",
     "pydantic>=2.10.6",
     "pyyaml>=6.0.2",
+    "rouge-score>=0.1.2",
     "tenacity>=9.0.0",
     "torch>=2.6",
     "tqdm>=4.67.1",
@@ -51,6 +52,16 @@ dev = [
     "pre-commit-hooks>=5.0.0",
     "pyright>=1.1.399",
     "ruff>=0.11.4",
+]
+
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "llmscope"
+]
+
+[tool.hatch.build.targets.wheel]
+only-include = [
+    "llmscope"
 ]
 
 [tool.ruff]

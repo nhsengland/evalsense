@@ -27,8 +27,7 @@ async def _load_bleu():
     return _bleu_fun
 
 
-@metric(name="BLEU")
-def bleu() -> MetricProtocol:
+def bleu_base() -> MetricProtocol:
     def metric(scores: list[SampleScore]) -> Value:
         bleu_module = evaluate.load("bleu")
         predictions = [score.score.metadata["prediction"] for score in scores]  # type: ignore
@@ -40,8 +39,12 @@ def bleu() -> MetricProtocol:
     return metric
 
 
-@scorer(name="BLEU Precision", metrics=[bleu()])
-def bleu_precision():
+@metric(name="BLEU")
+def bleu() -> MetricProtocol:
+    return bleu_base()
+
+
+def bleu_precision_base():
     async def score(state: TaskState, target: Target):
         bleu_module = await _load_bleu()
         predictions = [state.output.completion]
@@ -57,6 +60,11 @@ def bleu_precision():
         )
 
     return score
+
+
+@scorer(name="BLEU Precision", metrics=[bleu()])
+def bleu_precision():
+    return bleu_precision_base()
 
 
 bleu_evaluator = Evaluator("BLEU", scorer=bleu_precision())
