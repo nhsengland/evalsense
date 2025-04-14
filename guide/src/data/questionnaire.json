@@ -1,6 +1,12 @@
 {
-  "initial_question": "q_task_type",
+  "initial_question": "welcome",
   "questions": {
+    "welcome": {
+      "id": "welcome",
+      "text": "Welcome to the LLM Evaluation Guide",
+      "type": "info",
+      "next": "q_task_type"
+    },
     "q_task_type": {
       "id": "q_task_type",
       "text": "What is the primary task of the LLM?",

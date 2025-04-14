@@ -8,6 +8,7 @@ import questionnaireData from "@site/src/data/questionnaire.json";
 import QuestionStep from "../QuestionStep/QuestionStep";
 import SuggestionStep from "../SuggestionStep/SuggestionStep";
 import SummaryReport from "@site/src/components/SummaryReport/SummaryReport";
+import WelcomeStep from "../WelcomeStep/WelcomeStep";
 import { filterAndRankMethods } from "@site/src/utils/evaluationLogic";
 import {
   saveGuideState,
@@ -28,6 +29,7 @@ import ReplayIcon from "@mui/icons-material/Replay";
 const getQuestionConfig = (qId) => questionnaireData.questions[qId];
 
 const steps = [
+  { id: "welcome", label: "Welcome" },
   { id: "q_task_type", label: "Task" },
   { id: "q_qualities", label: "Qualities" },
   { id: "q_risks", label: "Risks" },
@@ -169,6 +171,8 @@ export default function InteractiveGuide() {
     }
 
     switch (activeStepId) {
+      case "welcome":
+        return <WelcomeStep />;
       case "suggestions":
         return (
           <SuggestionStep
