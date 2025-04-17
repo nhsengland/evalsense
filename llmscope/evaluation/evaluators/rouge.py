@@ -1,6 +1,7 @@
 import evaluate
 from inspect_ai.scorer import (
     Score,
+    Scorer,
     Target,
     mean,
     scorer,
@@ -13,7 +14,13 @@ from llmscope.evaluation import Evaluator
 _rouge_fun: evaluate.EvaluationModule | None = None
 
 
-async def _load_rouge():
+async def _load_rouge() -> evaluate.EvaluationModule:
+    """
+    Lazily loads the ROUGE evaluation module.
+
+    Returns:
+        evaluate.EvaluationModule: The loaded ROUGE evaluation module.
+    """
     async with concurrency("load_rouge", 1):
         global _rouge_fun
         if _rouge_fun is None:
@@ -22,8 +29,18 @@ async def _load_rouge():
     return _rouge_fun
 
 
-def rouge_base():
-    async def score(state: TaskState, target: Target):
+def rouge_base() -> Scorer:
+    """
+    Base scorer for ROUGE scores.
+
+    Returns:
+        Scorer: A coroutine that computes ROUGE scores.
+    """
+
+    async def score(state: TaskState, target: Target) -> Score:
+        if not target.text:
+            raise ValueError("Non-empty target is required for ROUGE evaluation.")
+
         rouge_module = await _load_rouge()
         predictions = [state.output.completion]
         references = [target.text]
@@ -50,7 +67,13 @@ def rouge_base():
         }
     ],
 )
-def rouge():
+def rouge() -> Scorer:
+    """
+    Scorer for ROUGE scores.
+
+    Returns:
+        Scorer: A coroutine that computes ROUGE scores.
+    """
     return rouge_base()
 
 

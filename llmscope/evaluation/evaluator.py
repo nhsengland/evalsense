@@ -10,7 +10,7 @@ from llmscope.generation import ModelConfig
 
 @runtime_checkable
 class ScorerFactory(Protocol):
-    """A protocol for constracting a Scorer given a Model."""
+    """A protocol for constructing a Scorer given a Model."""
 
     @abstractmethod
     def create_scorer(self, model: Model) -> Scorer:

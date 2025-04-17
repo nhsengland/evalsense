@@ -378,6 +378,7 @@ class Pipeline:
                 continue
 
             # Prepare the scorer
+            # Safe cast, as we filtered out any None evaluators above
             evaluator = cast(Evaluator, experiment.evaluator)
             scorer = evaluator.scorer
             if isinstance(scorer, ScorerFactory):
