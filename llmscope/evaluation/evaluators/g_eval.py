@@ -57,7 +57,9 @@ def g_eval_base_factory(
             score = extract_score(output.completion, min_score, max_score)
             if logprobs:
                 try:
-                    score = extract_weighted_score(output, score)
+                    score = extract_weighted_score(
+                        output, score, min_score=min_score, max_score=max_score
+                    )
                 except ValueError as e:
                     logger.error(
                         f"Cannot compute weighted evaluation score: {e}. "
@@ -165,7 +167,8 @@ class GEvalScorerFactory(ScorerFactory):
 
 
 def get_g_eval_evaluator(
-    name: str,
+    *,
+    name: str = "G-Eval",
     prompt_template: EvalPromptTemplate,
     model_config: ModelConfig,
     logprobs: bool = True,

@@ -5,14 +5,14 @@ from inspect_ai.model import ModelOutput
 import numpy as np
 
 
-def extract_score(text: str, min_score: int, max_score: int) -> int:
+def extract_score(text: str, min_score: int = 1, max_score: int = 10) -> int:
     """
     Extract the first numerical score from text that falls between min_score and max_score.
 
     Args:
         text (str): The text to extract the score from.
-        min_score (int): The minimum valid score.
-        max_score (int): The maximum valid score.
+        min_score (int): The minimum valid score. Defaults to 1.
+        max_score (int): The maximum valid score. Defaults to 10.
 
     Returns:
         float | None: The extracted score if found and valid, otherwise None.
@@ -31,13 +31,17 @@ def extract_score(text: str, min_score: int, max_score: int) -> int:
     raise ValueError(f"Unable to extract a valid score from text: {text}.")
 
 
-def extract_weighted_score(output: ModelOutput, score: int) -> float:
+def extract_weighted_score(
+    output: ModelOutput, score: int, min_score: int = 1, max_score: int = 10
+) -> float:
     """
     Extract a weighted evaluation score from the model output.
 
     Args:
         output (ModelOutput): The model output containing logprobs.
         score (int): The score to extract.
+        min_score (int): The minimum valid score. Defaults to 1.
+        max_score (int): The maximum valid score. Defaults to 10.
 
     Returns:
         float: The weighted score.
@@ -74,6 +78,11 @@ def extract_weighted_score(output: ModelOutput, score: int) -> float:
             continue
 
         score = int(clean_token)
+
+        # Ignore scores outside the valid range
+        if score < min_score or score > max_score:
+            continue
+
         score_probability = np.exp(logprob.logprob)
         probabilities[score] += score_probability
         total_probability += score_probability
