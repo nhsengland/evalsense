@@ -31,8 +31,8 @@ const getQuestionConfig = (qId) => questionnaireData.questions[qId];
 const steps = [
   { id: "welcome", label: "Welcome" },
   { id: "q_task_type", label: "Task" },
-  { id: "q_qualities", label: "Qualities" },
   { id: "q_risks", label: "Risks" },
+  { id: "q_qualities", label: "Qualities" },
   { id: "q_references", label: "References" },
   { id: "suggestions", label: "Suggestions" },
   { id: "summary", label: "Summary" },
@@ -197,6 +197,7 @@ export default function InteractiveGuide() {
               questionConfig={currentQuestionConfig}
               currentAnswer={answers[activeStepId]}
               onChange={(answer) => handleAnswerChange(activeStepId, answer)}
+              allAnswers={answers}
             />
           );
         }

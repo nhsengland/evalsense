@@ -11,7 +11,9 @@ export interface BaseItem {
 export type Category = BaseItem;
 export type Task = BaseItem;
 export type Quality = BaseItem;
-export type Risk = BaseItem;
+export interface Risk extends BaseItem {
+  related_qualities?: string[];
+}
 
 export interface MethodQualityCoverage {
   id: string;

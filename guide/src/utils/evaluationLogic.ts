@@ -18,6 +18,37 @@ const coverageScore: Record<CoverageLevel, number> = {
   Poor: 1,
 };
 
+export function getQualitiesForRisks(
+  riskIds: string[],
+): { id: string; sourceRisks: string[] }[] {
+  // First gather all the quality IDs that need to be pre-selected
+  const qualityMap = new Map<string, string[]>();
+
+  // Get risk objects from IDs
+  const risks = getItemsByIds("risks", riskIds) as Risk[];
+
+  // Process each risk's related qualities
+  risks.forEach((risk) => {
+    const relatedQualityIds = risk.related_qualities || [];
+    relatedQualityIds.forEach((qualityId) => {
+      // Add or append to the sourceRisks array for this quality
+      if (!qualityMap.has(qualityId)) {
+        qualityMap.set(qualityId, [risk.id]);
+      } else {
+        qualityMap.get(qualityId).push(risk.id);
+      }
+    });
+  });
+
+  // Convert the map to the result array
+  const result = Array.from(qualityMap.entries()).map(([id, sourceRisks]) => ({
+    id,
+    sourceRisks,
+  }));
+
+  return result;
+}
+
 export function filterAndRankMethods(answers: GuideAnswers): SuggestionsData {
   const allMethods = getData("methods") as Method[];
   const desiredQualityIds = (answers.q_qualities as string[] | undefined) || [];
@@ -47,13 +78,13 @@ export function filterAndRankMethods(answers: GuideAnswers): SuggestionsData {
     let score = 0;
     desiredQualityIds.forEach((qId) => {
       const coverage = method.assessed_qualities.find(
-        (q) => q.id === qId
+        (q) => q.id === qId,
       )?.coverage;
       score += coverageScore[coverage] || 0;
     });
     desiredRiskIds.forEach((rId) => {
       const coverage = method.identified_risks.find(
-        (r) => r.id === rId
+        (r) => r.id === rId,
       )?.coverage;
       score += coverageScore[coverage] || 0;
     });
@@ -79,7 +110,7 @@ export function filterAndRankMethods(answers: GuideAnswers): SuggestionsData {
 export function calculateCoverage(
   selectedMethodIds: string[],
   desiredQualities: Quality[],
-  desiredRisks: Risk[]
+  desiredRisks: Risk[],
 ): CoverageResult {
   const selectedMethods = getItemsByIds("methods", selectedMethodIds);
   const coverageMap: CoverageMap = {};
@@ -93,7 +124,7 @@ export function calculateCoverage(
     let bestCoverageLevel = null;
     selectedMethods.forEach((method) => {
       const qualCoverage = method.assessed_qualities.find(
-        (q) => q.id === quality.id
+        (q) => q.id === quality.id,
       )?.coverage;
       const score = coverageScore[qualCoverage] || 0;
       if (score > bestCoverage) {
@@ -104,7 +135,7 @@ export function calculateCoverage(
     if (bestCoverageLevel) {
       coverageMap[quality.id] = bestCoverageLevel;
       uncovered.qualities = uncovered.qualities.filter(
-        (q) => q.id !== quality.id
+        (q) => q.id !== quality.id,
       );
     }
   });
@@ -114,7 +145,7 @@ export function calculateCoverage(
     let bestCoverageLevel = null;
     selectedMethods.forEach((method) => {
       const riskCoverage = method.identified_risks.find(
-        (r) => r.id === risk.id
+        (r) => r.id === risk.id,
       )?.coverage;
       const score = coverageScore[riskCoverage] || 0;
       if (score > bestCoverage) {

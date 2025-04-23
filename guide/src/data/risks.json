@@ -3,18 +3,21 @@
     "id": "hallucination",
     "name": "Hallucination",
     "description": "Generating plausible but factually incorrect information.",
-    "type": "risk"
+    "type": "risk",
+    "related_qualities": ["accuracy"]
   },
   {
     "id": "bias",
     "name": "Bias",
     "description": "Differences in performance for various population subgroups.",
-    "type": "risk"
+    "type": "risk",
+    "related_qualities": []
   },
   {
     "id": "hamrful-content",
     "name": "Harmful Content",
     "description": "Generating content that is harmful or unsafe.",
-    "type": "risk"
+    "type": "risk",
+    "related_qualities": []
   }
 ]
