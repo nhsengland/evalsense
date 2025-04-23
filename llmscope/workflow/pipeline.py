@@ -181,7 +181,7 @@ class Pipeline:
             """
             return Task(
                 dataset=inspect_dataset,
-                solver=experiment.generation_steps.solver,
+                solver=experiment.generation_steps.steps,
                 name=task_name,
             )
 

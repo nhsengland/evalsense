@@ -8,4 +8,4 @@ class GenerationSteps:
     """A class for specifying generation steps for LLMs, including prompting."""
 
     name: str
-    solver: Solver | list[Solver]
+    steps: Solver | list[Solver]
