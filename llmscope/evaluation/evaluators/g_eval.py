@@ -118,7 +118,7 @@ def g_eval_factory(
     )
 
     @scorer(name=f"G-Eval ({name}, {model.name})", metrics=[mean()])
-    def g_eval():
+    def g_eval() -> Scorer:
         return g_eval_base()
 
     return g_eval
