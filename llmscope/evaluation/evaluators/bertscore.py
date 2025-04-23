@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import override
 
 import evaluate
 from inspect_ai.scorer import (
@@ -11,27 +11,170 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 from inspect_ai.util import concurrency
 
-from llmscope.evaluation import Evaluator
-
-_bertscore_fun: evaluate.EvaluationModule | None = None
+from llmscope.evaluation import Evaluator, ScoreCalculator
 
 
-async def _load_bertscore() -> evaluate.EvaluationModule:
+class BertScoreCalculator(ScoreCalculator):
+    """Calculator for computing BERTScores."""
+
+    def __init__(self):
+        self.bertscore_module = evaluate.load("bertscore")
+
+    @override
+    def calculate(
+        self,
+        *,
+        prediction: str,
+        reference: str | None = None,
+        model_type="microsoft/deberta-xlarge-mnli",
+        lang="en",
+        num_layers=None,
+        verbose=False,
+        idf: bool | dict[str, float] = False,
+        device=None,
+        batch_size=64,
+        nthreads=1,
+        rescale_with_baseline=False,
+        baseline_path=None,
+        use_fast_tokenizer=False,
+        **kwargs: dict,
+    ) -> Score:
+        """
+        Calculates BERTScore for the supplied model prediction and reference input.
+
+        Args:
+            prediction (str): The text of the prediction from the model.
+            reference (str, optional): The text of the reference input to compare against.
+            model_type (str): The model type to use for computing BERTScore.
+                Defaults to "microsoft/deberta-xlarge-mnli", the currently best-performing
+                model according to BERTScore authors.
+            lang (str): The language of the text. Defaults to "en".
+            num_layers (int | None): The layer of representations to use.
+            verbose (bool): Whether to turn on verbose mode.
+            idf (bool | dict): Use IDF weighting — can be a precomputed IDF dictionary.
+            device (str | None): The device to use for computing the contextual embeddings.
+            batch_size (int): The batch size to use for computing the contextual embeddings.
+            nthreads (int): The number of threads to use for computing the contextual embeddings.
+            rescale_with_baseline (bool): Whether to rescale the BERTScore with pre-computed baseline.
+            baseline_path (str | None): Customized baseline file.
+            use_fast_tokenizer (bool): The `use_fast` parameter passed to HF tokenizer.
+
+        Returns:
+            Score: Inspect AI Score with the calculated evaluation results.
+        """
+        if reference is None:
+            raise ValueError(
+                "Reference is required for computing BERTScore, but was None."
+            )
+
+        predictions = [prediction]
+        references = [reference]
+
+        result = self.bertscore_module.compute(
+            predictions=predictions,
+            references=references,
+            lang=lang,
+            model_type=model_type,
+            num_layers=num_layers,
+            verbose=verbose,
+            idf=idf,
+            device=device,
+            batch_size=batch_size,
+            nthreads=nthreads,
+            rescale_with_baseline=rescale_with_baseline,
+            baseline_path=baseline_path,
+            use_fast_tokenizer=use_fast_tokenizer,
+        )
+        return Score(
+            value={
+                "precision": result["precision"],  # type: ignore
+                "recall": result["recall"],  # type: ignore
+                "f1": result["f1"],  # type: ignore
+            },
+            answer=prediction,
+            metadata={
+                "hashcode": result["hashcode"],  # type: ignore
+            },
+        )
+
+    @override
+    async def calculate_async(
+        self,
+        *,
+        prediction: str,
+        reference: str | None = None,
+        model_type="microsoft/deberta-xlarge-mnli",
+        lang="en",
+        num_layers=None,
+        verbose=False,
+        idf: bool | dict[str, float] = False,
+        device=None,
+        batch_size=64,
+        nthreads=1,
+        rescale_with_baseline=False,
+        baseline_path=None,
+        use_fast_tokenizer=False,
+        **kwargs: dict,
+    ) -> Score:
+        """
+        Calculates BERTScore for the supplied model prediction and reference input.
+
+        Args:
+            prediction (str): The text of the prediction from the model.
+            reference (str, optional): The text of the reference input to compare against.
+            model_type (str): The model type to use for computing BERTScore.
+                Defaults to "microsoft/deberta-xlarge-mnli", the currently best-performing
+                model according to BERTScore authors.
+            lang (str): The language of the text. Defaults to "en".
+            num_layers (int | None): The layer of representations to use.
+            verbose (bool): Whether to turn on verbose mode.
+            idf (bool | dict): Use IDF weighting — can be a precomputed IDF dictionary.
+            device (str | None): The device to use for computing the contextual embeddings.
+            batch_size (int): The batch size to use for computing the contextual embeddings.
+            nthreads (int): The number of threads to use for computing the contextual embeddings.
+            rescale_with_baseline (bool): Whether to rescale the BERTScore with pre-computed baseline.
+            baseline_path (str | None): Customized baseline file.
+            use_fast_tokenizer (bool): The `use_fast` parameter passed to HF tokenizer.
+
+        Returns:
+            Score: Inspect AI Score with the calculated evaluation results.
+        """
+        return self.calculate(
+            prediction=prediction,
+            reference=reference,
+            lang=lang,
+            model_type=model_type,
+            num_layers=num_layers,
+            verbose=verbose,
+            idf=idf,
+            device=device,
+            batch_size=batch_size,
+            nthreads=nthreads,
+            rescale_with_baseline=rescale_with_baseline,
+            baseline_path=baseline_path,
+            use_fast_tokenizer=use_fast_tokenizer,
+        )
+
+
+_bertscore_calculator: None | BertScoreCalculator = None
+
+
+async def _init_bertscore() -> BertScoreCalculator:
     """
-    Lazily loads the BERTScore evaluation module.
+    Lazily initialises the BERTScore calculator.
 
     Returns:
-        evaluate.EvaluationModule: The loaded BERTScore evaluation module.
+        BertScoreCalculator: The initialised BERTScore calculator.
     """
     async with concurrency("load_bertscore", 1):
-        global _bertscore_fun
-        if _bertscore_fun is None:
-            _bertscore_fun = evaluate.load("bertscore")
+        global _bertscore_calculator
+        if _bertscore_calculator is None:
+            _bertscore_calculator = BertScoreCalculator()
 
-    return _bertscore_fun
+    return _bertscore_calculator
 
 
-def bertscore_base_factory(
+def bertscore_base(
     model_type="microsoft/deberta-xlarge-mnli",
     lang="en",
     num_layers=None,
@@ -43,9 +186,9 @@ def bertscore_base_factory(
     rescale_with_baseline=False,
     baseline_path=None,
     use_fast_tokenizer=False,
-) -> Callable[[], Scorer]:
+) -> Scorer:
     """
-    Base factory function to create a BERTScore scorer.
+    Base scorer for BERTScore.
 
     Args:
         model_type (str): The model type to use for computing BERTScore.
@@ -72,52 +215,35 @@ def bertscore_base_factory(
             tokenizer. Defaults to `False`.
 
     Returns:
-        Callable[[], Scorer]: The BERTScore scorer factory function.
+        Scorer: A coroutine that computes BERTScores.
     """
 
-    def bertscore_base() -> Scorer:
-        async def score(state: TaskState, target: Target) -> Score:
-            if not target.text:
-                raise ValueError(
-                    "Non-empty target is required for BERTScore evaluation."
-                )
+    async def score(state: TaskState, target: Target) -> Score:
+        bertscore_calculator = await _init_bertscore()
+        return await bertscore_calculator.calculate_async(
+            prediction=state.output.completion,
+            reference=target.text,
+            model_type=model_type,
+            lang=lang,
+            num_layers=num_layers,
+            verbose=verbose,
+            idf=idf,
+            device=device,
+            batch_size=batch_size,
+            nthreads=nthreads,
+            rescale_with_baseline=rescale_with_baseline,
+            baseline_path=baseline_path,
+            use_fast_tokenizer=use_fast_tokenizer,
+        )
 
-            bertscore_module = await _load_bertscore()
-            predictions = [state.output.completion]
-            references = [target.text]
-            result = bertscore_module.compute(
-                predictions=predictions,
-                references=references,
-                lang=lang,
-                model_type=model_type,
-                num_layers=num_layers,
-                verbose=verbose,
-                idf=idf,
-                device=device,
-                batch_size=batch_size,
-                nthreads=nthreads,
-                rescale_with_baseline=rescale_with_baseline,
-                baseline_path=baseline_path,
-                use_fast_tokenizer=use_fast_tokenizer,
-            )
-            return Score(
-                value={
-                    "precision": result["precision"],  # type: ignore
-                    "recall": result["recall"],  # type: ignore
-                    "f1": result["f1"],  # type: ignore
-                },
-                answer=state.output.completion,
-                metadata={
-                    "hashcode": result["hashcode"],  # type: ignore
-                },
-            )
-
-        return score
-
-    return bertscore_base
+    return score
 
 
-def bertscore_factory(
+@scorer(
+    name="BERTScore",
+    metrics=[{"precision": [mean()]}, {"recall": [mean()]}, {"f1": [mean()]}],
+)
+def bertscore(
     *,
     model_type="microsoft/deberta-xlarge-mnli",
     lang="en",
@@ -130,29 +256,8 @@ def bertscore_factory(
     rescale_with_baseline=False,
     baseline_path=None,
     use_fast_tokenizer=False,
-) -> Callable[[], Scorer]:
-    """
-    Factory function to create a BERTScore scorer.
-
-    Args:
-        model_type (str): The model type to use for computing BERTScore.
-            Defaults to "microsoft/deberta-xlarge-mnli", the currently best-performing
-            model according to BERTScore authors.
-        lang (str): The language of the text. Defaults to "en".
-        num_layers (int | None): The layer of representations to use.
-        verbose (bool): Whether to turn on verbose mode.
-        idf (bool | dict): Use IDF weighting — can be a precomputed IDF dictionary.
-        device (str | None): The device to use for computing the contextual embeddings.
-        batch_size (int): The batch size to use for computing the contextual embeddings.
-        nthreads (int): The number of threads to use for computing the contextual embeddings.
-        rescale_with_baseline (bool): Whether to rescale the BERTScore with pre-computed baseline.
-        baseline_path (str | None): Customized baseline file.
-        use_fast_tokenizer (bool): The `use_fast` parameter passed to HF tokenizer.
-
-    Returns:
-        Scorer: The BERTScore scorer.
-    """
-    bertscore_base = bertscore_base_factory(
+) -> Scorer:
+    return bertscore_base(
         model_type=model_type,
         lang=lang,
         num_layers=num_layers,
@@ -165,15 +270,6 @@ def bertscore_factory(
         baseline_path=baseline_path,
         use_fast_tokenizer=use_fast_tokenizer,
     )
-
-    @scorer(
-        name="BERTScore",
-        metrics=[{"precision": [mean()]}, {"recall": [mean()]}, {"f1": [mean()]}],
-    )
-    def bertscore() -> Scorer:
-        return bertscore_base()
-
-    return bertscore
 
 
 def get_bertscore_evaluator(
@@ -222,7 +318,7 @@ def get_bertscore_evaluator(
     """
     return Evaluator(
         name="BERTScore",
-        scorer=bertscore_factory(
+        scorer=bertscore(
             model_type=model_type,
             lang=lang,
             num_layers=num_layers,
@@ -234,5 +330,5 @@ def get_bertscore_evaluator(
             rescale_with_baseline=rescale_with_baseline,
             baseline_path=baseline_path,
             use_fast_tokenizer=use_fast_tokenizer,
-        )(),
+        ),
     )

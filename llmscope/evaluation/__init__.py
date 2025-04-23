@@ -1,4 +1,4 @@
-from llmscope.evaluation.evaluator import Evaluator, ScorerFactory
+from llmscope.evaluation.evaluator import Evaluator, ScoreCalculator, ScorerFactory
 from llmscope.evaluation.experiment import (
     EvaluationRecord,
     ExperimentBatchConfig,
@@ -13,6 +13,7 @@ from llmscope.evaluation.prompt_template import EvalPromptTemplate
 
 __all__ = [
     "Evaluator",
+    "ScoreCalculator",
     "ScorerFactory",
     "EvaluationRecord",
     "ExperimentConfig",

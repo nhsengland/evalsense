@@ -1,3 +1,5 @@
+from typing import override
+
 import evaluate
 from inspect_ai.scorer import (
     Score,
@@ -9,24 +11,84 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 from inspect_ai.util import concurrency
 
-from llmscope.evaluation import Evaluator
-
-_rouge_fun: evaluate.EvaluationModule | None = None
+from llmscope.evaluation import Evaluator, ScoreCalculator
 
 
-async def _load_rouge() -> evaluate.EvaluationModule:
+class RougeScoreCalculator(ScoreCalculator):
+    """Calculator for computing ROUGE scores."""
+
+    def __init__(self):
+        self.rouge_module = evaluate.load("rouge")
+
+    @override
+    def calculate(
+        self,
+        *,
+        prediction: str,
+        reference: str | None = None,
+        **kwargs: dict,
+    ) -> Score:
+        """
+        Calculates ROUGE scores for the supplied model prediction and reference input.
+
+        Args:
+            prediction (str): The text of the prediction from the model.
+            reference (str, optional): The text of the reference input to compare against.
+
+        Returns:
+            Score: Inspect AI Score with the calculated evaluation results.
+        """
+        if reference is None:
+            raise ValueError("Reference is required for computing ROUGE, but was None.")
+
+        predictions = [prediction]
+        references = [reference]
+
+        result = self.rouge_module.compute(
+            predictions=predictions, references=references
+        )
+        return Score(
+            value={
+                "ROUGE-1": result["rouge1"],  # type: ignore
+                "ROUGE-2": result["rouge2"],  # type: ignore
+                "ROUGE-L": result["rougeL"],  # type: ignore
+            },
+            answer=prediction,
+        )
+
+    @override
+    async def calculate_async(
+        self, *, prediction: str, reference: str | None = None, **kwargs: dict
+    ) -> Score:
+        """
+        Calculates ROUGE scores for the supplied model prediction and reference input.
+
+        Args:
+            prediction (str): The text of the prediction from the model.
+            reference (str, optional): The text of the reference input to compare against.
+
+        Returns:
+            Score: Inspect AI Score with the calculated evaluation results.
+        """
+        return self.calculate(prediction=prediction, reference=reference, **kwargs)
+
+
+_rouge_calculator: RougeScoreCalculator | None = None
+
+
+async def _init_rouge() -> RougeScoreCalculator:
     """
-    Lazily loads the ROUGE evaluation module.
+    Lazily initialises the ROUGE calculator.
 
     Returns:
-        evaluate.EvaluationModule: The loaded ROUGE evaluation module.
+        RougeScoreCalculator: The initialised ROUGE calculator.
     """
     async with concurrency("load_rouge", 1):
-        global _rouge_fun
-        if _rouge_fun is None:
-            _rouge_fun = evaluate.load("rouge")
+        global _rouge_calculator
+        if _rouge_calculator is None:
+            _rouge_calculator = RougeScoreCalculator()
 
-    return _rouge_fun
+    return _rouge_calculator
 
 
 def rouge_base() -> Scorer:
@@ -38,20 +100,9 @@ def rouge_base() -> Scorer:
     """
 
     async def score(state: TaskState, target: Target) -> Score:
-        if not target.text:
-            raise ValueError("Non-empty target is required for ROUGE evaluation.")
-
-        rouge_module = await _load_rouge()
-        predictions = [state.output.completion]
-        references = [target.text]
-        result = rouge_module.compute(predictions=predictions, references=references)
-        return Score(
-            value={
-                "ROUGE-1": result["rouge1"],  # type: ignore
-                "ROUGE-2": result["rouge2"],  # type: ignore
-                "ROUGE-L": result["rougeL"],  # type: ignore
-            },
-            answer=state.output.completion,
+        rouge_calculator = await _init_rouge()
+        return await rouge_calculator.calculate_async(
+            prediction=state.output.completion, reference=target.text
         )
 
     return score

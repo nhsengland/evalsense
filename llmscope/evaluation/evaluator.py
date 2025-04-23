@@ -3,9 +3,56 @@ from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
 from inspect_ai.model import Model
-from inspect_ai.scorer import Scorer
+from inspect_ai.scorer import Score, Scorer
 
 from llmscope.generation import ModelConfig
+
+
+@runtime_checkable
+class ScoreCalculator(Protocol):
+    """A protocol for computing evaluation scores."""
+
+    @abstractmethod
+    def calculate(
+        self,
+        *,
+        prediction: str,
+        reference: str | None = None,
+        **kwargs: dict,
+    ) -> Score:
+        """Computes evaluation scores for the given evaluation method
+
+        Args:
+            predictions (str): The model prediction to evaluate.
+            references (str, optional): The reference output to compare against.
+            **kwargs (dict): Additional keyword arguments specific to the given
+                evaluation method.
+
+        Returns:
+            Score: The Inspect AI Score object with the calculated result.
+        """
+        pass
+
+    @abstractmethod
+    async def calculate_async(
+        self,
+        *,
+        prediction: str,
+        reference: str | None = None,
+        **kwargs: dict,
+    ) -> Score:
+        """Computes evaluation scores for the given evaluation method
+
+        Args:
+            predictions (str): The model prediction to evaluate.
+            references (str, optional): The reference output to compare against.
+            **kwargs (dict): Additional keyword arguments specific to the given
+                evaluation method.
+
+        Returns:
+            Score: The Inspect AI Score object with the calculated result.
+        """
+        pass
 
 
 @runtime_checkable

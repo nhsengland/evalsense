@@ -9,7 +9,13 @@ from inspect_ai.scorer import (
     scorer,
 )
 from inspect_ai.solver import TaskState
-from llmscope.evaluation import Evaluator, EvalPromptTemplate, ScorerFactory
+
+from llmscope.evaluation import (
+    Evaluator,
+    EvalPromptTemplate,
+    ScoreCalculator,
+    ScorerFactory,
+)
 from llmscope.generation import ModelConfig
 from llmscope.logging import get_logger
 from llmscope.utils.evaluation import extract_score, extract_weighted_score
@@ -17,7 +23,67 @@ from llmscope.utils.evaluation import extract_score, extract_weighted_score
 logger = get_logger(__name__)
 
 
-def g_eval_base_factory(
+class GEvalScoreCalculator(ScoreCalculator):
+    def __init__(
+        self,
+        model: Model,
+        prompt_template: EvalPromptTemplate,
+        logprobs: bool = True,
+        top_logprobs: int = 20,
+        min_score: int = 1,
+        max_score: int = 10,
+        normalise: bool = True,
+    ):
+        self.model = model
+        self.prompt_template = prompt_template
+        self.logprobs = logprobs
+        self.top_logprobs = top_logprobs
+        self.min_score = min_score
+        self.max_score = max_score
+        self.normalise = normalise
+
+    @override
+    def calculate(
+        self, *, prediction: str, reference: str | None = None, **kwargs: dict
+    ) -> Score:
+        raise NotImplementedError(
+            "Synchronous evaluation is not supported for G-Eval. "
+            "Use calculate_async instead."
+        )
+
+    @override
+    async def calculate_async(
+        self, *, prediction: str, reference: str | None = None, **kwargs: dict
+    ) -> Score:
+        logprobs_config = GenerateConfig(
+            logprobs=self.logprobs,
+            top_logprobs=self.top_logprobs,
+        )
+        llm_input = self.prompt_template(prediction=prediction, reference=reference)
+        output = await self.model.generate(llm_input, config=logprobs_config)
+
+        score = extract_score(output.completion, self.min_score, self.max_score)
+        if self.logprobs:
+            try:
+                score = extract_weighted_score(
+                    output, score, min_score=self.min_score, max_score=self.max_score
+                )
+            except ValueError as e:
+                logger.error(
+                    f"Cannot compute weighted evaluation score: {e}. "
+                    "Falling back to standard score."
+                )
+
+        if self.normalise:
+            score = (score - self.min_score) / (self.max_score - self.min_score)
+
+        return Score(
+            value=score,
+            answer=prediction,
+        )
+
+
+def g_eval_base(
     *,
     prompt_template: EvalPromptTemplate,
     logprobs: bool = True,
@@ -26,9 +92,9 @@ def g_eval_base_factory(
     max_score: int = 10,
     normalise: bool = True,
     model: Model,
-) -> Callable[[], Scorer]:
+) -> Scorer:
     """
-    Base factory function to create a G-Eval scorer.
+    Base scorer for G-Eval.
 
     Args:
         prompt_template (EvalPromptTemplate): The prompt template to use.
@@ -41,42 +107,24 @@ def g_eval_base_factory(
         model (Model): The model to use for evaluation.
 
     Returns:
-        Callable[[], Scorer]: The G-Eval scorer factory function.
+        Scorer: The G-Eval scorer factory function.
     """
-    logprobs_config = GenerateConfig(
-        logprobs=logprobs,
-        top_logprobs=top_logprobs,
-    )
-    config = model.config.merge(logprobs_config)
 
-    def g_eval_base():
-        async def score(state: TaskState, target: Target):
-            llm_input = prompt_template(state, target)
-            output = await model.generate(llm_input, config=config)
+    async def score(state: TaskState, target: Target):
+        g_eval_calculator = GEvalScoreCalculator(
+            model=model,
+            prompt_template=prompt_template,
+            logprobs=logprobs,
+            top_logprobs=top_logprobs,
+            min_score=min_score,
+            max_score=max_score,
+            normalise=normalise,
+        )
+        return await g_eval_calculator.calculate_async(
+            prediction=state.output.completion, reference=target.text
+        )
 
-            score = extract_score(output.completion, min_score, max_score)
-            if logprobs:
-                try:
-                    score = extract_weighted_score(
-                        output, score, min_score=min_score, max_score=max_score
-                    )
-                except ValueError as e:
-                    logger.error(
-                        f"Cannot compute weighted evaluation score: {e}. "
-                        "Falling back to standard score."
-                    )
-
-            if normalise:
-                score = (score - min_score) / (max_score - min_score)
-
-            return Score(
-                value=score,
-                answer=state.output.completion,
-            )
-
-        return score
-
-    return g_eval_base
+    return score
 
 
 def g_eval_factory(
@@ -91,7 +139,7 @@ def g_eval_factory(
     model: Model,
 ) -> Callable[[], Scorer]:
     """
-    Factory function to create a full G-Eval scorer.
+    Factory function to create a G-Eval scorer.
 
     Args:
         name (str): The name of the scorer.
@@ -107,19 +155,18 @@ def g_eval_factory(
     Returns:
         Callable[[], Scorer]: The G-Eval scorer factory function.
     """
-    g_eval_base = g_eval_base_factory(
-        prompt_template=prompt_template,
-        model=model,
-        logprobs=logprobs,
-        top_logprobs=top_logprobs,
-        min_score=min_score,
-        max_score=max_score,
-        normalise=normalise,
-    )
 
     @scorer(name=f"G-Eval ({name}, {model.name})", metrics=[mean()])
     def g_eval() -> Scorer:
-        return g_eval_base()
+        return g_eval_base(
+            prompt_template=prompt_template,
+            model=model,
+            logprobs=logprobs,
+            top_logprobs=top_logprobs,
+            min_score=min_score,
+            max_score=max_score,
+            normalise=normalise,
+        )
 
     return g_eval
 
