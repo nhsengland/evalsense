@@ -54,10 +54,9 @@ class Pipeline:
                 all_experiments.extend(experiment.all_experiments)
             else:
                 all_experiments.append(experiment)
-        if not maintain_order:
-            all_experiments = sorted(all_experiments, key=lambda x: x.model_config.name)
         self.experiments = all_experiments
         self.project = project
+        self._maintain_order = maintain_order
         self._active_model_config: ModelConfig | None = None
         self._active_model: Model | None = None
 
@@ -65,13 +64,26 @@ class Pipeline:
     def generation_experiments(self):
         """Returns unique generation stages of the experiments."""
         experiments = {e.generation_record: e for e in self.experiments}
-        return list(experiments.values())
+        experiments_list = list(experiments.values())
+        if not self._maintain_order:
+            # Sort experiments to minimise model loads
+            experiments_list = sorted(
+                experiments_list, key=lambda x: x.model_config.name
+            )
+        return experiments_list
 
     @property
     def evaluation_experiments(self):
         """Returns unique evaluation stages of the experiments."""
         experiments = {e.evaluation_record: e for e in self.experiments}
-        return list(experiments.values())
+        experiments_list = list(experiments.values())
+        if not self._maintain_order:
+            # Sort experiments to minimise model loads
+            experiments_list = sorted(
+                experiments_list,
+                key=lambda x: "" if x.evaluator is None else x.evaluator.model_name,
+            )
+        return experiments_list
 
     def _cleanup_active_model(self):
         """Cleans up the active model if it exists."""

@@ -79,3 +79,16 @@ class Evaluator:
     name: str
     scorer: Scorer | ScorerFactory
     model_config: ModelConfig | None = None
+
+    @property
+    def model_name(self) -> str:
+        """Retrieves the model name associated with the evaluator config.
+
+        Returns an empty string if the evaluator doesn't use a model config.
+
+        Returns:
+            str: The name of the model in the config or empty string.
+        """
+        if self.model_config is None:
+            return ""
+        return self.model_config.name
