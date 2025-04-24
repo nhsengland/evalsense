@@ -11,7 +11,7 @@ export default function GuidePage() {
     >
       <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          Interactive Evaluation Method Selector
+          LLM Evaluation Guide
         </Typography>
         <InteractiveGuide />
       </Container>

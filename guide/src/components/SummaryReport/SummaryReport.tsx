@@ -11,7 +11,10 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { getItemById, getItemsByIds } from "@site/src/utils/dataLoaders";
 import { calculateCoverage } from "@site/src/utils/evaluationLogic";
-import { GuideAnswers } from "@site/src/types/evaluation.types";
+import {
+  GuideAnswers,
+  ImportanceRating,
+} from "@site/src/types/evaluation.types";
 
 interface SummaryReportProps {
   answers: GuideAnswers;
@@ -23,20 +26,30 @@ export default function SummaryReport({
   selectedMethodIds,
 }: SummaryReportProps) {
   const task = getItemById("tasks", answers.q_task_type as string);
-  const desiredQualities = getItemsByIds(
-    "qualities",
-    (answers.q_qualities as string[]) || [],
-  );
-  const desiredRisks = getItemsByIds(
-    "risks",
-    (answers.q_risks as string[]) || [],
-  );
+
+  // Get quality and risk ratings
+  const qualityRatings =
+    (answers.q_qualities as ImportanceRating[] | undefined) || [];
+  const riskRatings = (answers.q_risks as ImportanceRating[] | undefined) || [];
+
+  // Get IDs for qualities and risks with importance > 1
+  const desiredQualityIds = qualityRatings
+    .filter((q) => q.importance > 1)
+    .map((q) => q.id);
+  const desiredRiskIds = riskRatings
+    .filter((r) => r.importance > 1)
+    .map((r) => r.id);
+
+  const desiredQualities = getItemsByIds("qualities", desiredQualityIds);
+  const desiredRisks = getItemsByIds("risks", desiredRiskIds);
   const selectedMethods = getItemsByIds("methods", selectedMethodIds);
 
   const { coverage, uncovered } = calculateCoverage(
     selectedMethodIds,
     desiredQualities,
     desiredRisks,
+    qualityRatings,
+    riskRatings,
   );
 
   return (

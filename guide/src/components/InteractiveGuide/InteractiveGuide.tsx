@@ -25,6 +25,7 @@ import {
   Snackbar,
 } from "@mui/material";
 import ReplayIcon from "@mui/icons-material/Replay";
+import { ImportanceRating } from "@site/src/types/evaluation.types";
 
 const getQuestionConfig = (qId) => questionnaireData.questions[qId];
 
@@ -109,7 +110,10 @@ export default function InteractiveGuide() {
     setGuideState((prevState) => ({ ...prevState, ...newState }));
   };
 
-  const handleAnswerChange = (questionId, answer) => {
+  const handleAnswerChange = (
+    questionId: string,
+    answer: string | string[] | ImportanceRating[],
+  ) => {
     updateState({ answers: { ...answers, [questionId]: answer } });
   };
 

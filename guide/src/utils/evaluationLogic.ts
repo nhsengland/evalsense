@@ -9,6 +9,7 @@ import {
   CoverageResult,
   CoverageMap,
   UncoveredItems,
+  ImportanceRating,
 } from "../types/evaluation.types";
 
 const coverageScore: Record<CoverageLevel, number> = {
@@ -19,40 +20,75 @@ const coverageScore: Record<CoverageLevel, number> = {
 };
 
 export function getQualitiesForRisks(
-  riskIds: string[],
-): { id: string; sourceRisks: string[] }[] {
+  riskImportance: ImportanceRating[],
+): { id: string; sourceRisks: string[]; maxImportance: number }[] {
   // First gather all the quality IDs that need to be pre-selected
-  const qualityMap = new Map<string, string[]>();
+  const qualityMap = new Map<
+    string,
+    { sourceRisks: string[]; maxImportance: number }
+  >();
 
-  // Get risk objects from IDs
+  // Get risk objects from IDs with their importance
+  const riskIds = riskImportance
+    .filter((r) => r.importance > 1)
+    .map((r) => r.id);
   const risks = getItemsByIds("risks", riskIds) as Risk[];
 
   // Process each risk's related qualities
   risks.forEach((risk) => {
     const relatedQualityIds = risk.related_qualities || [];
+    // Get the importance rating for this risk
+    const importance =
+      riskImportance.find((r) => r.id === risk.id)?.importance || 1;
+
     relatedQualityIds.forEach((qualityId) => {
-      // Add or append to the sourceRisks array for this quality
+      // Add or update the sourceRisks array and track the max importance
       if (!qualityMap.has(qualityId)) {
-        qualityMap.set(qualityId, [risk.id]);
+        qualityMap.set(qualityId, {
+          sourceRisks: [risk.id],
+          maxImportance: importance,
+        });
       } else {
-        qualityMap.get(qualityId).push(risk.id);
+        const current = qualityMap.get(qualityId);
+        if (!current.sourceRisks.includes(risk.id)) {
+          current.sourceRisks.push(risk.id);
+        }
+        // Update max importance if this risk has higher importance
+        if (importance > current.maxImportance) {
+          current.maxImportance = importance;
+        }
       }
     });
   });
 
   // Convert the map to the result array
-  const result = Array.from(qualityMap.entries()).map(([id, sourceRisks]) => ({
-    id,
-    sourceRisks,
-  }));
+  const result = Array.from(qualityMap.entries()).map(
+    ([id, { sourceRisks, maxImportance }]) => ({
+      id,
+      sourceRisks,
+      maxImportance,
+    }),
+  );
 
   return result;
 }
 
 export function filterAndRankMethods(answers: GuideAnswers): SuggestionsData {
   const allMethods = getData("methods") as Method[];
-  const desiredQualityIds = (answers.q_qualities as string[] | undefined) || [];
-  const desiredRiskIds = (answers.q_risks as string[] | undefined) || [];
+
+  // Get quality and risk ratings
+  const qualityRatings =
+    (answers.q_qualities as ImportanceRating[] | undefined) || [];
+  const riskRatings = (answers.q_risks as ImportanceRating[] | undefined) || [];
+
+  // Get IDs for qualities and risks that have importance > 1
+  const desiredQualityIds = qualityRatings
+    .filter((q) => q.importance > 1)
+    .map((q) => q.id);
+  const desiredRiskIds = riskRatings
+    .filter((r) => r.importance > 1)
+    .map((r) => r.id);
+
   const taskType = answers.q_task_type as string | undefined;
   const noReference = answers.q_references === "no";
 
@@ -76,18 +112,30 @@ export function filterAndRankMethods(answers: GuideAnswers): SuggestionsData {
   // Calculate score for each method based on user's desired qualities/risks
   const scoredMethods = filtered.map((method) => {
     let score = 0;
-    desiredQualityIds.forEach((qId) => {
-      const coverage = method.assessed_qualities.find(
-        (q) => q.id === qId,
-      )?.coverage;
-      score += coverageScore[coverage] || 0;
+
+    // Weight scores by importance
+    qualityRatings.forEach((qRating) => {
+      if (qRating.importance > 1) {
+        const coverage = method.assessed_qualities.find(
+          (q) => q.id === qRating.id,
+        )?.coverage;
+        const coverageValue = coverageScore[coverage] || 0;
+        score += coverageValue * qRating.importance;
+      }
     });
-    desiredRiskIds.forEach((rId) => {
-      const coverage = method.identified_risks.find(
-        (r) => r.id === rId,
-      )?.coverage;
-      score += coverageScore[coverage] || 0;
+
+    // Similar for risks
+    riskRatings.forEach((rRating) => {
+      if (rRating.importance > 1) {
+        const coverage = method.identified_risks.find(
+          (r) => r.id === rRating.id,
+        )?.coverage;
+        const coverageValue = coverageScore[coverage] || 0;
+        // Weight by importance (0-4 scale)
+        score += coverageValue * rRating.importance;
+      }
     });
+
     return { ...method, score };
   });
 
@@ -103,23 +151,39 @@ export function filterAndRankMethods(answers: GuideAnswers): SuggestionsData {
 /**
  * Calculates coverage of desired qualities/risks by selected methods.
  * @param {string[]} selectedMethodIds - Array of IDs of methods chosen by the user.
- * @param {object[]} desiredQualities - Array of desired quality objects {id, name}.
- * @param {object[]} desiredRisks - Array of desired risk objects {id, name}.
+ * @param {Quality[]} desiredQualities - Array of desired quality objects.
+ * @param {Risk[]} desiredRisks - Array of desired risk objects.
+ * @param {ImportanceRating[]} qualityRatings - Array of quality importance ratings.
+ * @param {ImportanceRating[]} riskRatings - Array of risk importance ratings.
  * @returns {object} - { coverage: { quality/risk_id: best_coverage_level }, uncovered: { qualities: [...], risks: [...] } }
  */
 export function calculateCoverage(
   selectedMethodIds: string[],
   desiredQualities: Quality[],
   desiredRisks: Risk[],
+  qualityRatings: ImportanceRating[] = [],
+  riskRatings: ImportanceRating[] = [],
 ): CoverageResult {
   const selectedMethods = getItemsByIds("methods", selectedMethodIds);
   const coverageMap: CoverageMap = {};
+
+  // Filter to only include qualities and risks with importance > 1
+  const significantQualities = desiredQualities.filter((q) => {
+    const rating = qualityRatings.find((r) => r.id === q.id);
+    return rating && rating.importance > 1;
+  });
+
+  const significantRisks = desiredRisks.filter((r) => {
+    const rating = riskRatings.find((rat) => rat.id === r.id);
+    return rating && rating.importance > 1;
+  });
+
   const uncovered: UncoveredItems = {
-    qualities: [...desiredQualities],
-    risks: [...desiredRisks],
+    qualities: [...significantQualities],
+    risks: [...significantRisks],
   };
 
-  desiredQualities.forEach((quality) => {
+  significantQualities.forEach((quality) => {
     let bestCoverage = 0; // Use numeric score for comparison
     let bestCoverageLevel = null;
     selectedMethods.forEach((method) => {
@@ -140,7 +204,7 @@ export function calculateCoverage(
     }
   });
 
-  desiredRisks.forEach((risk) => {
+  significantRisks.forEach((risk) => {
     let bestCoverage = 0;
     let bestCoverageLevel = null;
     selectedMethods.forEach((method) => {

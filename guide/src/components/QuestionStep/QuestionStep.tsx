@@ -1,23 +1,52 @@
 import React, { useEffect } from "react";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
-import Checkbox from "@mui/material/Checkbox";
 import FormGroup from "@mui/material/FormGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
+import Rating from "@mui/material/Rating";
+import Typography from "@mui/material/Typography";
 import StarsIcon from "@mui/icons-material/Stars";
+import SignalCellular0Bar from "@mui/icons-material/SignalCellular0Bar";
+import SignalCellular1Bar from "@mui/icons-material/SignalCellular1Bar";
+import SignalCellular2Bar from "@mui/icons-material/SignalCellular2Bar";
+import SignalCellular3Bar from "@mui/icons-material/SignalCellular3Bar";
+import SignalCellular4Bar from "@mui/icons-material/SignalCellular4Bar";
 import { getItemById } from "@site/src/utils/dataLoaders";
 import { getQualitiesForRisks } from "@site/src/utils/evaluationLogic";
-import { Question, GuideAnswers } from "@site/src/types/evaluation.types";
+import {
+  Question,
+  GuideAnswers,
+  ImportanceRating,
+} from "@site/src/types/evaluation.types";
+
+// Custom icons for importance rating
+const customIcons = {
+  1: { icon: <SignalCellular0Bar />, label: "Not important" },
+  2: { icon: <SignalCellular1Bar />, label: "Slightly important" },
+  3: { icon: <SignalCellular2Bar />, label: "Moderately important" },
+  4: { icon: <SignalCellular3Bar />, label: "Important" },
+  5: { icon: <SignalCellular4Bar />, label: "Very important" },
+};
+
+interface IconContainerProps {
+  value: number;
+  [key: string]: unknown;
+}
+
+function IconContainer(props: IconContainerProps) {
+  const { value, ...other } = props;
+  return <span {...other}>{customIcons[value].icon}</span>;
+}
 
 interface QuestionStepProps {
   questionConfig: Question;
   currentAnswer: GuideAnswers[string];
-  onChange: (answer: string | string[]) => void;
-  allAnswers?: GuideAnswers; // To access previous answers like risks
+  onChange: (answer: string | string[] | ImportanceRating[]) => void;
+  allAnswers?: GuideAnswers;
 }
 
 const QuestionStep: React.FC<QuestionStepProps> = ({
@@ -38,12 +67,17 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
         (Array.isArray(currentAnswer) && currentAnswer.length === 0)) &&
       !Object.prototype.hasOwnProperty.call(allAnswers, "q_qualities")
     ) {
-      const selectedRisks = (allAnswers.q_risks as string[]) || [];
+      const selectedRisks = (allAnswers.q_risks as ImportanceRating[]) || [];
       if (selectedRisks.length > 0) {
-        // Get quality IDs that should be preselected based on risks
+        // Get quality IDs that should be preselected based on risks with their max importance
         const preselectedQualities = getQualitiesForRisks(selectedRisks);
         if (preselectedQualities.length > 0) {
-          onChange(preselectedQualities.map((q) => q.id));
+          // Convert to ImportanceRating[] format with importance values from related risks
+          const qualityRatings = preselectedQualities.map((q) => ({
+            id: q.id,
+            importance: q.maxImportance || 0,
+          }));
+          onChange(qualityRatings);
         }
       }
     }
@@ -63,18 +97,55 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
     return option.value;
   };
 
-  const handleRadioChange = (event) => {
+  const handleRadioChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onChange(event.target.value);
   };
 
-  const handleCheckboxChange = (event) => {
-    const { value, checked } = event.target;
-    const currentValues = Array.isArray(currentAnswer) ? currentAnswer : [];
-    if (checked) {
-      onChange([...currentValues, value]);
-    } else {
-      onChange(currentValues.filter((v) => v !== value));
+  // Rating handlers for importance
+  const handleImportanceChange = (id: string, newValue: number | null) => {
+    // Ensure newValue is between 1-5
+    const importance =
+      newValue === null ? 1 : Math.min(Math.max(1, newValue), 5);
+
+    // Handle risks and qualities ratings
+    if (
+      questionConfig.id === "q_risks" ||
+      questionConfig.id === "q_qualities"
+    ) {
+      // Start with current ratings or empty array
+      const ratings: ImportanceRating[] = Array.isArray(currentAnswer)
+        ? [...(currentAnswer as ImportanceRating[])]
+        : [];
+
+      // Find if this item is already in the ratings
+      const existingIndex = ratings.findIndex((item) => item.id === id);
+
+      if (existingIndex >= 0) {
+        if (importance === 1) {
+          // Remove item if importance is 1
+          ratings.splice(existingIndex, 1);
+        } else {
+          // Update existing rating
+          ratings[existingIndex].importance = importance;
+        }
+      } else if (importance > 1) {
+        // Add new rating if it's important
+        ratings.push({ id, importance });
+      }
+
+      onChange(ratings);
     }
+  };
+
+  // Get importance value for an item
+  const getImportanceValue = (id: string): number => {
+    if (!currentAnswer || !Array.isArray(currentAnswer)) return 1;
+
+    // Find rating for this id
+    const rating = (currentAnswer as ImportanceRating[]).find(
+      (item) => item.id === id,
+    );
+    return rating ? rating.importance : 1;
   };
 
   return (
@@ -113,9 +184,9 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
 
               // Get related risks for this quality (if any)
               const qualityWithRisks = isQualityFromRisk
-                ? getQualitiesForRisks(allAnswers.q_risks as string[]).find(
-                    (q) => q.id === option.value,
-                  )
+                ? getQualitiesForRisks(
+                    allAnswers.q_risks as ImportanceRating[],
+                  ).find((q) => q.id === option.value)
                 : null;
 
               const relatedRiskNames =
@@ -127,32 +198,67 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
               return (
                 <Box
                   key={option.value}
-                  sx={{ display: "flex", alignItems: "center", mb: 0.5 }}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    mb: 2.5,
+                  }}
                 >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={
-                          Array.isArray(currentAnswer) &&
-                          currentAnswer.includes(option.value)
-                        }
-                        onChange={handleCheckboxChange}
-                        value={option.value}
-                      />
-                    }
-                    label={getOptionLabel(option)}
-                  />
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Typography variant="body1" sx={{ mr: 2 }}>
+                      {getOptionLabel(option)}
+                    </Typography>
 
-                  {relatedRiskNames.length > 0 && (
-                    <Chip
-                      icon={<StarsIcon fontSize="small" />}
-                      label={`Recommended for risk${relatedRiskNames.length > 1 ? "s" : ""}: ${relatedRiskNames.join(", ")}`}
-                      size="small"
-                      color="primary"
-                      variant="outlined"
-                      sx={{ ml: 1 }}
+                    {relatedRiskNames.length > 0 && (
+                      <Chip
+                        icon={<StarsIcon fontSize="small" />}
+                        label={`Recommended for risk${relatedRiskNames.length > 1 ? "s" : ""}: ${relatedRiskNames.join(", ")}`}
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      mt: 1.5,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mr: 1, minWidth: 100 }}
+                    >
+                      Importance:
+                    </Typography>
+                    <Rating
+                      name={`importance-${option.value}`}
+                      value={getImportanceValue(option.value)}
+                      onChange={(event, newValue) => {
+                        handleImportanceChange(option.value, newValue);
+                      }}
+                      IconContainerComponent={IconContainer}
+                      max={5}
+                      sx={{ color: "primary.main" }}
                     />
-                  )}
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ ml: 1 }}
+                    >
+                      {customIcons[getImportanceValue(option.value)]?.label ||
+                        "Not important"}
+                    </Typography>
+                  </Box>
                 </Box>
               );
             })}

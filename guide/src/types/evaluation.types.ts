@@ -71,8 +71,13 @@ export interface Questionnaire {
 
 // --- Guide State Types ---
 
+export interface ImportanceRating {
+  id: string;
+  importance: number; // 1-5 scale where 1 is "not important" and 5 is "very important"
+}
+
 export interface GuideAnswers {
-  [questionId: string]: string | string[] | undefined;
+  [questionId: string]: string | ImportanceRating[] | undefined;
 }
 
 export interface SuggestionsData {
