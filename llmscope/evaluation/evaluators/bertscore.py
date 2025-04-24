@@ -1,3 +1,4 @@
+import gc
 from typing import override
 
 import evaluate
@@ -10,6 +11,7 @@ from inspect_ai.scorer import (
 )
 from inspect_ai.solver import TaskState
 from inspect_ai.util import concurrency
+import torch
 
 from llmscope.evaluation import Evaluator, ScoreCalculator
 
@@ -87,9 +89,9 @@ class BertScoreCalculator(ScoreCalculator):
         )
         return Score(
             value={
-                "precision": result["precision"],  # type: ignore
-                "recall": result["recall"],  # type: ignore
-                "f1": result["f1"],  # type: ignore
+                "BERTScore Precision": result["precision"][0],  # type: ignore
+                "BERTScore Recall": result["recall"][0],  # type: ignore
+                "BERTScore F1": result["f1"][0],  # type: ignore
             },
             answer=prediction,
             metadata={
@@ -174,6 +176,18 @@ async def _init_bertscore() -> BertScoreCalculator:
     return _bertscore_calculator
 
 
+def _cleanup_bertscore() -> None:
+    """
+    Cleans up the BERTScore calculator.
+    """
+    global _bertscore_calculator
+    if _bertscore_calculator is not None:
+        del _bertscore_calculator
+        _bertscore_calculator = None
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
 def bertscore_base(
     model_type="microsoft/deberta-xlarge-mnli",
     lang="en",
@@ -241,7 +255,11 @@ def bertscore_base(
 
 @scorer(
     name="BERTScore",
-    metrics=[{"precision": [mean()]}, {"recall": [mean()]}, {"f1": [mean()]}],
+    metrics=[
+        {"BERTScore Precision": [mean()]},
+        {"BERTScore Recall": [mean()]},
+        {"BERTScore F1": [mean()]},
+    ],
 )
 def bertscore(
     *,
@@ -287,7 +305,7 @@ def get_bertscore_evaluator(
     use_fast_tokenizer: bool = False,
 ) -> Evaluator:
     """
-    Get a BERTScore evaluator.
+    Returns a BERTScore evaluator.
 
     Args:
         model_type (str, optional): The model type to use for computing BERTScore.
@@ -331,4 +349,5 @@ def get_bertscore_evaluator(
             baseline_path=baseline_path,
             use_fast_tokenizer=use_fast_tokenizer,
         ),
+        cleanup_fun=_cleanup_bertscore,
     )

@@ -154,4 +154,11 @@ def bleu_precision() -> Scorer:
     return bleu_precision_base()
 
 
-bleu_evaluator = Evaluator("BLEU", scorer=bleu_precision())
+def get_bleu_evaluator() -> Evaluator:
+    """
+    Returns an evaluator for BLEU scores.
+
+    Returns:
+        Evaluator: An evaluator for BLEU scores.
+    """
+    return Evaluator("BLEU", scorer=bleu_precision())

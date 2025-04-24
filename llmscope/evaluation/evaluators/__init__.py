@@ -8,9 +8,9 @@ from llmscope.evaluation.evaluators.bleu import (
     BleuPrecisionScoreCalculator,
     bleu,
     bleu_base,
-    bleu_evaluator,
     bleu_precision,
     bleu_precision_base,
+    get_bleu_evaluator,
 )
 from llmscope.evaluation.evaluators.g_eval import (
     GEvalScoreCalculator,
@@ -21,9 +21,9 @@ from llmscope.evaluation.evaluators.g_eval import (
 )
 from llmscope.evaluation.evaluators.rouge import (
     RougeScoreCalculator,
+    get_rouge_evaluator,
     rouge,
     rouge_base,
-    rouge_evaluator,
 )
 
 __all__ = [
@@ -34,7 +34,7 @@ __all__ = [
     "BleuPrecisionScoreCalculator",
     "bleu",
     "bleu_base",
-    "bleu_evaluator",
+    "get_bleu_evaluator",
     "bleu_precision",
     "bleu_precision_base",
     "GEvalScoreCalculator",
@@ -43,7 +43,7 @@ __all__ = [
     "g_eval_factory",
     "get_g_eval_evaluator",
     "RougeScoreCalculator",
+    "get_rouge_evaluator",
     "rouge",
     "rouge_base",
-    "rouge_evaluator",
 ]

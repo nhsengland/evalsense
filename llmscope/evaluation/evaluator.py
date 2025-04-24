@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Callable, Protocol, runtime_checkable
 
 from inspect_ai.model import Model
 from inspect_ai.scorer import Score, Scorer
@@ -79,6 +79,7 @@ class Evaluator:
     name: str
     scorer: Scorer | ScorerFactory
     model_config: ModelConfig | None = None
+    cleanup_fun: Callable[[], None] | None = None
 
     @property
     def model_name(self) -> str:

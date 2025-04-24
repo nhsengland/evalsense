@@ -133,6 +133,7 @@ class Pipeline:
                     model=new_model_config.model,
                     **new_model_config.model_args,
                     config=GenerateConfig(**new_model_config.generation_args),
+                    memoize=False,
                 )
 
             self._active_model_config = new_model_config
@@ -462,6 +463,16 @@ class Pipeline:
                     log_location=log_location,
                 ),
             )
+
+            # Perform cleanup if needed
+            if evaluator.cleanup_fun is not None:
+                try:
+                    evaluator.cleanup_fun()
+                except Exception as e:
+                    logger.error(
+                        f"❌  Error during cleanup for {evaluator.name}: {e}. "
+                        "Please check the evaluator's cleanup function."
+                    )
 
             # If user interrupted the evaluation, raise KeyboardInterrupt
             if isinstance(exception, KeyboardInterrupt):

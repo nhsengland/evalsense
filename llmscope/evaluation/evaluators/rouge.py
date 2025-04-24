@@ -128,4 +128,11 @@ def rouge() -> Scorer:
     return rouge_base()
 
 
-rouge_evaluator = Evaluator("ROUGE", scorer=rouge())
+def get_rouge_evaluator() -> Evaluator:
+    """
+    Returns an evaluator for ROUGE scores.
+
+    Returns:
+        Evaluator: An evaluator for ROUGE scores.
+    """
+    return Evaluator("ROUGE", scorer=rouge())
