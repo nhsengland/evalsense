@@ -10,10 +10,19 @@ export default function WelcomeStep() {
         </Typography>
 
         <Alert severity="info">
-          <strong>Note:</strong> This LLM evaluation guide is intended to be
-          used by users with basic technical knowledge about LLMs. If you are
-          unfamiliar with this topic, we suggest liaising with someone more
-          experienced to help you with the selection process.
+          <Typography sx={{ mb: 1, textAlign: "justify" }}>
+            <strong>Note:</strong> This guide is intended to be used by users
+            with basic technical knowledge about LLMs. If you are unfamiliar
+            with this topic, we suggest liaising with someone more experienced
+            to help you with the selection process.
+          </Typography>
+          <Typography sx={{ textAlign: "justify" }}>
+            The guide is intended to provide helpful information on relevant
+            evaluation methods, but cannot cover all possible scenarios and
+            requirements. We recommend considering the details of your use-case
+            and potential domain-specific evaluation methods beyond the
+            recommendations provided by this guide.
+          </Typography>
         </Alert>
       </Box>
     </Box>
