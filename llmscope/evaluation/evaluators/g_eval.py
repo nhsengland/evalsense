@@ -156,7 +156,7 @@ def g_eval_factory(
         Callable[[], Scorer]: The G-Eval scorer factory function.
     """
 
-    @scorer(name=f"G-Eval ({name}, {model.name})", metrics=[mean()])
+    @scorer(name=name, metrics=[mean()])
     def g_eval() -> Scorer:
         return g_eval_base(
             prompt_template=prompt_template,
@@ -215,7 +215,7 @@ class GEvalScorerFactory(ScorerFactory):
 
 def get_g_eval_evaluator(
     *,
-    name: str = "G-Eval",
+    quality_name: str = "G-Eval",
     prompt_template: EvalPromptTemplate,
     model_config: ModelConfig,
     logprobs: bool = True,
@@ -228,7 +228,7 @@ def get_g_eval_evaluator(
     Constructs a G-Eval evaluator that can be used in LLMScope evaluation pipeline.
 
     Args:
-        name (str): The name of the evaluator.
+        quality_name (str): The name of the quality to be evaluated by G-Eval.
         prompt_template (EvalPromptTemplate): The prompt template to use.
         model_config (ModelConfig): The model configuration.
         logprobs (bool): Whether to use model log probabilities to compute weighted
@@ -241,10 +241,11 @@ def get_g_eval_evaluator(
     Returns:
         Evaluator: The constructed G-Eval evaluator.
     """
+    metric_name = f"G-Eval ({quality_name}, {model_config.name})"
     return Evaluator(
-        name=name,
+        name=metric_name,
         scorer=GEvalScorerFactory(
-            name=name,
+            name=metric_name,
             prompt_template=prompt_template,
             logprobs=logprobs,
             top_logprobs=top_logprobs,
