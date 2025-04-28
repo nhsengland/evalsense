@@ -156,6 +156,7 @@ def g_eval_factory(
         Callable[[], Scorer]: The G-Eval scorer factory function.
     """
 
+    # TODO: Pass metrics as parameter instead of using base versions
     @scorer(name=name, metrics=[mean()])
     def g_eval() -> Scorer:
         return g_eval_base(

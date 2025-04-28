@@ -74,10 +74,10 @@ def extract_weighted_score(
         clean_token = normalise_token(logprob.token)
 
         # Ignore non-numeric tokens
-        if not clean_token.isdigit():
+        try:
+            score = int(clean_token)
+        except ValueError:
             continue
-
-        score = int(clean_token)
 
         # Ignore scores outside the valid range
         if score < min_score or score > max_score:
@@ -88,8 +88,10 @@ def extract_weighted_score(
         total_probability += score_probability
 
     assert total_probability > 0, "Total probability should be greater than zero."
-    assert total_probability <= 1, (
-        "Total probability should be less than or equal to one."
+    # Allow for probability slightly exceeding 1 due to floating point errors
+    assert total_probability <= 1 + 1e-5, (
+        "Total probability should be less than or close to one, but was "
+        f"{total_probability}. Computed score probabilities: {probabilities}"
     )
 
     # Finally, calculate the weighted score

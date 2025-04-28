@@ -23,6 +23,7 @@ dependencies = [
     "pydantic>=2.10.6",
     "pyyaml>=6.0.2",
     "rouge-score>=0.1.2",
+    "seaborn>=0.13.2",
     "tenacity>=9.0.0",
     "torch>=2.6",
     "tqdm>=4.67.1",

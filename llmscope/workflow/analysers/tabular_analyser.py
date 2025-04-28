@@ -45,11 +45,12 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
         self.output_format = output_format
 
     @override
-    def __call__(self, project: Project) -> T:
+    def __call__(self, project: Project, **kwargs: dict) -> T:
         """Analyses the evaluation results.
 
         Args:
             project (Project): The project holding the evaluation data to analyse.
+            **kwargs (dict): Additional arguments for the analysis.
 
         Returns:
             T: The analysed results in the specified output format.

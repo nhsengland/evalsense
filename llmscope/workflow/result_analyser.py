@@ -21,10 +21,11 @@ class ResultAnalyser[T](Protocol):
         self.name = name
 
     @abstractmethod
-    def __call__(self, project: Project) -> T:
+    def __call__(self, project: Project, **kwargs: dict) -> T:
         """Analyses the evaluation results.
 
         Args:
             project (Project): The project holding the evaluation data to analyse.
+            **kwargs (dict): Additional arguments for the analysis.
         """
         ...
