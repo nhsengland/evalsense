@@ -44,8 +44,9 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
 
         Args:
             name (str): The name of the metric correlation analyser.
-            output_format (Literal["polars", "pandas"]): The output format of the
-                correlation matrix. Can be "polars" or "pandas". Defaults to "polars".
+            output_format (Literal["polars", "pandas", "numpy"]): The output
+                format of the correlation matrix. Can be "polars", "pandas",
+                or "numpy". Defaults to "polars".
         """
         super().__init__(name=name)
         if output_format not in OUTPUT_FORMATTERS:

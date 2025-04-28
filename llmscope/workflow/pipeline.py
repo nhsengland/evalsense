@@ -101,7 +101,12 @@ class Pipeline:
                     pass
             _, still_alive = psutil.wait_procs(children, timeout=5)
             if still_alive:
-                logger.warning("⚠️  Failed to clean up background processes.")
+                logger.warning(
+                    "⚠️  Unable to fully clean up background processes "
+                    f"({len(still_alive)}/{len(children)} still alive). "
+                    "Unless this results in overly high VRAM usage, "
+                    "you can safely ignore this warning."
+                )
 
             self._active_model_config = None
             self._active_model = None

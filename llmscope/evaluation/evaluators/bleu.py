@@ -2,6 +2,7 @@ from typing import Any, cast, override
 
 import evaluate
 from inspect_ai.scorer import (
+    Metric,
     MetricProtocol,
     SampleScore,
     Score,
@@ -96,7 +97,7 @@ async def _init_bleu() -> BleuPrecisionScoreCalculator:
     return _bleu_calculator
 
 
-def bleu_base() -> MetricProtocol:
+def bleu_metric() -> MetricProtocol:
     """
     Base metric for BLEU scores.
 
@@ -115,50 +116,42 @@ def bleu_base() -> MetricProtocol:
     return metric
 
 
-@metric(name="BLEU")
-def bleu() -> MetricProtocol:
-    """
-    Metric for BLEU scores.
-
-    Returns:
-        MetricProtocol: A function that computes BLEU scores.
-    """
-    return bleu_base()
-
-
-def bleu_precision_base() -> Scorer:
-    """
-    Base scorer for BLEU precision scores.
-
-    Returns:
-        Scorer: A coroutine that computes BLEU precision scores.
-    """
-
-    async def score(state: TaskState, target: Target):
-        bleu_calculator = await _init_bleu()
-        return await bleu_calculator.calculate_async(
-            prediction=state.output.completion, reference=target.text
-        )
-
-    return score
-
-
-@scorer(name="BLEU Precision", metrics=[bleu()])
-def bleu_precision() -> Scorer:
-    """
-    Scorer for BLEU precision scores.
-
-    Returns:
-        Scorer: A coroutine that computes BLEU precision scores.
-    """
-    return bleu_precision_base()
-
-
-def get_bleu_evaluator() -> Evaluator:
+def get_bleu_evaluator(
+    name: str = "BLEU",
+    scorer_name: str = "BLEU Precision",
+    metrics: list[Metric | dict[str, list[Metric]]]
+    | dict[str, list[Metric]]
+    | None = None,
+) -> Evaluator:
     """
     Returns an evaluator for BLEU scores.
+
+    Args:
+        name (str): The name of the metric and evaluator. Defaults to "BLEU".
+        metric_name (str): The name of the internal scorer. Defaults to "BLEU Precision".
+        metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
+            The metrics to use for the evaluation. If `None`, the default metric
+            will be used (BLEU).
 
     Returns:
         Evaluator: An evaluator for BLEU scores.
     """
-    return Evaluator("BLEU", scorer=bleu_precision())
+
+    @metric(name=name)
+    def bleu() -> MetricProtocol:
+        return bleu_metric()
+
+    if metrics is None:
+        metrics = [bleu()]
+
+    @scorer(name=scorer_name, metrics=metrics)
+    def bleu_precision_scorer() -> Scorer:
+        async def score(state: TaskState, target: Target):
+            bleu_calculator = await _init_bleu()
+            return await bleu_calculator.calculate_async(
+                prediction=state.output.completion, reference=target.text
+            )
+
+        return score
+
+    return Evaluator(name, scorer=bleu_precision_scorer())

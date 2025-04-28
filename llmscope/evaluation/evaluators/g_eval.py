@@ -1,7 +1,8 @@
-from typing import Callable, override
+from typing import override
 
 from inspect_ai.model import GenerateConfig, Model
 from inspect_ai.scorer import (
+    Metric,
     Score,
     Scorer,
     Target,
@@ -83,95 +84,6 @@ class GEvalScoreCalculator(ScoreCalculator):
         )
 
 
-def g_eval_base(
-    *,
-    prompt_template: EvalPromptTemplate,
-    logprobs: bool = True,
-    top_logprobs: int = 20,
-    min_score: int = 1,
-    max_score: int = 10,
-    normalise: bool = True,
-    model: Model,
-) -> Scorer:
-    """
-    Base scorer for G-Eval.
-
-    Args:
-        prompt_template (EvalPromptTemplate): The prompt template to use.
-        logprobs (bool): Whether to use model log probabilities to compute weighted
-            evaluation score instead of a standard score.
-        top_logprobs (int): The number of top log probabilities to consider.
-        min_score (int): The minimum valid score.
-        max_score (int): The maximum valid score.
-        normalise (bool): Whether to normalise the scores between 0 and 1.
-        model (Model): The model to use for evaluation.
-
-    Returns:
-        Scorer: The G-Eval scorer factory function.
-    """
-
-    async def score(state: TaskState, target: Target):
-        g_eval_calculator = GEvalScoreCalculator(
-            model=model,
-            prompt_template=prompt_template,
-            logprobs=logprobs,
-            top_logprobs=top_logprobs,
-            min_score=min_score,
-            max_score=max_score,
-            normalise=normalise,
-        )
-        return await g_eval_calculator.calculate_async(
-            prediction=state.output.completion, reference=target.text
-        )
-
-    return score
-
-
-def g_eval_factory(
-    *,
-    name: str,
-    prompt_template: EvalPromptTemplate,
-    logprobs: bool = True,
-    top_logprobs: int = 20,
-    min_score: int = 1,
-    max_score: int = 10,
-    normalise: bool = True,
-    model: Model,
-) -> Callable[[], Scorer]:
-    """
-    Factory function to create a G-Eval scorer.
-
-    Args:
-        name (str): The name of the scorer.
-        prompt_template (EvalPromptTemplate): The prompt template to use.
-        logprobs (bool): Whether to use model log probabilities to compute weighted
-            evaluation score instead of a standard score.
-        top_logprobs (int): The number of top log probabilities to consider.
-        min_score (int): The minimum valid score.
-        max_score (int): The maximum valid score.
-        normalise (bool): Whether to normalise the scores between 0 and 1.
-        model (Model): The model to use for evaluation.
-
-    Returns:
-        Callable[[], Scorer]: The G-Eval scorer factory function.
-    """
-
-    # TODO: Pass metrics as parameter instead of using base versions
-    @scorer(name=name, metrics=[mean()])
-    def g_eval() -> Scorer:
-        return g_eval_base(
-            prompt_template=prompt_template,
-            model=model,
-            logprobs=logprobs,
-            top_logprobs=top_logprobs,
-            min_score=min_score,
-            max_score=max_score,
-            normalise=normalise,
-        )
-
-    return g_eval
-
-
 class GEvalScorerFactory(ScorerFactory):
     """Scorer factory for G-Eval."""
 
@@ -179,6 +91,9 @@ class GEvalScorerFactory(ScorerFactory):
         self,
         name: str,
         prompt_template: EvalPromptTemplate,
+        metrics: list[Metric | dict[str, list[Metric]]]
+        | dict[str, list[Metric]]
+        | None = None,
         logprobs: bool = True,
         top_logprobs: int = 20,
         min_score: int = 1,
@@ -191,6 +106,9 @@ class GEvalScorerFactory(ScorerFactory):
         Args:
             name (str): The name of the scorer.
             prompt_template (EvalPromptTemplate): The prompt template to use.
+            metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
+                The metrics to use for the evaluation. If `None`, the default metric
+                will be used (G-Eval).
             logprobs (bool): Whether to use model log probabilities to compute weighted
                 evaluation score instead of a standard score.
             top_logprobs (int): The number of top log probabilities to consider.
@@ -198,25 +116,57 @@ class GEvalScorerFactory(ScorerFactory):
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
         """
-        self._create_scorer = lambda model: g_eval_factory(
-            name=name,
-            prompt_template=prompt_template,
-            model=model,
-            logprobs=logprobs,
-            top_logprobs=top_logprobs,
-            min_score=min_score,
-            max_score=max_score,
-            normalise=normalise,
-        )()
+        self.name = name
+        self.prompt_template = prompt_template
+        if metrics is None:
+            metrics = [mean()]
+        self.metrics = metrics
+        self.logprobs = logprobs
+        self.top_logprobs = top_logprobs
+        self.min_score = min_score
+        self.max_score = max_score
+        self.normalise = normalise
 
     @override
     def create_scorer(self, model: Model) -> Scorer:
-        return self._create_scorer(model)
+        """
+        Creates a G-Eval scorer.
+
+        Args:
+            model (Model): The model to create a scorer for.
+
+        Returns:
+            Scorer: The created G-Eval scorer.
+        """
+
+        @scorer(name=self.name, metrics=self.metrics)
+        def g_eval_scorer() -> Scorer:
+            async def score(state: TaskState, target: Target):
+                g_eval_calculator = GEvalScoreCalculator(
+                    model=model,
+                    prompt_template=self.prompt_template,
+                    logprobs=self.logprobs,
+                    top_logprobs=self.top_logprobs,
+                    min_score=self.min_score,
+                    max_score=self.max_score,
+                    normalise=self.normalise,
+                )
+                return await g_eval_calculator.calculate_async(
+                    prediction=state.output.completion, reference=target.text
+                )
+
+            return score
+
+        return g_eval_scorer()
 
 
 def get_g_eval_evaluator(
     *,
-    quality_name: str = "G-Eval",
+    name: str = "G-Eval",
+    quality_name: str = "Unknown",
+    metrics: list[Metric | dict[str, list[Metric]]]
+    | dict[str, list[Metric]]
+    | None = None,
     prompt_template: EvalPromptTemplate,
     model_config: ModelConfig,
     logprobs: bool = True,
@@ -229,7 +179,11 @@ def get_g_eval_evaluator(
     Constructs a G-Eval evaluator that can be used in LLMScope evaluation pipeline.
 
     Args:
+        name (str): The name of the evaluator. Defaults to "G-Eval".
         quality_name (str): The name of the quality to be evaluated by G-Eval.
+        metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
+            The metrics to use for the evaluation. If `None`, the default metric
+            will be used (G-Eval).
         prompt_template (EvalPromptTemplate): The prompt template to use.
         model_config (ModelConfig): The model configuration.
         logprobs (bool): Whether to use model log probabilities to compute weighted
@@ -242,11 +196,12 @@ def get_g_eval_evaluator(
     Returns:
         Evaluator: The constructed G-Eval evaluator.
     """
-    metric_name = f"G-Eval ({quality_name}, {model_config.name})"
+    metric_name = f"{name} ({quality_name}, {model_config.name})"
     return Evaluator(
         name=metric_name,
         scorer=GEvalScorerFactory(
             name=metric_name,
+            metrics=metrics,
             prompt_template=prompt_template,
             logprobs=logprobs,
             top_logprobs=top_logprobs,
