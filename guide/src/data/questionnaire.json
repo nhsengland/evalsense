@@ -12,7 +12,13 @@
       "text": "What is the primary task of the LLM?",
       "type": "single-select",
       "source_data_key": "tasks",
-      "options": [{ "value": "summarization" }, { "value": "qa" }],
+      "options": [
+        { "value": "summarization" },
+        { "value": "qa" },
+        { "value": "ner" },
+        { "value": "relation-extraction" },
+        { "value": "text-classification" }
+      ],
       "maps_to": "supported_tasks",
       "next": "q_risks"
     },
@@ -21,7 +27,13 @@
       "text": "Which potential risks are you most concerned about?",
       "type": "multi-select",
       "source_data_key": "risks",
-      "options": [{ "value": "hallucination" }, { "value": "bias" }],
+      "options": [
+        { "value": "hallucination" },
+        { "value": "omissions" },
+        { "value": "bias" },
+        { "value": "harmful-content" },
+        { "value": "confidentiality-breach" }
+      ],
       "maps_to": "identified_risks",
       "next": "q_qualities"
     },
@@ -30,7 +42,14 @@
       "text": "Which qualities are most important to assess?",
       "type": "multi-select",
       "source_data_key": "qualities",
-      "options": [{ "value": "accuracy" }, { "value": "fluency" }],
+      "options": [
+        { "value": "correctness" },
+        { "value": "conciseness" },
+        { "value": "fluency" },
+        { "value": "fairness" },
+        { "value": "safety" },
+        { "value": "privacy" }
+      ],
       "maps_to": "assessed_qualities",
       "next": "q_references"
     },

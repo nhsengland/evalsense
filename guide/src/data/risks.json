@@ -4,7 +4,14 @@
     "name": "Hallucination",
     "description": "Generating plausible but factually incorrect information.",
     "type": "risk",
-    "related_qualities": ["accuracy"]
+    "related_qualities": ["correctness"]
+  },
+  {
+    "id": "omissions",
+    "name": "Omissions",
+    "description": "Missing important information in the output.",
+    "type": "risk",
+    "related_qualities": ["correctness"]
   },
   {
     "id": "bias",
@@ -14,9 +21,16 @@
     "related_qualities": []
   },
   {
-    "id": "hamrful-content",
+    "id": "harmful-content",
     "name": "Harmful Content",
     "description": "Generating content that is harmful or unsafe.",
+    "type": "risk",
+    "related_qualities": []
+  },
+  {
+    "id": "confidentiality-breach",
+    "name": "Confidentiality Breach",
+    "description": "Inadvertently revealing sensitive information.",
     "type": "risk",
     "related_qualities": []
   }

@@ -9,11 +9,11 @@
     "link_implementation": "https://pypi.org/project/rouge-score/",
     "reference_requirement": "required",
     "supported_tasks": ["summarization"],
-    "assessed_qualities": [
-      { "id": "accuracy", "coverage": "Partial" },
-      { "id": "fluency", "coverage": "Poor" }
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Poor" }],
+    "identified_risks": [
+      { "id": "hallucination", "coverage": "Poor" },
+      { "id": "omissions", "coverage": "Poor" }
     ],
-    "identified_risks": [],
     "output_values": "F1 score between 0 and 1. Higher is better.",
     "advantages": ["Automated", "Fast", "Widely used benchmark"],
     "disadvantages": [
@@ -25,28 +25,146 @@
     ]
   },
   {
-    "id": "expert-accuracy-review",
-    "name": "Expert Accuracy Review",
+    "id": "bleu",
+    "name": "BLEU",
     "type": "method",
-    "category": "human-eval",
-    "description_short": "Clinicians review output for factual correctness.",
-    "description_long_file": "expert-accuracy.md",
-    "link_implementation": null,
-    "reference_requirement": "optional",
-    "supported_tasks": ["summarization", "q_and_a"],
-    "assessed_qualities": [{ "id": "accuracy", "coverage": "Very Good" }],
-    "identified_risks": [{ "id": "hallucination", "coverage": "Good" }],
-    "output_values": "Likert scale (1-5) or binary (Correct/Incorrect). Defined by rubric.",
+    "category": "automated",
+    "description_short": "Measures n-gram precision between output and reference.",
+    "description_long_file": "bleu.md",
+    "link_implementation": "https://www.nltk.org/_modules/nltk/translate/bleu_score.html",
+    "reference_requirement": "required",
+    "supported_tasks": ["summarization"],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Poor" }],
+    "identified_risks": [
+      { "id": "hallucination", "coverage": "Poor" },
+      { "id": "omissions", "coverage": "Poor" }
+    ],
+    "output_values": "Score between 0 and 1. Higher is better.",
+    "advantages": ["Automated", "Fast", "Well-established in MT evaluation"],
+    "disadvantages": [
+      "Doesn't capture semantic meaning",
+      "Sensitive to reference choice",
+      "Low correlation with human judgment for non-MT tasks"
+    ],
+    "references": [
+      {
+        "name": "Papineni et al., 2002",
+        "url": "https://aclanthology.org/P02-1040/"
+      }
+    ]
+  },
+  {
+    "id": "bertscore",
+    "name": "BERTScore",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Uses contextual embeddings to measure semantic similarity between output and reference.",
+    "description_long_file": "bertscore.md",
+    "link_implementation": "https://github.com/Tiiiger/bert_score",
+    "reference_requirement": "required",
+    "supported_tasks": [
+      "summarization",
+      "machine-translation",
+      "text-generation"
+    ],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Partial" }],
+    "identified_risks": [
+      { "id": "hallucination", "coverage": "Partial" },
+      { "id": "omissions", "coverage": "Partial" }
+    ],
+    "output_values": "Precision, Recall, and F1 scores between 0 and 1. Higher is better.",
     "advantages": [
-      "Gold standard for clinical accuracy",
-      "Can catch nuanced errors"
+      "Captures semantic similarity",
+      "More aligned with human judgment than n-gram methods",
+      "More robust to paraphrasing"
     ],
     "disadvantages": [
-      "Slow",
-      "Expensive",
-      "Requires expert time",
-      "Subjectivity possible"
+      "Computationally intensive",
+      "Still requires references",
+      "Performance varies based on underlying language model",
+      "May still not fully capture semantic meaning"
     ],
-    "references": []
+    "references": [
+      {
+        "name": "Zhang et al., 2020",
+        "url": "https://arxiv.org/abs/1904.09675"
+      }
+    ]
+  },
+  {
+    "id": "medcon",
+    "name": "MEDCON",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Domain-specific metric for healthcare. Computes F1 score based on Unified Medical Language System (UMLS) concepts, extracted using fuzzy matching.",
+    "description_long_file": "medcon.md",
+    "link_implementation": "https://github.com/Stanford-AIMI/discharge-me/tree/main/scoring",
+    "reference_requirement": "required",
+    "supported_tasks": ["summarization"],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Partial" }],
+    "identified_risks": [
+      { "id": "hallucination", "coverage": "Partial" },
+      { "id": "omissions", "coverage": "Partial" }
+    ],
+    "output_values": "Score between 0 and 1. Higher scores indicate better alignemtn in medical concepts.",
+    "advantages": [
+      "Domain-specific metric for medical content",
+      "Deterministic and fast to compute",
+      "Can better detect discrepancies in medical content"
+    ],
+    "disadvantages": [
+      "Limited to medical domain",
+      "Requires specialized knowledge",
+      "May not capture general linguistic quality"
+    ],
+    "references": [
+      {
+        "name": "Yim et al., 2023",
+        "url": "https://arxiv.org/pdf/2306.02022"
+      }
+    ]
+  },
+  {
+    "id": "g-eval",
+    "name": "G-Eval",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Uses LLMs as judges to evaluate content against specific criteria.",
+    "description_long_file": "g-eval.md",
+    "link_implementation": "https://github.com/nlpyang/geval",
+    "reference_requirement": "optional",
+    "supported_tasks": ["summarization", "qa"],
+    "assessed_qualities": [
+      { "id": "correctness", "coverage": "Good" },
+      { "id": "conciseness", "coverage": "Good" },
+      { "id": "fluency", "coverage": "Good" },
+      { "id": "fairness", "coverage": "Poor" },
+      { "id": "safety", "coverage": "Good" },
+      { "id": "privacy", "coverage": "Good" }
+    ],
+    "identified_risks": [
+      { "id": "hallucination", "coverage": "Good" },
+      { "id": "omissions", "coverage": "Good" },
+      { "id": "bias", "coverage": "Poor" },
+      { "id": "harmful-content", "coverage": "Good" },
+      { "id": "confidentiality-breach", "coverage": "Good" }
+    ],
+    "output_values": "Scores typically on a scale (e.g., 1-5). Higher is better.",
+    "advantages": [
+      "Can evaluate without references",
+      "Flexible criteria definition",
+      "Decent correlation with human judgment",
+      "Adaptable to a wide range of tasks"
+    ],
+    "disadvantages": [
+      "Computationally expensive",
+      "Dependent on judge LLM quality",
+      "Affected by the used prompt",
+      "Potential for judge model bias",
+      "Less transparent than traditional metrics"
+    ],
+    "references": [
+      { "name": "Liu et al., 2023", "url": "https://arxiv.org/abs/2303.16634" }
+    ]
   }
 ]

@@ -7,7 +7,7 @@
       "activeStepId": "suggestions",
       "answers": {
         "q_task_type": "summarization",
-        "q_qualities": ["accuracy"],
+        "q_qualities": ["correctness"],
         "q_risks": ["hallucination"],
         "q_references": "yes"
       },
@@ -22,7 +22,7 @@
       "activeStepId": "suggestions",
       "answers": {
         "q_task_type": "q_and_a",
-        "q_qualities": ["accuracy"],
+        "q_qualities": ["correctness"],
         "q_risks": ["harmful-content", "bias"],
         "q_references": "no"
       },

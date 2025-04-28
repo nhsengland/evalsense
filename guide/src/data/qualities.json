@@ -1,14 +1,38 @@
 [
   {
-    "id": "accuracy",
-    "name": "Correctness/Factuality",
+    "id": "correctness",
+    "name": "Correctness",
     "description": "Correctness of the generated information.",
     "type": "quality"
   },
   {
+    "id": "conciseness",
+    "name": "Conciseness",
+    "description": "How concise the output is.",
+    "type": "quality"
+  },
+  {
     "id": "fluency",
-    "name": "Fluency/Readability",
+    "name": "Readability",
     "description": "How natural and understandable the output is.",
+    "type": "quality"
+  },
+  {
+    "id": "fairness",
+    "name": "Fairness",
+    "description": "The degree to which the model's outputs are unbiased and equitable.",
+    "type": "quality"
+  },
+  {
+    "id": "safety",
+    "name": "Safety",
+    "description": "The degree to which the model's outputs are safe and non-harmful.",
+    "type": "quality"
+  },
+  {
+    "id": "privacy",
+    "name": "Privacy",
+    "description": "The degree to which the model's outputs protect sensitive information.",
     "type": "quality"
   }
 ]
