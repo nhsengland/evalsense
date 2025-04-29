@@ -1,4 +1,4 @@
-from typing import override
+from typing import Any, override
 
 from inspect_ai.model import GenerateConfig, Model
 from inspect_ai.scorer import (
@@ -13,13 +13,12 @@ from inspect_ai.solver import TaskState
 
 from llmscope.evaluation import (
     Evaluator,
-    EvalPromptTemplate,
     ScoreCalculator,
     ScorerFactory,
 )
 from llmscope.generation import ModelConfig
 from llmscope.logging import get_logger
-from llmscope.utils.evaluation import extract_score, extract_weighted_score
+from llmscope.utils.text import extract_score, extract_weighted_score, format_template
 
 logger = get_logger(__name__)
 
@@ -28,7 +27,7 @@ class GEvalScoreCalculator(ScoreCalculator):
     def __init__(
         self,
         model: Model,
-        prompt_template: EvalPromptTemplate,
+        prompt_template: str,
         logprobs: bool = True,
         top_logprobs: int = 20,
         min_score: int = 1,
@@ -45,7 +44,13 @@ class GEvalScoreCalculator(ScoreCalculator):
 
     @override
     def calculate(
-        self, *, prediction: str, reference: str | None = None, **kwargs: dict
+        self,
+        *,
+        prediction: str,
+        input: str | None = None,
+        reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: dict,
     ) -> Score:
         raise NotImplementedError(
             "Synchronous evaluation is not supported for G-Eval. "
@@ -54,20 +59,34 @@ class GEvalScoreCalculator(ScoreCalculator):
 
     @override
     async def calculate_async(
-        self, *, prediction: str, reference: str | None = None, **kwargs: dict
+        self,
+        *,
+        prediction: str,
+        input: str | None = None,
+        reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: dict,
     ) -> Score:
         logprobs_config = GenerateConfig(
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,
         )
-        llm_input = self.prompt_template(prediction=prediction, reference=reference)
+        if metadata is None:
+            metadata = {}
+        llm_input = format_template(
+            self.prompt_template,
+            prediction=prediction,
+            reference=reference,
+            input=input,
+            **metadata,
+        )
         output = await self.model.generate(llm_input, config=logprobs_config)
 
         score = extract_score(output.completion, self.min_score, self.max_score)
         if self.logprobs:
             try:
                 score = extract_weighted_score(
-                    output, score, min_score=self.min_score, max_score=self.max_score
+                    output, min_score=self.min_score, max_score=self.max_score
                 )
             except ValueError as e:
                 logger.error(
@@ -90,7 +109,7 @@ class GEvalScorerFactory(ScorerFactory):
     def __init__(
         self,
         name: str,
-        prompt_template: EvalPromptTemplate,
+        prompt_template: str,
         metrics: list[Metric | dict[str, list[Metric]]]
         | dict[str, list[Metric]]
         | None = None,
@@ -105,10 +124,10 @@ class GEvalScorerFactory(ScorerFactory):
 
         Args:
             name (str): The name of the scorer.
-            prompt_template (EvalPromptTemplate): The prompt template to use.
+            prompt_template (str): The prompt template to use.
             metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
                 The metrics to use for the evaluation. If `None`, the default metric
-                will be used (G-Eval).
+                will be used (G-Eval with mean aggregation).
             logprobs (bool): Whether to use model log probabilities to compute weighted
                 evaluation score instead of a standard score.
             top_logprobs (int): The number of top log probabilities to consider.
@@ -152,7 +171,10 @@ class GEvalScorerFactory(ScorerFactory):
                     normalise=self.normalise,
                 )
                 return await g_eval_calculator.calculate_async(
-                    prediction=state.output.completion, reference=target.text
+                    input=state.input_text,
+                    prediction=state.output.completion,
+                    reference=target.text,
+                    metadata=state.metadata,
                 )
 
             return score
@@ -167,7 +189,7 @@ def get_g_eval_evaluator(
     metrics: list[Metric | dict[str, list[Metric]]]
     | dict[str, list[Metric]]
     | None = None,
-    prompt_template: EvalPromptTemplate,
+    prompt_template: str,
     model_config: ModelConfig,
     logprobs: bool = True,
     top_logprobs: int = 20,
@@ -184,7 +206,10 @@ def get_g_eval_evaluator(
         metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
             The metrics to use for the evaluation. If `None`, the default metric
             will be used (G-Eval).
-        prompt_template (EvalPromptTemplate): The prompt template to use.
+        prompt_template (str): The prompt template to use. The supplied prompt should
+            be a format string with {prediction} and (optionally) {reference} as
+            placeholders, as well as any additional placeholders for entries in
+            Inspect AI sample/task state metadata.
         model_config (ModelConfig): The model configuration.
         logprobs (bool): Whether to use model log probabilities to compute weighted
             evaluation score instead of a standard score.

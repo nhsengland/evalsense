@@ -1,5 +1,5 @@
 import gc
-from typing import override
+from typing import Any, override
 
 import evaluate
 from inspect_ai.scorer import (
@@ -11,7 +11,6 @@ from inspect_ai.scorer import (
     scorer,
 )
 from inspect_ai.solver import TaskState
-from inspect_ai.util import concurrency
 import torch
 
 from llmscope.evaluation import Evaluator, ScoreCalculator
@@ -20,20 +19,39 @@ from llmscope.evaluation import Evaluator, ScoreCalculator
 class BertScoreCalculator(ScoreCalculator):
     """Calculator for computing BERTScores."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        model_type: str = "microsoft/deberta-xlarge-mnli",
+        lang: str = "en",
+        num_layers: int | None = None,
+        idf: bool | dict[str, float] = False,
+    ):
+        """
+        Initializes the BERTScore calculator.
+
+        Args:
+            model_type (str, optional): The model type to use for computing BERTScore.
+                Defaults to "microsoft/deberta-xlarge-mnli", the currently best-performing
+                model according to BERTScore authors.
+            lang (str, optional): The language of the text. Defaults to "en".
+            num_layers (int, optional): The layer of representations to use.
+            idf (bool | dict[str, float], optional): Use IDF weighting — can be a precomputed IDF dictionary.
+        """
         self.bertscore_module = evaluate.load("bertscore")
+        self.model_type = model_type
+        self.lang = lang
+        self.num_layers = num_layers
+        self.idf = idf
 
     @override
     def calculate(
         self,
         *,
         prediction: str,
+        input: str | None = None,
         reference: str | None = None,
-        model_type="microsoft/deberta-xlarge-mnli",
-        lang="en",
-        num_layers=None,
+        metadata: dict[str, Any] | None = None,
         verbose=False,
-        idf: bool | dict[str, float] = False,
         device=None,
         batch_size=64,
         nthreads=1,
@@ -47,19 +65,15 @@ class BertScoreCalculator(ScoreCalculator):
 
         Args:
             prediction (str): The text of the prediction from the model.
+            input (str, optional): The text of the model input. Ignored for BERTScore.
             reference (str, optional): The text of the reference input to compare against.
-            model_type (str): The model type to use for computing BERTScore.
-                Defaults to "microsoft/deberta-xlarge-mnli", the currently best-performing
-                model according to BERTScore authors.
-            lang (str): The language of the text. Defaults to "en".
-            num_layers (int | None): The layer of representations to use.
+            metadata (dict[str, Any], optional): Metadata for the evaluation. Ignored for BERTScore.
             verbose (bool): Whether to turn on verbose mode.
-            idf (bool | dict): Use IDF weighting — can be a precomputed IDF dictionary.
-            device (str | None): The device to use for computing the contextual embeddings.
+            device (str, optional): The device to use for computing the contextual embeddings.
             batch_size (int): The batch size to use for computing the contextual embeddings.
             nthreads (int): The number of threads to use for computing the contextual embeddings.
             rescale_with_baseline (bool): Whether to rescale the BERTScore with pre-computed baseline.
-            baseline_path (str | None): Customized baseline file.
+            baseline_path (str, optional): Customized baseline file.
             use_fast_tokenizer (bool): The `use_fast` parameter passed to HF tokenizer.
 
         Returns:
@@ -76,11 +90,11 @@ class BertScoreCalculator(ScoreCalculator):
         result = self.bertscore_module.compute(
             predictions=predictions,
             references=references,
-            lang=lang,
-            model_type=model_type,
-            num_layers=num_layers,
+            lang=self.lang,
+            model_type=self.model_type,
+            num_layers=self.num_layers,
             verbose=verbose,
-            idf=idf,
+            idf=self.idf,
             device=device,
             batch_size=batch_size,
             nthreads=nthreads,
@@ -105,12 +119,10 @@ class BertScoreCalculator(ScoreCalculator):
         self,
         *,
         prediction: str,
+        input: str | None = None,
         reference: str | None = None,
-        model_type="microsoft/deberta-xlarge-mnli",
-        lang="en",
-        num_layers=None,
+        metadata: dict[str, Any] | None = None,
         verbose=False,
-        idf: bool | dict[str, float] = False,
         device=None,
         batch_size=64,
         nthreads=1,
@@ -124,14 +136,10 @@ class BertScoreCalculator(ScoreCalculator):
 
         Args:
             prediction (str): The text of the prediction from the model.
+            input (str | None): The text of the model input. Ignored for BERTScore.
             reference (str, optional): The text of the reference input to compare against.
-            model_type (str): The model type to use for computing BERTScore.
-                Defaults to "microsoft/deberta-xlarge-mnli", the currently best-performing
-                model according to BERTScore authors.
-            lang (str): The language of the text. Defaults to "en".
-            num_layers (int | None): The layer of representations to use.
+            metadata (dict[str, Any] | None): Metadata for the evaluation. Ignored for BERTScore.
             verbose (bool): Whether to turn on verbose mode.
-            idf (bool | dict): Use IDF weighting — can be a precomputed IDF dictionary.
             device (str | None): The device to use for computing the contextual embeddings.
             batch_size (int): The batch size to use for computing the contextual embeddings.
             nthreads (int): The number of threads to use for computing the contextual embeddings.
@@ -145,11 +153,7 @@ class BertScoreCalculator(ScoreCalculator):
         return self.calculate(
             prediction=prediction,
             reference=reference,
-            lang=lang,
-            model_type=model_type,
-            num_layers=num_layers,
             verbose=verbose,
-            idf=idf,
             device=device,
             batch_size=batch_size,
             nthreads=nthreads,
@@ -157,36 +161,6 @@ class BertScoreCalculator(ScoreCalculator):
             baseline_path=baseline_path,
             use_fast_tokenizer=use_fast_tokenizer,
         )
-
-
-_bertscore_calculator: None | BertScoreCalculator = None
-
-
-async def _init_bertscore() -> BertScoreCalculator:
-    """
-    Lazily initialises the BERTScore calculator.
-
-    Returns:
-        BertScoreCalculator: The initialised BERTScore calculator.
-    """
-    async with concurrency("load_bertscore", 1):
-        global _bertscore_calculator
-        if _bertscore_calculator is None:
-            _bertscore_calculator = BertScoreCalculator()
-
-    return _bertscore_calculator
-
-
-def _cleanup_bertscore() -> None:
-    """
-    Cleans up the BERTScore calculator.
-    """
-    global _bertscore_calculator
-    if _bertscore_calculator is not None:
-        del _bertscore_calculator
-        _bertscore_calculator = None
-        gc.collect()
-        torch.cuda.empty_cache()
 
 
 def get_bertscore_evaluator(
@@ -248,21 +222,29 @@ def get_bertscore_evaluator(
             {"BERTScore F1": [mean()]},
         ]
 
+    bertscore_calculator = BertScoreCalculator(
+        model_type=model_type,
+        lang=lang,
+        num_layers=num_layers,
+        idf=idf,
+    )
+
+    def cleanup_fun() -> None:
+        global bertscore_calculator
+        bertscore_calculator = None
+        gc.collect()
+        torch.cuda.empty_cache()
+
     @scorer(
         name=name,
         metrics=metrics,
     )
     def bertscore_scorer() -> Scorer:
         async def score(state: TaskState, target: Target) -> Score:
-            bertscore_calculator = await _init_bertscore()
             return await bertscore_calculator.calculate_async(
                 prediction=state.output.completion,
                 reference=target.text,
-                model_type=model_type,
-                lang=lang,
-                num_layers=num_layers,
                 verbose=verbose,
-                idf=idf,
                 device=device,
                 batch_size=batch_size,
                 nthreads=nthreads,
@@ -276,5 +258,5 @@ def get_bertscore_evaluator(
     return Evaluator(
         name=name,
         scorer=bertscore_scorer(),
-        cleanup_fun=_cleanup_bertscore,
+        cleanup_fun=cleanup_fun,
     )

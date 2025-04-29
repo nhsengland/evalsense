@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from collections import defaultdict
-from typing import Literal, Mapping, cast, override
+from typing import Literal, cast, override
 
 import numpy as np
 import numpy.typing as npt
@@ -87,7 +87,7 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
         """
         eval_logs = project.get_logs(type="evaluation", status="success")
 
-        result_data: Mapping[str, list[float]] = defaultdict(list)
+        result_data: dict[str, list[float]] = defaultdict(list)
         for eval_record, log in eval_logs.items():
             if not hasattr(log, "samples") or not log.samples:
                 continue

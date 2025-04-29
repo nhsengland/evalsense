@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Callable, Protocol, runtime_checkable
+from typing import Any, Callable, Protocol, runtime_checkable
 
 from inspect_ai.model import Model
 from inspect_ai.scorer import Score, Scorer
@@ -17,14 +17,20 @@ class ScoreCalculator(Protocol):
         self,
         *,
         prediction: str,
+        input: str | None = None,
         reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
         **kwargs: dict,
     ) -> Score:
         """Computes evaluation scores for the given evaluation method
 
         Args:
             predictions (str): The model prediction to evaluate.
+            input (str, optional): The input to the model. Optional.
             references (str, optional): The reference output to compare against.
+                Optional.
+            metadata (dict[str, Any], optional): Additional metadata for the score.
+                Optional.
             **kwargs (dict): Additional keyword arguments specific to the given
                 evaluation method.
 
@@ -38,14 +44,20 @@ class ScoreCalculator(Protocol):
         self,
         *,
         prediction: str,
+        input: str | None = None,
         reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
         **kwargs: dict,
     ) -> Score:
         """Computes evaluation scores for the given evaluation method
 
         Args:
             predictions (str): The model prediction to evaluate.
+            input (str, optional): The input to the model. Optional.
             references (str, optional): The reference output to compare against.
+                Optional.
+            metadata (dict[str, Any], optional): Additional metadata for the score.
+                Optional.
             **kwargs (dict): Additional keyword arguments specific to the given
                 evaluation method.
 

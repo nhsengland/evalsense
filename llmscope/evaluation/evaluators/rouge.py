@@ -1,4 +1,4 @@
-from typing import override
+from typing import Any, override
 
 import evaluate
 from inspect_ai.scorer import (
@@ -10,7 +10,6 @@ from inspect_ai.scorer import (
     scorer,
 )
 from inspect_ai.solver import TaskState
-from inspect_ai.util import concurrency
 
 from llmscope.evaluation import Evaluator, ScoreCalculator
 
@@ -26,7 +25,9 @@ class RougeScoreCalculator(ScoreCalculator):
         self,
         *,
         prediction: str,
+        input: str | None = None,
         reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
         **kwargs: dict,
     ) -> Score:
         """
@@ -34,7 +35,10 @@ class RougeScoreCalculator(ScoreCalculator):
 
         Args:
             prediction (str): The text of the prediction from the model.
+            input (str, optional): The text of the input to the model. Ignored for ROUGE.
             reference (str, optional): The text of the reference input to compare against.
+            metadata (dict[str, Any], optional): Additional metadata for the score.
+                Ignored for ROUGE.
 
         Returns:
             Score: Inspect AI Score with the calculated evaluation results.
@@ -59,37 +63,34 @@ class RougeScoreCalculator(ScoreCalculator):
 
     @override
     async def calculate_async(
-        self, *, prediction: str, reference: str | None = None, **kwargs: dict
+        self,
+        *,
+        prediction: str,
+        input: str | None = None,
+        reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: dict,
     ) -> Score:
         """
         Calculates ROUGE scores for the supplied model prediction and reference input.
 
         Args:
             prediction (str): The text of the prediction from the model.
+            input (str, optional): The text of the input to the model. Ignored for ROUGE.
             reference (str, optional): The text of the reference input to compare against.
+            metadata (dict[str, Any], optional): Additional metadata for the score.
+                Ignored for ROUGE.
 
         Returns:
             Score: Inspect AI Score with the calculated evaluation results.
         """
-        return self.calculate(prediction=prediction, reference=reference, **kwargs)
-
-
-_rouge_calculator: RougeScoreCalculator | None = None
-
-
-async def _init_rouge() -> RougeScoreCalculator:
-    """
-    Lazily initialises the ROUGE calculator.
-
-    Returns:
-        RougeScoreCalculator: The initialised ROUGE calculator.
-    """
-    async with concurrency("load_rouge", 1):
-        global _rouge_calculator
-        if _rouge_calculator is None:
-            _rouge_calculator = RougeScoreCalculator()
-
-    return _rouge_calculator
+        return self.calculate(
+            prediction=prediction,
+            input=input,
+            reference=reference,
+            metadata=metadata,
+            **kwargs,
+        )
 
 
 def get_rouge_evaluator(
@@ -119,10 +120,11 @@ def get_rouge_evaluator(
             }
         ]
 
+    rouge_calculator = RougeScoreCalculator()
+
     @scorer(name=name, metrics=metrics)
     def rouge_scorer() -> Scorer:
         async def score(state: TaskState, target: Target) -> Score:
-            rouge_calculator = await _init_rouge()
             return await rouge_calculator.calculate_async(
                 prediction=state.output.completion, reference=target.text
             )

@@ -13,7 +13,6 @@ from inspect_ai.scorer import (
     scorer,
 )
 from inspect_ai.solver import TaskState
-from inspect_ai.util import concurrency
 
 from llmscope.evaluation import Evaluator, ScoreCalculator
 
@@ -29,7 +28,9 @@ class BleuPrecisionScoreCalculator(ScoreCalculator):
         self,
         *,
         prediction: str,
+        input: str | None = None,
         reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
         **kwargs: dict,
     ) -> Score:
         """
@@ -37,7 +38,10 @@ class BleuPrecisionScoreCalculator(ScoreCalculator):
 
         Args:
             prediction (str): The text of the prediction from the model.
+            input (str, optional): The text of the input to the model. Ignored for BLEU.
             reference (str, optional): The text of the reference input to compare against.
+            metadata (dict[str, Any], optional): Additional metadata for the score.
+                Ignored for BLEU.
 
         Returns:
             Score: Inspect AI Score with the calculated evaluation results.
@@ -64,37 +68,34 @@ class BleuPrecisionScoreCalculator(ScoreCalculator):
 
     @override
     async def calculate_async(
-        self, *, prediction: str, reference: str | None = None, **kwargs: dict
+        self,
+        *,
+        prediction: str,
+        input: str | None = None,
+        reference: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        **kwargs: dict,
     ) -> Score:
         """
         Calculates BLEU precision scores for the supplied model prediction and reference input.
 
         Args:
             prediction (str): The text of the prediction from the model.
+            input (str, optional): The text of the input to the model. Ignored for BLEU.
             reference (str, optional): The text of the reference input to compare against.
+            metadata (dict[str, Any], optional): Additional metadata for the score.
+                Ignored for BLEU.
 
         Returns:
             Score: Inspect AI Score with the calculated evaluation results.
         """
-        return self.calculate(prediction=prediction, reference=reference, **kwargs)
-
-
-_bleu_calculator: BleuPrecisionScoreCalculator | None = None
-
-
-async def _init_bleu() -> BleuPrecisionScoreCalculator:
-    """
-    Lazily initialises the BLEU precision score calculator.
-
-    Returns:
-        BleuPrecisionScoreCalculator: The initialised BLEU calculator.
-    """
-    async with concurrency("load_bleu", 1):
-        global _bleu_calculator
-        if _bleu_calculator is None:
-            _bleu_calculator = BleuPrecisionScoreCalculator()
-
-    return _bleu_calculator
+        return self.calculate(
+            prediction=prediction,
+            reference=reference,
+            input=input,
+            metadata=metadata,
+            **kwargs,
+        )
 
 
 def bleu_metric() -> MetricProtocol:
@@ -144,10 +145,11 @@ def get_bleu_evaluator(
     if metrics is None:
         metrics = [bleu()]
 
+    bleu_calculator = BleuPrecisionScoreCalculator()
+
     @scorer(name=scorer_name, metrics=metrics)
     def bleu_precision_scorer() -> Scorer:
         async def score(state: TaskState, target: Target):
-            bleu_calculator = await _init_bleu()
             return await bleu_calculator.calculate_async(
                 prediction=state.output.completion, reference=target.text
             )
