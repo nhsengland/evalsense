@@ -25,12 +25,12 @@ class ScoreCalculator(Protocol):
         """Computes evaluation scores for the given evaluation method
 
         Args:
-            predictions (str): The model prediction to evaluate.
+            predictions (str): The model output to evaluate.
             input (str, optional): The input to the model. Optional.
             references (str, optional): The reference output to compare against.
                 Optional.
-            metadata (dict[str, Any], optional): Additional metadata for the score.
-                Optional.
+            metadata (dict[str, Any], optional): Additional Inspect AI sample/task
+                state metadata. Optional.
             **kwargs (dict): Additional keyword arguments specific to the given
                 evaluation method.
 
@@ -49,15 +49,15 @@ class ScoreCalculator(Protocol):
         metadata: dict[str, Any] | None = None,
         **kwargs: dict,
     ) -> Score:
-        """Computes evaluation scores for the given evaluation method
+        """Asynchronously computes evaluation scores for the given evaluation method
 
         Args:
-            predictions (str): The model prediction to evaluate.
+            predictions (str): The model output to evaluate.
             input (str, optional): The input to the model. Optional.
             references (str, optional): The reference output to compare against.
                 Optional.
-            metadata (dict[str, Any], optional): Additional metadata for the score.
-                Optional.
+            metadata (dict[str, Any], optional): Additional Inspect AI sample/task
+                state metadata. Optional.
             **kwargs (dict): Additional keyword arguments specific to the given
                 evaluation method.
 

@@ -104,7 +104,7 @@ class Pipeline:
                 logger.warning(
                     "⚠️  Unable to fully clean up background processes "
                     f"({len(still_alive)}/{len(children)} still alive). "
-                    "Unless this results in overly high VRAM usage, "
+                    "Unless this results in overly high resource usage, "
                     "you can safely ignore this warning."
                 )
 

@@ -222,7 +222,7 @@ def get_bertscore_evaluator(
             {"BERTScore F1": [mean()]},
         ]
 
-    bertscore_calculator = BertScoreCalculator(
+    calculator = BertScoreCalculator(
         model_type=model_type,
         lang=lang,
         num_layers=num_layers,
@@ -230,8 +230,7 @@ def get_bertscore_evaluator(
     )
 
     def cleanup_fun() -> None:
-        global bertscore_calculator
-        bertscore_calculator = None
+        del calculator.bertscore_module
         gc.collect()
         torch.cuda.empty_cache()
 
@@ -241,7 +240,7 @@ def get_bertscore_evaluator(
     )
     def bertscore_scorer() -> Scorer:
         async def score(state: TaskState, target: Target) -> Score:
-            return await bertscore_calculator.calculate_async(
+            return await calculator.calculate_async(
                 prediction=state.output.completion,
                 reference=target.text,
                 verbose=verbose,

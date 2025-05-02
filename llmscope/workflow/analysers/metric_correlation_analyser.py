@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from collections import defaultdict
-from typing import Literal, cast, override
+from typing import Callable, Literal, cast, override
 
 import numpy as np
 import numpy.typing as npt
@@ -62,8 +62,9 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
         project: Project,
         corr_method: Literal["spearman", "pearson"] = "spearman",
         return_plot: bool = True,
-        figsize: tuple[int, int] = (10, 8),
+        figsize: tuple[int, int] = (12, 10),
         metric_labels: dict[str, str] | None = None,
+        method_filter_fun: Callable[[str], bool] = lambda _: True,
         **kwargs: dict,
     ) -> T:
         """Calculates Spearman rank correlations between evaluation metrics.
@@ -87,8 +88,8 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
         """
         eval_logs = project.get_logs(type="evaluation", status="success")
 
-        result_data: dict[str, list[float]] = defaultdict(list)
-        for eval_record, log in eval_logs.items():
+        result_data: dict[str, list[float | int]] = defaultdict(list)
+        for log in eval_logs.values():
             if not hasattr(log, "samples") or not log.samples:
                 continue
 
@@ -98,21 +99,27 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
                     continue
 
                 for metric_name, score in sample.scores.items():
+                    if not method_filter_fun(metric_name):
+                        continue
+
                     if metric_labels is not None and metric_name in metric_labels:
                         metric_name = metric_labels[metric_name]
 
-                    if type(score.value) is float:
+                    if type(score.value) is float or type(score.value) is int:
                         result_data[metric_name].append(score.value)
                     elif type(score.value) is dict:
                         # Extract inner scores from result dictionary
                         for inner_metric_name, inner_score in score.value.items():
+                            if not method_filter_fun(inner_metric_name):
+                                continue
+
                             if (
                                 metric_labels is not None
                                 and inner_metric_name in metric_labels
                             ):
                                 inner_metric_name = metric_labels[inner_metric_name]
 
-                            if type(inner_score) is float:
+                            if type(inner_score) is float or type(inner_score) is int:
                                 result_data[inner_metric_name].append(inner_score)
 
         sample_scores_df = pl.DataFrame(result_data)

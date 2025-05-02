@@ -1,6 +1,6 @@
 from collections import defaultdict
 import regex
-from typing import Callable
+from typing import Callable, Literal, overload
 
 from inspect_ai.model import ModelOutput
 import numpy as np
@@ -27,20 +27,75 @@ def format_template(template: str, **kwargs) -> str:
         )
 
 
-def extract_binary_answer(text: str) -> bool:
+def extract_lines(
+    text: str,
+    include_filter_fun: Callable[[str], bool] = lambda _: True,
+    trim_lines: bool = True,
+) -> list[str]:
     """
-    Extract a binary answer (True/False) from the text.
+    Extract lines from the text based on a filter function.
+
+    Args:
+        text (str): The text to extract lines from.
+        include_filter_fun (Callable[[str], bool], optional): A function that
+            takes a line and returns True if it should be included, False
+            otherwise. Defaults to a function that includes all lines.
+        trim_lines (bool, optional): Whether to trim bullet points, list numbers
+            and whitespace from the beginning/end of each line. Defaults to True.
+
+    Returns:
+        list[str]: A list of extracted lines.
+    """
+    lines = text.splitlines()
+    if trim_lines:
+        lines = [regex.sub(r"^\s*\d+\.\s*", "", line) for line in lines]
+        lines = [line.strip().lstrip("*").lstrip("-").strip() for line in lines]
+
+    return [line for line in lines if include_filter_fun(line)]
+
+
+@overload
+def extract_ternary_answer(
+    text: str, binary_only: Literal[True], unknown_on_mismatch: Literal[False] = False
+) -> bool: ...
+@overload
+def extract_ternary_answer(
+    text: str, binary_only: Literal[False], unknown_on_mismatch: bool = True
+) -> bool | None: ...
+def extract_ternary_answer(
+    text: str, binary_only: bool, unknown_on_mismatch: bool = True
+) -> bool | None:
+    """
+    Extract a ternary answer (True/False/Unknown) from the text.
+
+    Valid answers are 'yes', 'no', 'true', 'false', 'unknown', and 'I don't know'.
 
     Args:
         text (str): The text to extract the answer from.
+        binary_only (bool): If True, only 'yes' or 'no' are valid answers.
+        unknown_on_mismatch (bool): If True, return None for answers not
+            matching any of the valid answers. If False, raise an error.
+            Only relevant if binary_only is False. Defaults to True.
 
     Returns:
-        bool: The extracted binary answer.
+        bool | None: The extracted answer - bool for True/False, None for Unknown.
     """
-    pattern = r"\b(?:yes|no|true|false)\b"
+    pattern = r"\b(?:yes|no|true|false|unknown|i don't know)\b"
     match = regex.search(pattern, text, regex.IGNORECASE)
     if match:
-        return match.group(0).lower() in ["yes", "true"]
+        answer = match.group(0).lower()
+        if answer in ["yes", "true"]:
+            return True
+        elif answer in ["no", "false"]:
+            return False
+        else:
+            if binary_only:
+                raise ValueError(
+                    "Binary answer expected, but 'unknown' or 'I don't know' found."
+                )
+            return None
+    if not binary_only and unknown_on_mismatch:
+        return None
     raise ValueError(f"Unable to extract a binary answer from text: {text}.")
 
 
@@ -92,7 +147,7 @@ def _eval_weighted_options[T](
         dict[T, float]: A dictionary mapping each valid option to its probability.
     """
     if output.choices[0].logprobs is None:
-        raise ValueError("Cannot computed weighted answer, logprobs are not available.")
+        raise ValueError("Cannot compute weighted answer, logprobs are not available.")
 
     # First, identify matching target token
     logprobs = output.choices[0].logprobs.content

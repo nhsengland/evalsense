@@ -82,24 +82,31 @@ class GEvalScoreCalculator(ScoreCalculator):
         )
         output = await self.model.generate(llm_input, config=logprobs_config)
 
-        score = extract_score(output.completion, self.min_score, self.max_score)
+        raw_score = extract_score(output.completion, self.min_score, self.max_score)
         if self.logprobs:
             try:
-                score = extract_weighted_score(
+                raw_score = extract_weighted_score(
                     output, min_score=self.min_score, max_score=self.max_score
                 )
             except ValueError as e:
                 logger.error(
-                    f"Cannot compute weighted evaluation score: {e}. "
+                    f"❌  Cannot compute weighted evaluation score: {e}. "
                     "Falling back to standard score."
                 )
 
         if self.normalise:
-            score = (score - self.min_score) / (self.max_score - self.min_score)
+            score = (raw_score - self.min_score) / (self.max_score - self.min_score)
+        else:
+            score = raw_score
 
         return Score(
             value=score,
             answer=prediction,
+            metadata={
+                "prompt": llm_input,
+                "output_text": output.completion,
+                "raw_score": raw_score,
+            },
         )
 
 
@@ -186,6 +193,7 @@ def get_g_eval_evaluator(
     *,
     name: str = "G-Eval",
     quality_name: str = "Unknown",
+    model_name: str | None = None,
     metrics: list[Metric | dict[str, list[Metric]]]
     | dict[str, list[Metric]]
     | None = None,
@@ -203,13 +211,17 @@ def get_g_eval_evaluator(
     Args:
         name (str): The name of the evaluator. Defaults to "G-Eval".
         quality_name (str): The name of the quality to be evaluated by G-Eval.
+        model_name (str | None): The name of the model to be used for evaluation.
+            If `None`, the model name will be taken from the model config.
         metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
             The metrics to use for the evaluation. If `None`, the default metric
             will be used (G-Eval).
-        prompt_template (str): The prompt template to use. The supplied prompt should
+        prompt_template (str): The prompt template to use. The supplied template should
             be a format string with {prediction} and (optionally) {reference} as
             placeholders, as well as any additional placeholders for entries in
-            Inspect AI sample/task state metadata.
+            Inspect AI sample/task state metadata. The template should instruct the
+            judge model to respond with a numerical score between the specified
+            min_score and max_score.
         model_config (ModelConfig): The model configuration.
         logprobs (bool): Whether to use model log probabilities to compute weighted
             evaluation score instead of a standard score.
@@ -221,7 +233,7 @@ def get_g_eval_evaluator(
     Returns:
         Evaluator: The constructed G-Eval evaluator.
     """
-    metric_name = f"{name} ({quality_name}, {model_config.name})"
+    metric_name = f"{name} ({quality_name}, {model_name or model_config.name})"
     return Evaluator(
         name=metric_name,
         scorer=GEvalScorerFactory(

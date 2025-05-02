@@ -16,6 +16,12 @@ from llmscope.evaluation.evaluators.rouge import (
     RougeScoreCalculator,
     get_rouge_evaluator,
 )
+from llmscope.evaluation.evaluators.qags import (
+    QagsConfig,
+    QagsScoreCalculator,
+    QagsScorerFactory,
+    get_qags_evaluator,
+)
 
 __all__ = [
     "BertScoreCalculator",
@@ -28,4 +34,8 @@ __all__ = [
     "get_g_eval_evaluator",
     "RougeScoreCalculator",
     "get_rouge_evaluator",
+    "QagsConfig",
+    "QagsScoreCalculator",
+    "QagsScorerFactory",
+    "get_qags_evaluator",
 ]
