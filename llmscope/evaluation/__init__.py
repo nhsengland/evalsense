@@ -9,7 +9,6 @@ from llmscope.evaluation.experiment import (
     ResultRecord,
     TaskConfig,
 )
-from llmscope.evaluation.prompt_template import EvalPromptTemplate
 
 __all__ = [
     "Evaluator",
@@ -23,5 +22,4 @@ __all__ = [
     "RecordStatus",
     "ResultRecord",
     "TaskConfig",
-    "EvalPromptTemplate",
 ]
