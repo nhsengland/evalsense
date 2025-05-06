@@ -147,7 +147,11 @@ def _eval_weighted_options[T](
         dict[T, float]: A dictionary mapping each valid option to its probability.
     """
     if output.choices[0].logprobs is None:
-        raise ValueError("Cannot compute weighted answer, logprobs are not available.")
+        raise ValueError(
+            "Logprobs for computing weighted options are not available. "
+            + "Check if your model provider supports logprobs and disable "
+            + "using weighted options if needed by setting logprobs=False."
+        )
 
     # First, identify matching target token
     logprobs = output.choices[0].logprobs.content

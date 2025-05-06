@@ -32,16 +32,18 @@ class QagsConfig(Protocol):
     """A protocol for configuring QAGS evaluation."""
 
     answer_comparison_mode: Literal["ternary", "exact", "judge"]
-    use_weighted_answer: bool
+    logprobs: bool
     top_logprobs: int
     ci: float
+    debug: bool
 
     def __init__(
         self,
         answer_comparison_mode: Literal["ternary", "exact", "judge"],
-        use_weighted_answer: bool = True,
+        logprobs: bool = True,
         top_logprobs: int = 20,
         ci: float = 0.1,
+        debug: bool = False,
     ):
         """
         Initializes the QAGS configuration.
@@ -53,7 +55,7 @@ class QagsConfig(Protocol):
                 questions with "yes", "no", or "unknown". In other modes, the model
                 may give arbitrary answers, which are either compared in terms
                 of exact match or compared by the model itself.
-            use_weighted_answer (bool): Whether to use weighted answers. Can only
+            logprobs (bool): Whether to use logprobs to compute weighted answers. Can only
                 be used when `answer_comparison_mode` is set to "judge".
             top_logprobs (int): The number of top log probabilities to consider
                 when computing weighted answers.
@@ -63,11 +65,13 @@ class QagsConfig(Protocol):
                 is set to "judge". The default value is 0.1, which means that
                 answers with a score of 0.9 or are confident "yes", while answers
                 with a score of 0.1 or lower are confident "no".
+            debug (bool): Whether to report repeated errors in the log.
         """
         self.answer_comparison_mode = answer_comparison_mode
-        self.use_weighted_answer = use_weighted_answer
+        self.logprobs = logprobs
         self.top_logprobs = top_logprobs
         self.ci = ci
+        self.debug = debug
 
     def enforce_not_none[T](self, param_name: str, param_value: T | None) -> T:
         """
@@ -212,6 +216,7 @@ class QagsScoreCalculator(ScoreCalculator):
         model: Model,
         config: QagsConfig,
         name: str = "QAGS",
+        debug: bool = False,
     ):
         """
         Initializes the QAGS score calculator.
@@ -220,20 +225,19 @@ class QagsScoreCalculator(ScoreCalculator):
             model (Model): The model to use for evaluation.
             config (QagsConfig): The configuration for the QAGS score calculator.
             name (str): The name of the score calculator. Defaults to "QAGS".
+            debug (bool): Whether to report repeated errors in the log.
         """
         self.model = model
         self.config = config
         self.name = name
+        self.warned_weighted_answer = False
 
     @property
     def generate_config(self) -> GenerateConfig:
         """Generation configuration for the model."""
-        if (
-            self.config.use_weighted_answer
-            and self.config.answer_comparison_mode == "judge"
-        ):
+        if self.config.logprobs and self.config.answer_comparison_mode == "judge":
             return GenerateConfig(
-                logprobs=self.config.use_weighted_answer,
+                logprobs=self.config.logprobs,
                 top_logprobs=self.config.top_logprobs,
             )
         return GenerateConfig()
@@ -641,16 +645,27 @@ class QagsScoreCalculator(ScoreCalculator):
                     unknown_on_mismatch=False,
                 )
             )
-            if self.config.use_weighted_answer:
+            if self.config.logprobs:
                 try:
                     answer_comparison = extract_weighted_binary_answer(
                         answer_comparison_output
                     )
                 except ValueError as e:
-                    logger.error(
-                        f"❌  Cannot compute weighted comparison score: {e}. "
-                        "Falling back to binary comparison."
-                    )
+                    if not self.warned_weighted_answer or self.config.debug:
+                        self.warned_weighted_answer = True
+
+                        error_message = (
+                            f"❌  Cannot compute weighted comparison score: {e} "
+                            "Falling back to binary comparison."
+                        )
+
+                        if not self.config.debug:
+                            error_message += (
+                                " Further errors will be suppressed "
+                                + "(set debug=True to see all errors)."
+                            )
+
+                        logger.error(error_message)
             answer_comparisons.append(answer_comparison)
 
         def to_match_symbol(answer_comparison: float) -> str:
@@ -837,12 +852,13 @@ class QagsScorerFactory(ScorerFactory):
 
         @scorer(name=self.name, metrics=self.metrics)
         def qags_scorer() -> Scorer:
+            qags_score_calculator = QagsScoreCalculator(
+                model=model,
+                config=self.config,
+                name=self.name,
+            )
+
             async def score(state: TaskState, target: Target):
-                qags_score_calculator = QagsScoreCalculator(
-                    model=model,
-                    config=self.config,
-                    name=self.name,
-                )
                 return await qags_score_calculator.calculate_async(
                     input=state.input_text,
                     prediction=state.output.completion,

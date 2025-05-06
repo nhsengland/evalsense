@@ -33,6 +33,7 @@ class GEvalScoreCalculator(ScoreCalculator):
         min_score: int = 1,
         max_score: int = 10,
         normalise: bool = True,
+        debug: bool = False,
     ):
         self.model = model
         self.prompt_template = prompt_template
@@ -41,6 +42,8 @@ class GEvalScoreCalculator(ScoreCalculator):
         self.min_score = min_score
         self.max_score = max_score
         self.normalise = normalise
+        self.debug = debug
+        self.warned_weighted_score = False
 
     @override
     def calculate(
@@ -89,10 +92,21 @@ class GEvalScoreCalculator(ScoreCalculator):
                     output, min_score=self.min_score, max_score=self.max_score
                 )
             except ValueError as e:
-                logger.error(
-                    f"❌  Cannot compute weighted evaluation score: {e}. "
-                    "Falling back to standard score."
-                )
+                if not self.warned_weighted_score or self.debug:
+                    self.warned_weighted_score = True
+
+                    error_message = (
+                        f"❌  Cannot compute weighted evaluation score: {e} "
+                        "Falling back to standard score."
+                    )
+
+                    if not self.debug:
+                        error_message += (
+                            " Further errors will be suppressed "
+                            + "(set debug=True to see all errors)."
+                        )
+
+                    logger.error(error_message)
 
         if self.normalise:
             score = (raw_score - self.min_score) / (self.max_score - self.min_score)
@@ -125,6 +139,7 @@ class GEvalScorerFactory(ScorerFactory):
         min_score: int = 1,
         max_score: int = 10,
         normalise: bool = True,
+        debug: bool = False,
     ):
         """
         Initialize the G-Eval scorer factory.
@@ -141,6 +156,7 @@ class GEvalScorerFactory(ScorerFactory):
             min_score (int): The minimum valid score.
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
+            debug (bool): Whether to report repeated errors in the log.
         """
         self.name = name
         self.prompt_template = prompt_template
@@ -152,6 +168,7 @@ class GEvalScorerFactory(ScorerFactory):
         self.min_score = min_score
         self.max_score = max_score
         self.normalise = normalise
+        self.debug = debug
 
     @override
     def create_scorer(self, model: Model) -> Scorer:
@@ -167,16 +184,18 @@ class GEvalScorerFactory(ScorerFactory):
 
         @scorer(name=self.name, metrics=self.metrics)
         def g_eval_scorer() -> Scorer:
+            g_eval_calculator = GEvalScoreCalculator(
+                model=model,
+                prompt_template=self.prompt_template,
+                logprobs=self.logprobs,
+                top_logprobs=self.top_logprobs,
+                min_score=self.min_score,
+                max_score=self.max_score,
+                normalise=self.normalise,
+                debug=self.debug,
+            )
+
             async def score(state: TaskState, target: Target):
-                g_eval_calculator = GEvalScoreCalculator(
-                    model=model,
-                    prompt_template=self.prompt_template,
-                    logprobs=self.logprobs,
-                    top_logprobs=self.top_logprobs,
-                    min_score=self.min_score,
-                    max_score=self.max_score,
-                    normalise=self.normalise,
-                )
                 return await g_eval_calculator.calculate_async(
                     input=state.input_text,
                     prediction=state.output.completion,
@@ -204,6 +223,7 @@ def get_g_eval_evaluator(
     min_score: int = 1,
     max_score: int = 10,
     normalise: bool = True,
+    debug: bool = False,
 ) -> Evaluator:
     """
     Constructs a G-Eval evaluator that can be used in LLMScope evaluation pipeline.
@@ -229,6 +249,7 @@ def get_g_eval_evaluator(
         min_score (int): The minimum valid score.
         max_score (int): The maximum valid score.
         normalise (bool): Whether to normalise the scores between 0 and 1.
+        debug (bool): Whether to report repeated errors in the log.
 
     Returns:
         Evaluator: The constructed G-Eval evaluator.
@@ -245,6 +266,7 @@ def get_g_eval_evaluator(
             min_score=min_score,
             max_score=max_score,
             normalise=normalise,
+            debug=debug,
         ),
         model_config=model_config,
     )
