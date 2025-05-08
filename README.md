@@ -1,3 +1,6 @@
+> [!WARNING]
+> This project is a work in progress. Critical components may be missing, inoperative or incomplete, and the API can undergo major changes without any notice. Please check back later for a more stable version.
+
 # LLMScope: LLM Evaluation
 <div align="center">
 
@@ -56,17 +59,7 @@ To setup the Node environment for the LLM evaluation guide (located under [`guid
 - `npm run start` to run the development server
 
 ## Usage
-{DESCRIPTION OF CODE}
-
-### Outputs
-{LIST AND DESCRIPTION OF OUTPUTS}
-
-{NOTES ON REPRODUCIBILITY OF RESULTS}
-
-### Datasets
-{DESCRIPTION AND LINKS TO DATASETS}
-
-{LINK TO FAKE DATA TO SUPPORT INITAIL CODE RUNS}
+For an example illustrating the usage of LLMScope, please check the [Demo notebook](https://github.com/nhsengland/llmscope/blob/main/notebooks/Demo.ipynb) under the `notebooks/` folder.
 
 ## Contributing
 
