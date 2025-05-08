@@ -1737,7 +1737,7 @@ wheels = [
 ]
 
 [[package]]
-name = "llmscope"
+name = "evalsense"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

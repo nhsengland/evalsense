@@ -1,13 +1,13 @@
 > [!WARNING]
 > This project is a work in progress. Critical components may be missing, inoperative or incomplete, and the API can undergo major changes without any notice. Please check back later for a more stable version.
 
-# LLMScope: LLM Evaluation
+# EvalSense: LLM Evaluation
 <div align="center">
 
 [![status: experimental](https://github.com/GIScience/badges/raw/master/status/experimental.svg)](https://github.com/GIScience/badges#experimental)
-[![license: MIT](https://img.shields.io/badge/License-MIT-brightgreen)](https://github.com/nhsengland/llmscope/blob/main/LICENCE)
-[![LLMScope status](https://github.com/nhsengland/llmscope/actions/workflows/llmscope.yml/badge.svg)](https://github.com/nhsengland/llmscope/actions/workflows/llmscope.yml)
-[![Guide status](https://github.com/nhsengland/llmscope/actions/workflows/guide.yml/badge.svg)](https://github.com/nhsengland/llmscope/actions/workflows/guide.yml)
+[![license: MIT](https://img.shields.io/badge/License-MIT-brightgreen)](https://github.com/nhsengland/evalsense/blob/main/LICENCE)
+[![EvalSense status](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml/badge.svg)](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml)
+[![Guide status](https://github.com/nhsengland/evalsense/actions/workflows/guide.yml/badge.svg)](https://github.com/nhsengland/evalsense/actions/workflows/guide.yml)
 [![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=white&style=flat)](https://react.dev/)
@@ -30,10 +30,10 @@ _**Note:** Only public or fake data are shared in this repository._
 
 ## Project Stucture
 
-- The main code for the LLMScope Python package can be found under [`llmscope/`](https://github.com/nhsengland/llmscope/tree/main/llmscope).
-- The accompanying documentation is available in the [`docs/`](https://github.com/nhsengland/llmscope/tree/main/docs) folder.
-- Code for the interactive LLM evaluation guide is located under [`guide/`](https://github.com/nhsengland/llmscope/tree/main/guide).
-- Jupyter notebooks with the evaluation experiments and examples are located under [`notebooks/`](https://github.com/nhsengland/llmscope/tree/main/notebooks).
+- The main code for the EvalSense Python package can be found under [`evalsense/`](https://github.com/nhsengland/evalsense/tree/main/evalsense).
+- The accompanying documentation is available in the [`docs/`](https://github.com/nhsengland/evalsense/tree/main/docs) folder.
+- Code for the interactive LLM evaluation guide is located under [`guide/`](https://github.com/nhsengland/evalsense/tree/main/guide).
+- Jupyter notebooks with the evaluation experiments and examples are located under [`notebooks/`](https://github.com/nhsengland/evalsense/tree/main/notebooks).
 
 ## Getting Started
 
@@ -43,7 +43,7 @@ To install the project for local development, you can follow the steps below:
 
 To clone the repo:
 
-`git clone git@github.com:nhsengland/llmscope.git`
+`git clone git@github.com:nhsengland/evalsense.git`
 
 To setup the Python environment for the project:
 
@@ -52,23 +52,23 @@ To setup the Python environment for the project:
 - `source .venv/bin/activate`
 - `pre-commit install`
 
-To setup the Node environment for the LLM evaluation guide (located under [`guide/`](https://github.com/nhsengland/llmscope/tree/main/guide)):
+To setup the Node environment for the LLM evaluation guide (located under [`guide/`](https://github.com/nhsengland/evalsense/tree/main/guide)):
 
 - Install [node](https://nodejs.org/en/download) if it's not installed already
 - `npm install` in the `guide/` directory
 - `npm run start` to run the development server
 
 ## Usage
-For an example illustrating the usage of LLMScope, please check the [Demo notebook](https://github.com/nhsengland/llmscope/blob/main/notebooks/Demo.ipynb) under the `notebooks/` folder.
+For an example illustrating the usage of EvalSense, please check the [Demo notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Demo.ipynb) under the `notebooks/` folder.
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+2. Create your Feature Branch (`git checkout -b feature/amazing-feature`)
+3. Commit your Changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the Branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
 _See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidance._

@@ -13,7 +13,7 @@ To ensure that the code we publish is appropraite, clear and reusable we require
   - No
 - [ ] Who has responsibility for ongoing support and communications for the code? (**Optional** Best practice to assign, else state the code is not maintained and when the last update was)
 - [x] Has a responsible disclosure process for security issues been defined? (**Mandatory** - could use github issues)
-  - See [SECURITY.md](https://github.com/nhsengland/llmscope/blob/main/SECURITY.md).
+  - See [SECURITY.md](https://github.com/nhsengland/evalsense/blob/main/SECURITY.md).
 - [x] Who will address identified issues and security concerns? (**Mandatory**. - assign monitoring of above disclosure process)
   - @[adamdejl](https://github.com/adamdejl) will monitor and address any reported security issues.
 - [ ] Has semantic versioning been used? (**Optional**)
@@ -61,7 +61,7 @@ To ensure that the code we publish is appropraite, clear and reusable we require
 ### Any third-party tools you use to host or manage your code follow the National Cyber Security Centre’s cloud security guidance
 
 - [x] Are third party tools used within the code? (**Mandatory** check. Best practice is to keep an inventory)
-  - Yes, see [pyproject.toml](https://github.com/nhsengland/llmscope/blob/main/pyproject.toml) and [package.json](https://github.com/nhsengland/llmscope/blob/main/guide/package.json).
+  - Yes, see [pyproject.toml](https://github.com/nhsengland/evalsense/blob/main/pyproject.toml) and [package.json](https://github.com/nhsengland/evalsense/blob/main/guide/package.json).
 - [ ] If so do they adhere to the NCSC's [Cloud Security Principles](https://www.ncsc.gov.uk/collection/cloud-security/implementing-the-cloud-security-principles)? (**Mandatory**)
 
 ### An internal code review has been completed

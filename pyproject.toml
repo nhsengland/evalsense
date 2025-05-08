@@ -1,5 +1,5 @@
 [project]
-name = "llmscope"
+name = "evalsense"
 version = "0.1.0"
 description = "Tools for evaluating large language models."
 readme = "README.md"
@@ -7,6 +7,24 @@ authors = [
     { name = "Adam Dejl", email = "adam.dejl18@imperial.ac.uk" }
 ]
 requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+license = "MIT"
+license-files = ["LICENCE"]
+keywords = [
+    "LLMs",
+    "Large Language Models",
+    "LLM Evaluation",
+    "LLM Benchmarking",
+    "Artificial Intelligence",
+    "Machine Learning",
+]
 dependencies = [
     "accelerate>=1.4.0",
     "bert-score>=0.3.13",
@@ -32,6 +50,10 @@ dependencies = [
     "vllm>=0.8.2",
 ]
 
+[project.urls]
+Homepage = "https://github.com/nhsengland/evalsense"
+Issues = "https://github.com/nhsengland/evalsense/issues"
+
 [project.optional-dependencies]
 interactive = [
     "ipywidgets>=8.1.5",
@@ -39,7 +61,7 @@ interactive = [
 ]
 
 [project.scripts]
-llmscope = "llmscope.cli.main:app"
+evalsense = "evalsense.cli.main:app"
 
 [build-system]
 requires = ["hatchling"]
@@ -58,12 +80,12 @@ dev = [
 
 [tool.hatch.build.targets.sdist]
 only-include = [
-    "llmscope"
+    "evalsense"
 ]
 
 [tool.hatch.build.targets.wheel]
 only-include = [
-    "llmscope"
+    "evalsense"
 ]
 
 [tool.ruff]

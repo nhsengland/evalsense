@@ -1,3 +1,3 @@
 # :material-pipe: Pipelines
 
-::: llmscope.pipelines
+::: evalsense.pipelines

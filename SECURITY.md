@@ -6,4 +6,4 @@ This software is a work in progress and doesn't have any officially supported re
 
 ## Reporting a Vulnerability
 
-Please report any vulnerabilities by submitting a private vulnerability report from the [Security](https://github.com/nhsengland/llmscope/security) tab.
+Please report any vulnerabilities by submitting a private vulnerability report from the [Security](https://github.com/nhsengland/evalsense/security) tab.

@@ -1,4 +1,4 @@
-site_name: LLMScope Documentation
+site_name: EvalSense Documentation
 site_description: A tool for evaluating LLM performance on healthcare tasks.
 theme:
   name: material

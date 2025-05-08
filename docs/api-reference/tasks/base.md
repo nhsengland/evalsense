@@ -1,3 +1,3 @@
 # :octicons-tasklist-16: Tasks
 
-::: llmscope.tasks
+::: evalsense.tasks

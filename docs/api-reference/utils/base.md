@@ -2,18 +2,18 @@
 
 ## :material-code-braces: Dict
 
-Module `llmscope.utils.dict`.
+Module `evalsense.utils.dict`.
 
-::: llmscope.utils.dict
+::: evalsense.utils.dict
 
 ## :octicons-file-16: Files
 
-Module `llmscope.utils.files`.
+Module `evalsense.utils.files`.
 
-::: llmscope.utils.files
+::: evalsense.utils.files
 
 ## :hugging: Huggingface
 
-Module `llmscope.utils.huggingface`.
+Module `evalsense.utils.huggingface`.
 
-::: llmscope.utils.huggingface
+::: evalsense.utils.huggingface
