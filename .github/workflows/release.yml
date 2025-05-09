@@ -67,7 +67,7 @@ jobs:
                 await github.rest.git.updateRef({
                   ...data,
                   ref: `tags/${tagName}`
-                );
+                });
               }
             }
       - name: Create draft GitHub release
