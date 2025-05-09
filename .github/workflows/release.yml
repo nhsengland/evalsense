@@ -67,7 +67,7 @@ jobs:
                 await github.rest.git.updateRef({
                   ...data,
                   ref: `tags/${tagName}`
-                );
+                });
               }
             }
       - name: Create draft GitHub release
@@ -77,7 +77,7 @@ jobs:
         run: |
           gh release create "v${{ inputs.version }}"\
             --repo "$GITHUB_REPOSITORY" \
-            --title "Release v${{ inputs.version }}" \
+            --title "v${{ inputs.version }}" \
             --draft
       - name: Upload release artifacts
         if: ${{ inputs.type == 'production' }}
