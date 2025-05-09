@@ -24,7 +24,7 @@
 </div>
 
 ## About
-This repository holds a Python package enabling systematic evaluation of large language models (LLMs) on open-ended generation tasks, with a particular focus on healthcare and summarisation. It also includes supplementary documentation and assets related to the NHS England project on LLM evaluation, such as the code for an interactive LLM evaluation guide (located in the `guide/` directory`). You can find more information about the project in the [original project proposal](https://nhsx.github.io/nhsx-internship-projects/genai-eval/).
+This repository holds a Python package enabling systematic evaluation of large language models (LLMs) on open-ended generation tasks, with a particular focus on healthcare and summarisation. It also includes supplementary documentation and assets related to the NHS England project on LLM evaluation, such as the code for an interactive LLM evaluation guide (located in the `guide/` directory). You can find more information about the project in the [original project proposal](https://nhsx.github.io/nhsx-internship-projects/genai-eval/).
 
 _**Note:** Only public or fake data are shared in this repository._
 
