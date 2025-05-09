@@ -1,0 +1,94 @@
+name: Release EvalSense
+
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        description: "Release type"
+        required: true
+        type: choice
+        options:
+          - test
+          - production
+        default: test
+      version:
+        description: "Release version"
+        required: true
+        type: string
+
+run-name: Release EvalSense v${{ inputs.version }} (${{ inputs.type }})
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.7.3
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Verify version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: python3 scripts/check_version.py
+      - name: Build project
+        run: uv build
+      - name: Create/update git tag
+        if: ${{ inputs.type == 'production' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ inputs.version }}';
+            const tagName = `v${version}`;
+
+            const data = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${tagName}`,
+              sha: context.sha,
+            };
+
+            try {
+              await github.rest.git.createRef(data);
+              console.log(`Tag ${tagName} created successfully.`);
+            } catch (error) {
+              if (error.status === 422) {
+                console.log(`Tag ${tagName} already exists. Updating...`);
+                await github.rest.git.updateRef({
+                  ...data,
+                  ref: `tags/${tagName}`
+                );
+              }
+            }
+      - name: Create draft GitHub release
+        if: ${{ inputs.type == 'production' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${{ inputs.version }}"\
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Release v${{ inputs.version }}" \
+            --draft
+      - name: Upload release artifacts
+        if: ${{ inputs.type == 'production' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "v${{ inputs.version }}" dist/** \
+            --repo "$GITHUB_REPOSITORY" \
+      - name: Publish to TestPyPI
+        if: ${{ inputs.type == 'test' }}
+        run: uv publish --index testpypi --trusted-publishing always
+      - name: Publish to PyPI
+        if: ${{ inputs.type == 'production' }}
+        run: uv publish --trusted-publishing always
