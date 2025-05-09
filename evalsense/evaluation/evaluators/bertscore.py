@@ -11,6 +11,7 @@ from inspect_ai.scorer import (
     scorer,
 )
 from inspect_ai.solver import TaskState
+from inspect_ai.util import concurrency
 import torch
 
 from evalsense.evaluation import Evaluator, ScoreCalculator
@@ -229,7 +230,16 @@ def get_bertscore_evaluator(
         idf=idf,
     )
 
-    def cleanup_fun() -> None:
+    async def init_bertscore() -> None:
+        async with concurrency("init_bertscore", 1):
+            if not hasattr(calculator, "bertscore_module"):
+                setattr(
+                    calculator,
+                    "bertscore_module",
+                    evaluate.load("bertscore"),
+                )
+
+    def cleanup_bertscore() -> None:
         del calculator.bertscore_module
         gc.collect()
         torch.cuda.empty_cache()
@@ -240,6 +250,8 @@ def get_bertscore_evaluator(
     )
     def bertscore_scorer() -> Scorer:
         async def score(state: TaskState, target: Target) -> Score:
+            await init_bertscore()
+
             return await calculator.calculate_async(
                 prediction=state.output.completion,
                 reference=target.text,
@@ -257,5 +269,5 @@ def get_bertscore_evaluator(
     return Evaluator(
         name=name,
         scorer=bertscore_scorer(),
-        cleanup_fun=cleanup_fun,
+        cleanup_fun=cleanup_bertscore,
     )
