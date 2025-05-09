@@ -2,18 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
-Instructions on how to update this Changelog are available in the `Updating the Changelog` section of the [`CONTRIBUTING.md`](./CONTRIBUTING.md).  This project follows [semantic versioning](https://semver.org/spec/v2.0.0.html).
+Instructions on how to update this Changelog are available in the `Updating the Changelog` section of the [`CONTRIBUTING.md`](./CONTRIBUTING.md). This project follows [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased v1.0.0]
+## Unreleased
 
-### Breaking Changes
+### Breaking changes
 
-- {LIST OF MAJOR CHANGES}
+- None
 
-### New Features
+### Enhancements
 
-- {LIST OF NEW FEATURES}
+- None
 
-### Fixed
+### Bug fixes
 
-- {LIST OF FIXES}
+- None
+
+### Documentation
+
+- None
+
+### Miscellaneous
+
+- None
+
+## v0.1.1
+
+Technical release: no user-facing changes.
+
+## v0.1.0
+
+Initial release.

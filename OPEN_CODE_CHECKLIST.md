@@ -17,8 +17,7 @@ To ensure that the code we publish is appropraite, clear and reusable we require
   - See [SECURITY.md](https://github.com/nhsengland/evalsense/blob/main/SECURITY.md).
 - [x] Who will address identified issues and security concerns? (**Mandatory**. - assign monitoring of above disclosure process)
   - @[adamdejl](https://github.com/adamdejl) and [datascience@nhs.net](mailto:datascience@nhs.net) will monitor and address any reported security issues.
-- [ ] Has semantic versioning been used? (**Optional**)
-  - Not currently applicable: this project is a work in progress and doesn't have any official releases yet.
+- [x] Has semantic versioning been used? (**Optional**)
 - [x] Have [contribution guidelines](https://github.com/alphagov/govuk-frontend/blob/master/CONTRIBUTING.md) or [PR style guides](https://github.com/alphagov/styleguides/blob/master/pull-requests.md) been included? (**Optional**)
 - [x] Are package dependencies and libaries documented with versions? (**Optional**)
 - [x] Has the code been linked to any published outputs so others can easily link to the code? (**Optional**)
