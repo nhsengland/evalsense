@@ -11,11 +11,12 @@ To ensure that the code we publish is appropraite, clear and reusable we require
 - [x] Is the README clear and concise? (**Optional** - use analytics unit template or [example](https://github.com/othneildrew/Best-README-Template/blob/master/BLANK_README.md))
 - [x] Do you need to consider MHRA 'software as a medical device' guidance? (**Mandatory** - use [flowchart](https://assets.publishing.service.gov.uk/government/uploads/system/uploads/attachment_data/file/999908/Software_flow_chart_Ed_1-08b-IVD.pdf))
   - No
-- [ ] Who has responsibility for ongoing support and communications for the code? (**Optional** Best practice to assign, else state the code is not maintained and when the last update was)
+- [x] Who has responsibility for ongoing support and communications for the code? (**Optional** Best practice to assign, else state the code is not maintained and when the last update was)
+  - [datascience@nhs.net]("mailto:datascience@nhs.net") is responsible for the ongoing support and communication about the code
 - [x] Has a responsible disclosure process for security issues been defined? (**Mandatory** - could use github issues)
   - See [SECURITY.md](https://github.com/nhsengland/evalsense/blob/main/SECURITY.md).
 - [x] Who will address identified issues and security concerns? (**Mandatory**. - assign monitoring of above disclosure process)
-  - @[adamdejl](https://github.com/adamdejl) will monitor and address any reported security issues.
+  - @[adamdejl](https://github.com/adamdejl) and [datascience@nhs.net]("mailto:datascience@nhs.net") will monitor and address any reported security issues.
 - [ ] Has semantic versioning been used? (**Optional**)
   - Not currently applicable: this project is a work in progress and doesn't have any official releases yet.
 - [x] Have [contribution guidelines](https://github.com/alphagov/govuk-frontend/blob/master/CONTRIBUTING.md) or [PR style guides](https://github.com/alphagov/styleguides/blob/master/pull-requests.md) been included? (**Optional**)
@@ -62,7 +63,7 @@ To ensure that the code we publish is appropraite, clear and reusable we require
 
 - [x] Are third party tools used within the code? (**Mandatory** check. Best practice is to keep an inventory)
   - Yes, see [pyproject.toml](https://github.com/nhsengland/evalsense/blob/main/pyproject.toml) and [package.json](https://github.com/nhsengland/evalsense/blob/main/guide/package.json).
-- [ ] If so do they adhere to the NCSC's [Cloud Security Principles](https://www.ncsc.gov.uk/collection/cloud-security/implementing-the-cloud-security-principles)? (**Mandatory**)
+- [x] If so do they adhere to the NCSC's [Cloud Security Principles](https://www.ncsc.gov.uk/collection/cloud-security/implementing-the-cloud-security-principles)? (**Mandatory**)
 
 ### An internal code review has been completed
 
