@@ -12,15 +12,16 @@ const config: Config = {
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
-  url: "https://your-docusaurus-site.example.com",
+  url: "https://nhsengland.github.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: "/",
+  baseUrl: "/evalsense/",
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: "facebook", // Usually your GitHub org/user name.
-  projectName: "docusaurus", // Usually your repo name.
+  organizationName: "nhsengland", // Usually your GitHub org/user name.
+  projectName: "evalsense", // Usually your repo name.
+  trailingSlash: false,
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -37,14 +38,7 @@ const config: Config = {
     [
       "classic",
       {
-        docs: {
-          sidebarPath: "./sidebars.ts",
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl: "https://github.com/nhsengland/evalsense/tree/main/guide",
-          remarkPlugins: [remarkMath],
-          rehypePlugins: [rehypeKatex],
-        },
+        docs: false,
         blog: false,
         theme: {
           customCss: "src/css/custom.css",
@@ -106,11 +100,11 @@ const config: Config = {
           ],
         },
         {
-          title: "Documentation",
+          title: "EvalSense Tool",
           items: [
             {
-              label: "Introduction",
-              to: "/docs/intro",
+              label: "Documentation",
+              to: "https://github.com/nhsengland/evalsense",
             },
           ],
         },
@@ -120,6 +114,10 @@ const config: Config = {
             {
               label: "GitHub",
               href: "https://github.com/nhsengland/evalsense",
+            },
+            {
+              label: "NHS England Data Science",
+              href: "https://nhsengland.github.io/datascience/",
             },
           ],
         },
