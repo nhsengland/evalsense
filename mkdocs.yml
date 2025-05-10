@@ -67,14 +67,15 @@ nav:
       - Datasets:
         - datasets: api-reference/datasets/base.md
         - datasets.managers: api-reference/datasets/managers.md
-      - LLMs:
-        - llms: api-reference/LLMs/base.md
-        - llms.managers: api-reference/LLMs/managers.md
-      - Pipelines:
-        - pipelines: api-reference/pipelines/base.md
-      - Prompts:
-        - prompts: api-reference/prompts/base.md
+      - Evaluation:
+        - evaluation: api-reference/evaluation/base.md
+        - evaluation.managers: api-reference/evaluation/evaluators.md
+      - Generation:
+        - generation: api-reference/generation/base.md
       - Tasks:
         - tasks: api-reference/tasks/base.md
       - Utils:
         - utils: api-reference/utils/base.md
+      - Workflow:
+        - workflow: api-reference/workflow/base.md
+        - workflow.analysers: api-reference/workflow/analysers.md

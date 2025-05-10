@@ -17,3 +17,7 @@ Module `evalsense.utils.files`.
 Module `evalsense.utils.huggingface`.
 
 ::: evalsense.utils.huggingface
+
+## :material-text: Text
+
+::: evalsense.utils.text
