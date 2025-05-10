@@ -40,6 +40,15 @@ _**Note:** Only public or fake data are shared in this repository._
 
 ## Getting Started
 
+## Installation
+You can install the project using [pip](https://pip.pypa.io/en/stable/) by running the following command:
+
+```bash
+pip install evalsense
+```
+
+This will install the latest released version of the package from [PyPI](https://pypi.org/project/evalsense/).
+
 ### Installation for Development
 
 To install the project for local development, you can follow the steps below:
