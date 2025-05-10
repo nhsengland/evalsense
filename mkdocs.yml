@@ -1,7 +1,11 @@
 site_name: EvalSense Documentation
-site_description: A tool for evaluating LLM performance on healthcare tasks.
+site_description: A tool for systematic large language model evaluation.
+repo_url: https://github.com/nhsengland/evalsense
+repo_name: nhsengland/evalsense
 theme:
   name: material
+  logo: assets/logo.svg
+  favicon: assets/favicon.ico
   font:
     text: Roboto
     code: Roboto Mono
@@ -20,25 +24,27 @@ theme:
   palette:
     - media: "(prefers-color-scheme)"
       scheme: default
-      primary: blue
-      accent: light blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-auto
         name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
-      primary: blue
-      accent: light blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: blue
-      accent: light blue
+      primary: custom
+      accent: custom
       toggle:
         icon: material/brightness-4
         name: Switch to system preference
+extra_css:
+  - stylesheets/extra.css
 plugins:
   - search
   - mkdocstrings:
@@ -69,7 +75,7 @@ nav:
         - datasets.managers: api-reference/datasets/managers.md
       - Evaluation:
         - evaluation: api-reference/evaluation/base.md
-        - evaluation.managers: api-reference/evaluation/evaluators.md
+        - evaluation.evaluators: api-reference/evaluation/evaluators.md
       - Generation:
         - generation: api-reference/generation/base.md
       - Tasks:
@@ -79,3 +85,4 @@ nav:
       - Workflow:
         - workflow: api-reference/workflow/base.md
         - workflow.analysers: api-reference/workflow/analysers.md
+  - "EvalSense Homepage": https://nhsengland.github.io/evalsense/

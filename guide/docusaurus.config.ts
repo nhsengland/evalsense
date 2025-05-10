@@ -7,8 +7,9 @@ import rehypeKatex from "rehype-katex";
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: "LLM Evaluation Guide",
-  tagline: "Comprehensive guidance for evaluating Large Language Models",
+  title: "EvalSense",
+  tagline:
+    "Comprehensive guidance and tooling for evaluating large language models (LLMs)",
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
@@ -63,9 +64,9 @@ const config: Config = {
 
   themeConfig: {
     navbar: {
-      title: "LLM Evaluation Guide",
+      title: "EvalSense",
       logo: {
-        alt: "LLM Evaluation Guide Logo",
+        alt: "EvalSense Logo",
         src: "img/logo.svg",
       },
       items: [
@@ -74,7 +75,7 @@ const config: Config = {
         { to: "/presets", label: "Evaluation Presets", position: "left" },
         {
           href: "https://nhsengland.github.io/evalsense/docs/",
-          label: "EvalSense Tool Documentation",
+          label: "Library Documentation",
           position: "left",
         },
         {
@@ -105,7 +106,7 @@ const config: Config = {
           ],
         },
         {
-          title: "EvalSense Tool",
+          title: "EvalSense Library",
           items: [
             {
               label: "Documentation",
