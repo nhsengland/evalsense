@@ -4,7 +4,7 @@ import Heading from "@theme/Heading";
 import styles from "./styles.module.css";
 import InteractiveGuideSvg from "@site/static/img/undraw_setup-wizard_wzp9.svg";
 import EvaluationMethodSvg from "@site/static/img/undraw_metrics_02ml.svg";
-import EvaluationPresetsSvg from "@site/static/img/undraw_select-option_a16s.svg";
+import LibrarySvg from "@site/static/img/undraw_developer-activity_4zqd.svg";
 
 type FeatureItem = {
   title: string;
@@ -13,6 +13,16 @@ type FeatureItem = {
 };
 
 const FeatureList: FeatureItem[] = [
+  {
+    title: "LLM Evaluation Library",
+    Svg: LibrarySvg,
+    description: (
+      <>
+        Python library for systematic evaluation of large language models on
+        open-ended generation tasks.
+      </>
+    ),
+  },
   {
     title: "Interactive Guide",
     Svg: InteractiveGuideSvg,
@@ -30,16 +40,6 @@ const FeatureList: FeatureItem[] = [
       <>
         Extensive catalogue of evaluation methods, including descriptions,
         supported tasks, and more.
-      </>
-    ),
-  },
-  {
-    title: "Evaluation Presets",
-    Svg: EvaluationPresetsSvg,
-    description: (
-      <>
-        Pre-configured presets for common use-cases, simplifying the selection
-        of suitable methods.
       </>
     ),
   },
