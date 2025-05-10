@@ -2,9 +2,11 @@
 > This project is a work in progress. Critical components may be missing, inoperative or incomplete, and the API can undergo major changes without any notice. Please check back later for a more stable version.
 
 # EvalSense: LLM Evaluation
+
 <div align="center">
 
 [![status: experimental](https://github.com/GIScience/badges/raw/master/status/experimental.svg)](https://github.com/GIScience/badges#experimental)
+[![PyPI package version](https://img.shields.io/pypi/v/evalsense)](https://pypi.org/project/evalsense/)
 [![license: MIT](https://img.shields.io/badge/License-MIT-brightgreen)](https://github.com/nhsengland/evalsense/blob/main/LICENCE)
 [![EvalSense status](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml/badge.svg)](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml)
 [![Guide status](https://github.com/nhsengland/evalsense/actions/workflows/guide.yml/badge.svg)](https://github.com/nhsengland/evalsense/actions/workflows/guide.yml)
@@ -24,6 +26,7 @@
 </div>
 
 ## About
+
 This repository holds a Python package enabling systematic evaluation of large language models (LLMs) on open-ended generation tasks, with a particular focus on healthcare and summarisation. It also includes supplementary documentation and assets related to the NHS England project on LLM evaluation, such as the code for an interactive LLM evaluation guide (located in the `guide/` directory). You can find more information about the project in the [original project proposal](https://nhsx.github.io/nhsx-internship-projects/genai-eval/).
 
 _**Note:** Only public or fake data are shared in this repository._
@@ -59,6 +62,7 @@ To setup the Node environment for the LLM evaluation guide (located under [`guid
 - `npm run start` to run the development server
 
 ## Usage
+
 For an example illustrating the usage of EvalSense, please check the [Demo notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Demo.ipynb) under the `notebooks/` folder.
 
 ## Contributing
