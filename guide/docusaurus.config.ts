@@ -73,6 +73,11 @@ const config: Config = {
         { to: "/catalogue", label: "Method Catalogue", position: "left" },
         { to: "/presets", label: "Evaluation Presets", position: "left" },
         {
+          href: "https://nhsengland.github.io/evalsense/docs/",
+          label: "EvalSense Tool Documentation",
+          position: "left",
+        },
+        {
           href: "https://github.com/nhsengland/evalsense",
           label: "GitHub",
           position: "right",
@@ -104,7 +109,7 @@ const config: Config = {
           items: [
             {
               label: "Documentation",
-              to: "https://github.com/nhsengland/evalsense",
+              to: "https://nhsengland.github.io/evalsense/docs/",
             },
           ],
         },
