@@ -1,32 +1,62 @@
 [
   {
-    "id": "preset-summarisation-accuracy",
-    "name": "Medical Summary Accuracy",
-    "description": "Focuses on ensuring factual accuracy in clinical note summarization.",
+    "id": "preset-discharge-summarisation",
+    "name": "Discharge Summarisation",
+    "description": "Generating discharge summaries from a corpus of medical notes documenting a patient's hospital stay.",
     "guideState": {
       "activeStepId": "suggestions",
       "answers": {
         "q_task_type": "summarization",
-        "q_qualities": ["correctness"],
-        "q_risks": ["hallucination"],
+        "q_qualities": [
+          {
+            "id": "correctness",
+            "importance": 5
+          },
+          {
+            "id": "robustness",
+            "importance": 4
+          },
+          {
+            "id": "fairness",
+            "importance": 4
+          },
+          {
+            "id": "safety",
+            "importance": 3
+          }
+        ],
+        "q_risks": [
+          {
+            "id": "hallucination",
+            "importance": 5
+          },
+          {
+            "id": "omissions",
+            "importance": 5
+          },
+          {
+            "id": "distributional-shift",
+            "importance": 4
+          },
+          {
+            "id": "bias",
+            "importance": 4
+          },
+          {
+            "id": "harmful-content",
+            "importance": 3
+          }
+        ],
         "q_references": "yes"
       },
-      "selectedMethodIds": []
-    }
-  },
-  {
-    "id": "preset-patient-qa-safety",
-    "name": "Patient Q&A Safety",
-    "description": "Prioritizes safety and avoids harmful content in patient-facing Q&A.",
-    "guideState": {
-      "activeStepId": "suggestions",
-      "answers": {
-        "q_task_type": "q_and_a",
-        "q_qualities": ["correctness"],
-        "q_risks": ["harmful-content", "bias"],
-        "q_references": "no"
-      },
-      "selectedMethodIds": []
+      "selectedMethodIds": [
+        "qags",
+        "g-eval",
+        "ood-performance",
+        "stratified-performance",
+        "word-count",
+        "compression-ratio"
+      ]
     }
   }
 ]

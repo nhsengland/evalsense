@@ -71,12 +71,13 @@ export default function InteractiveGuide() {
           const results = filterAndRankMethods(presetState.answers);
           presetState.suggestionsData = results;
         }
-        return { ...initialState, ...presetState };
+        setGuideState({ ...initialState, ...presetState });
+      } else {
+        const loadedState = loadGuideState();
+        setGuideState(loadedState || initialState);
       }
-      const loadedState = loadGuideState();
-      setGuideInitialized(true);
-      setGuideState(loadedState || initialState);
     }
+    setGuideInitialized(true);
   }, [guideInitialized]);
 
   useEffect(() => {
