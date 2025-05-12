@@ -26,6 +26,10 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 - None
 
+## v0.1.2
+
+Technical release: no user-facing changes.
+
 ## v0.1.1
 
 Technical release: no user-facing changes.
