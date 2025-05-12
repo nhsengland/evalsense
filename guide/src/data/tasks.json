@@ -6,27 +6,33 @@
     "type": "task"
   },
   {
-    "id": "qa",
-    "name": "Question Answering",
-    "description": "Answering questions based on provided context.",
+    "id": "close-ended-qa",
+    "name": "Close-Ended Question Answering",
+    "description": "Answering questions based on provided context, out of a set of possible answers.",
     "type": "task"
   },
   {
-    "id": "ner",
-    "name": "Named Entity Recognition",
-    "description": "Identifying and classifying named entities in text.",
+    "id": "open-ended-qa",
+    "name": "Open-Ended Question Answering",
+    "description": "Answering questions based on provided context, without a set of possible answers.",
     "type": "task"
   },
   {
-    "id": "relation-extraction",
-    "name": "Relation Extraction",
-    "description": "Extracting relationships between entities in text.",
+    "id": "ner-re",
+    "name": "Named Entity Recognition / Relation Extraction",
+    "description": "Identifying and classifying named entities and/or relations between them in text.",
     "type": "task"
   },
   {
     "id": "text-classification",
     "name": "Text Classification",
     "description": "Classifying text into predefined categories.",
+    "type": "task"
+  },
+  {
+    "id": "text-generation",
+    "name": "Other Text Generation",
+    "description": "Any other task involving open text generation.",
     "type": "task"
   }
 ]

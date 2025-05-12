@@ -1,0 +1,51 @@
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+import ReactMarkdown from "react-markdown";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+
+<Typography variant="body2">
+  MEDCON (Medical Concept-based evaluation) is a domain-specific metric designed
+  to assess the accuracy and consistency of clinical concepts in generated
+  medical texts, such as clinical notes or summaries, against a reference text.
+  It operates by identifying medical concepts from both the candidate and
+  reference texts using the Unified Medical Language System (UMLS) and then
+  calculating an F1-score based on the overlap of these concept sets.
+</Typography>
+
+<Typography variant="body2">
+  The extraction of UMLS concepts is typically performed using tools like
+  [QuickUMLS](https://github.com/Georgetown-IR-Lab/QuickUMLS), which identifies
+  mentions of UMLS concepts through a string matching algorithm. The authors of
+  MEDCON recommend restricting the evaluation to specific UMLS semantic groups,
+  such as Anatomy, Chemicals & Drugs, Devices, Disorders, Genes & Molecular
+  Sequences, Phenomena, and Physiology. This is meant to ensure that the
+  evaluation focuses on clinically relevant concepts.
+</Typography>
+
+<Typography variant="body2">
+  Despite being grounded in UMLS concepts, MEDCON has been found to only poorly
+  correlate with human judgement when assessing medical summaries, similarly to
+  other traditional metrics like BLEU or ROUGE. This is likely because it only
+  assesses overlap between the concepts mentioned in the model output and does
+  not accurately capture its high-level meaning.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Calculation
+</Typography>
+
+<Typography variant="body2">
+1. **Concept Extraction**
+     - Extract UMLS concepts from the reference text, forming a set <LaTeX>{"S_{ref}"}</LaTeX>.
+     - Extract UMLS concepts from the candidate text, forming a set <LaTeX>{"S_{cand}"}</LaTeX>.
+     - Both extractions are typically filtered to include only concepts belonging to pre-defined relevant UMLS semantic groups.
+1. **Overlap Calculation**
+     - True Positives (TP): Concepts present in both <LaTeX>{"S_{ref}"}</LaTeX> and <LaTeX>{"S_{cand}"}</LaTeX>. <LaTeX>{"TP = |S_{ref} \\cap S_{cand}|"}</LaTeX>.
+     - False Positives (FP): Concepts present in <LaTeX>{"S_{cand}"}</LaTeX> but not in <LaTeX>{"S_{ref}"}</LaTeX>. <LaTeX>{"FP = |S_{cand} \\setminus S_{ref}|"}</LaTeX>.
+     - False Negatives (FN): Concepts present in <LaTeX>{"S_{ref}"}</LaTeX> but not in <LaTeX>{"S_{cand}"}</LaTeX>. <LaTeX>{"FN = |S_{ref} \\setminus S_{cand}|"}</LaTeX>.
+1. **Metric Scores**
+     - MEDCON Precision: <LaTeX>{"P = \\frac{TP}{TP + FP}"}</LaTeX>
+     - MEDCON Recall: <LaTeX>{"R = \\frac{TP}{TP + FN}"}</LaTeX>
+     - MEDCON F1 Score: <LaTeX>{"F1 = 2 \\cdot \\frac{P \\cdot R}{P + R}"}</LaTeX>
+
+</Typography>

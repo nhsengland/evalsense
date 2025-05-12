@@ -18,20 +18,34 @@
     "name": "Bias",
     "description": "Differences in performance for various population subgroups.",
     "type": "risk",
-    "related_qualities": []
+    "related_qualities": ["fairness"]
   },
   {
     "id": "harmful-content",
     "name": "Harmful Content",
     "description": "Generating content that is harmful or unsafe.",
     "type": "risk",
-    "related_qualities": []
+    "related_qualities": ["safety"]
   },
   {
     "id": "confidentiality-breach",
     "name": "Confidentiality Breach",
     "description": "Inadvertently revealing sensitive information.",
     "type": "risk",
-    "related_qualities": []
+    "related_qualities": ["privacy"]
+  },
+  {
+    "id": "distributional-shift",
+    "name": "Distributional Shift",
+    "description": "Performance degradation due to changes in data distribution.",
+    "type": "risk",
+    "related_qualities": ["robustness"]
+  },
+  {
+    "id": "adversarial-attacks",
+    "name": "Adversarial Attacks and Jailbreaks",
+    "description": "Exploiting vulnerabilities to manipulate model behavior.",
+    "type": "risk",
+    "related_qualities": ["robustness"]
   }
 ]

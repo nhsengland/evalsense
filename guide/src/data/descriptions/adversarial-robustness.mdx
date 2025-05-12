@@ -1,0 +1,31 @@
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+
+<Typography variant="body2" gutterBottom>
+  Adversarial Robustness Evaluation is a strategy to assess how well a model
+  withstands deliberate attempts to deceive it using adversarial examples.
+  Adversarial examples are inputs that have been maliciously modified to cause
+  the model to make incorrect predictions or behave in unexpected ways.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  For text-based models, adversarial attacks might involve inclusion of unusual
+  sequences of characters or words, or the use of various "jailbreaking" prompts
+  aiming to bypass model safeguards.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Evaluation Process
+</Typography>
+
+<Typography variant="body2" component="div" gutterBottom>
+1. **Attack Method Selection**
+    - Choose one or more adversarial attack algorithms that are most relevant to the considered task and use-case.
+1. **Adversarial Example Generation**
+    - Apply the selected attack method to the evaluation dataset to generate the corresponding adversarial examples.
+1. **Performance Evaluation**
+    - Evaluate the model's performance on both the standard in-distribution test set and the adversarial examples using the selected performance metrics.
+1.  **Comparison and Analysis**
+    - Compare the performance on adversarial examples against the performance on standard data. A significant drop in performance indicates potential vulnerability against adversarial attacks. Computing the percentage of successful attacks (Attack Success Rate) is also common. The results can inform potential mitigation strategies, such as adversarial training or model input preprocessing/filtering.
+
+</Typography>

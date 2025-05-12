@@ -34,5 +34,11 @@
     "name": "Privacy",
     "description": "The degree to which the model's outputs protect sensitive information.",
     "type": "quality"
+  },
+  {
+    "id": "robustness",
+    "name": "Robustness",
+    "description": "The model's ability to maintain performance across various conditions.",
+    "type": "quality"
   }
 ]

@@ -1,0 +1,54 @@
+import Typography from "@mui/material/Typography";
+import ReactMarkdown from "react-markdown";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+
+<Typography variant="body2">
+  BLEU (Bilingual Evaluation Understudy) is an evaluation metric that is based
+  on a geometric mean of modified n-gram precision scores, typically computed
+  for n-grams of size 1 to 4. Since high precision could be trivially achieved
+  by only outputting very short texts, BLEU additionally incorporates a brevity
+  penalty to penalize overly short outputs. While BLEU is very fast to compute
+  and is still being used for evaluation, it only relies on surface-level word
+  overlap and does not capture deeper semantic meaning. For more comprehensive
+  evaluation, consider model-based alternatives such as G-Eval or QAGS Score.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Note that, unlike most other evaluation metrics, BLEU is meant to be computed
+  for a whole corpus of samples and may not be meaningful when applied to an
+  individual pair of a reference text and an evaluated text.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Example
+</Typography>
+
+<Typography variant="body2">
+Note: For simplicity, the example below ignores punctuation.
+
+- **Reference text:** The patient presents with chest pain, shortness of breath, lightheadedness and dizziness.
+- **Evaluated text:** The patient denies any chest pain, shortness of breath or lightheadedness.
+- **1-gram precision:**
+  - Correct 1-grams in evaluated text: 8 ("The", "patient", "chest", "pain", "shortness", "of", "breath", "lightheadedness")
+  - Total 1-grams in evaluated text: 11
+  - 1-gram precision: <LaTeX>{"\\text{precision}\_1 = \\frac{8}{11} = 0.73"}</LaTeX>
+- **2-gram precision:**
+  - Correct 2-grams in evaluated text: 5 ("The patient", "chest pain", "pain shortness", "shortness of", "of breath")
+  - Total 2-grams in evaluated text: 10
+  - 2-gram precision: <LaTeX>{"\\text{precision}\_2 = \\frac{5}{10} = 0.50"}</LaTeX>
+- **3-gram precision:**
+  - Correct 3-grams in evaluated text: 3 ("chest pain shortness", "pain shortness of", "shortness of breath")
+  - Total 3-grams in evaluated text: 9
+  - 3-gram precision: <LaTeX>{"\\text{precision}\_3 = \\frac{3}{9} = 0.33"}</LaTeX>
+- **4-gram precision:**
+  - Correct 4-grams in evaluated text: 2 ("chest pain shortness of", "pain shortness of breath")
+  - Total 4-grams in evaluated text: 8
+  - 4-gram precision: <LaTeX>{"\\text{precision}\_4 = \\frac{2}{8} = 0.25"}</LaTeX>
+- **Brevity penalty:**
+  - Reference text length: 12
+  - Evaluated text length: 11
+  - Brevity penalty: <LaTeX>{"\\text{BP} = \\min(1, \\exp(1 - \\frac{12}{11})) = 0.91"}</LaTeX>
+- **BLEU score:**
+  - BLEU = <LaTeX>{"\\text{BP} \\cdot (\\text{precision}\_1 \\cdot \\text{precision}\_2 \\cdot \\text{precision}\_3 \\cdot \\text{precision}\_4)^{\\frac{1}{4}} = 0.91 \\cdot (0.73 \\cdot 0.5 \\cdot 0.33 \\cdot 0.25)^{\\frac{1}{4}} = 0.38"}</LaTeX>
+
+</Typography>

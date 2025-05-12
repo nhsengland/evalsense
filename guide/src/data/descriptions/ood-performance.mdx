@@ -1,0 +1,34 @@
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+
+<Typography variant="body2" gutterBottom>
+  Out-of-Distribution (OOD) Performance Evaluation is a strategy focused on
+  assessing how well a model generalizes to data that comes from a different
+  distribution than the data it was trained on. In real-world scenarios, models
+  often encounter inputs that are novel, unexpected, or exhibit characteristics
+  not seen during training (e.g., coming from a different environment, having
+  different writing styles, using different terms, or including different types
+  of mistakes or issues).
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Evaluating OOD performance is crucial for understanding a model's robustness
+  and reliability. A model that performs well on in-distribution (ID) test data
+  (data similar to training data) might still fail significantly when faced with
+  OOD inputs.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Evaluation Process
+</Typography>
+
+<Typography variant="body2" component="div" gutterBottom>
+
+1.  **OOD Data Collection/Creation.**
+    - Obtain or create datasets that represent anticipated or plausible shifts in data distribution. This might involve using data from different locations, time periods, sources, domains, or data perturbed in specific ways (e.g., with stylistic changes or introduction of jargon).
+1.  **Performance Evaluation**
+    - Evaluate the model's performance on both the standard in-distribution test set and one or more OOD test sets using the selected performance metrics.
+1.  **Comparison and Analysis**
+    - Compare the performance on ID versus OOD data. A significant drop in performance indicates poor OOD generalization. Analyze the types of errors made on OOD data to understand the model's failure modes.
+
+</Typography>

@@ -1,0 +1,32 @@
+import Typography from "@mui/material/Typography";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+
+<Typography variant="body2" gutterBottom>
+  The Compression Ratio, also referred to as Word Reduction, is a metric
+  commonly used in text summarization to quantify the extent to which a source
+  document has been shortened to produce a summary. It is typically calculated
+  as the ratio of the length of the summary to the length of the source text.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  <LaTeX>
+    {
+      "\\text{Compression Ratio} = \\frac{\\text{Length of Summary}}{\\text{Length of Source Text}}"
+    }
+  </LaTeX>
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Lengths can be measured in terms of words, characters, or tokens. A lower
+  compression ratio indicates a more concise summary relative to the original
+  document. For example, a compression ratio of 0.2 means the summary is 20% of
+  the length of the source text.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  While easy to compute and potentially useful for evaluating conciseness, the
+  compression ratio on its own does not indicate the overall quality of the
+  summary. Typically, the measure should be used alongside more sophisticated
+  methods evaluating other aspects of the text, such as correctness and
+  readability.
+</Typography>

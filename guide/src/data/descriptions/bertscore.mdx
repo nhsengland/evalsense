@@ -1,0 +1,75 @@
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+import ReactMarkdown from "react-markdown";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+
+<Typography variant="body2">
+  BERTScore uses the pre-trained contextual embeddings from BERT (Bidirectional
+  Encoder Representations from Transformers) models to evaluate the similarity
+  between a candidate text and a reference text. Instead of exact matches,
+  BERTScore computes a similarity score comparing each token in the candidate
+  text with each token in the reference text using cosine similarity on their
+  contextual embeddings.
+</Typography>
+
+<Typography variant="body2">
+  It then greedily matches tokens to maximize this similarity, producing recall
+  (candidate tokens matched to reference), precision (reference tokens matched
+  to candidate), and an F1 score. This approach allows BERTScore to better
+  capture semantic similarity and handle paraphrasing compared to n-gram based
+  metrics like BLEU or ROUGE. Importance weighting can also be applied, e.g.,
+  using inverse document frequency (IDF) scores to give more weight to rare
+  words.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  While potentially more powerful than traditional statistical metrics,
+  BERTScore still requires a reference text and its performance can depend on
+  the specific BERT model used and the layers from which embeddings are
+  extracted. It can also only capture semantic overlap between the individual
+  tokens and not the overall meaning of the text, which makes it only poorly
+  correlated with human judgement when assessing correctness.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Calculation
+</Typography>
+
+<Typography variant="body2">
+
+1. **Token Embeddings**
+   - Obtain contextual embeddings for each token in the
+     reference text <LaTeX>{"R = (r_1, ..., r_k)"}</LaTeX> and candidate text{" "}
+     <LaTeX>{"C = (c_1, ..., c_m)"}</LaTeX> using a pre-trained BERT model.
+1. **Cosine Similarity**
+   - For each token <LaTeX>{"c_i"}</LaTeX> in the candidate,
+     find the token <LaTeX>{"r_j"}</LaTeX> in the reference that maximizes cosine
+     similarity: <LaTeX>{"\\text{sim}(c_i, r_j)"}</LaTeX>.
+1. **BERTScore Recall (<LaTeX>{"R\_{\\text{BERT}}"}</LaTeX>)**
+   - Average of the maximum similarity scores for each token in the candidate text,
+     optionally weighted by IDF:
+     <LaTeX>
+       {
+         "R_{\\text{BERT}} = \\frac{1}{|C|} \\sum_{c_i \\in C} \\max_{r_j \\in R} \\mathbf{c}_i^T \\mathbf{r}_j"
+       }
+     </LaTeX>
+1. **BERTScore Precision (<LaTeX>{"P\_{\\text{BERT}}"}</LaTeX>)**
+   - Average of
+     the maximum similarity scores for each token in the reference text, optionally
+     weighted by IDF:
+     <LaTeX>
+       {
+         "P_{\\text{BERT}} = \\frac{1}{|R|} \\sum_{r_j \\in R} \\max_{c_i \\in C} \\mathbf{r}_j^T \\mathbf{c}_i"
+       }
+     </LaTeX>
+1. **BERTScore F1 (<LaTeX>{"F1\_{\\text{BERT}}"}</LaTeX>)**
+   - The harmonic mean
+     of <LaTeX>{"P*{\\text{BERT}}"}</LaTeX> and <LaTeX>{"R*{\\text{BERT}}"}</LaTeX>
+     :
+     <LaTeX>
+       {
+         "F1_{\\text{BERT}} = 2 \\frac{P_{\\text{BERT}} \\cdot R_{\\text{BERT}}}{P_{\\text{BERT}} + R_{\\text{BERT}}}"
+       }
+     </LaTeX>
+
+</Typography>

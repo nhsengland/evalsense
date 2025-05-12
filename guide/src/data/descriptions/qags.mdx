@@ -1,0 +1,79 @@
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+import ReactMarkdown from "react-markdown";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+
+<Typography variant="body2">
+QAGS (Question Answering and Generation for Summarisation) is an evaluation
+metric that assesses the factual consistency and information coverage of a
+generated text (e.g., a summary) by using question generation and question
+answering models. It operates in two main stages:
+
+1. **Question Generation (QG):** An LLM model generates a set of questions
+   based on the model output as well as some background or reference text
+   containing the ground-truth imformation.
+1. **Question Answering (QA):** For each generated question, an LLM
+   model attempts to provide an answer based on either the evaluated text
+   or the background/reference text. The answers are then compared against
+   each other to assess the factual correctness of the evaluated text.
+
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  While QAGS has originally been proposed for evaluation on summarisation tasks,
+  it can also be applied to other open-ended generation tasks where factual
+  correctness is important, such as question answering. It can also be used to
+  identify hallucinations (information in the generated text that is not
+  supported by the background/reference text) and omissions (information in the
+  background/reference text that is missing from the evaluated text).
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Evaluation Modes
+</Typography>
+
+<Typography variant="body2">
+QAGS can be adapted to operate in different modes for evaluating the answers:
+- **Ternary Mode:** The QG model produces close-ended questions with only "yes", "no", or "unknown" as the permissible answers. This mode is particularly useful for assessing coverage (share of facts in the reference/background text that are also present in the evaluated text) and groundedness (share of facts in the evaluated text that are supported by the reference/background text). Compared to questions requiring more open-ended answers, this mode also makes it easier to compare the answers obtained for the evaluated text and the reference/background text.
+- **Exact Match Mode:** The generated questions are open-ended and the answers are expected to be exact matches. Unless the generated questions have very clear and unambiguous responses, this mode may be overly strict when comparing the answers. Using open-ended questions also makes it more difficult to assess properties like coverage and groundedness, making the output limited to an accuracy measure indicating the share of questions with matching responses. However, compared to ternary mode, the open-ended questions used in thsi mode may be more suitable for assessing factual consistency and correctness of the evaluated text.
+- **Judge Mode (LLM-based):** This mode is similar to the exact match mode, but uses an LLM to semantically compare the generated answers. This offers more flexibility compared to the exact match mode, but increases the required number of model generations.
+
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Example
+</Typography>
+
+<Typography variant="body2">
+- **Reference Text**
+    - CHIEF COMPLAINT: Left wrist and hand pain with numbness and tingling, particularly at night.
+- **Evaluated Text**
+    - CHIEF COMPLAINT: Patient presents with numbness and tingling in the right hand and wrist, particularly at night, and reports experiencing these symptoms for several months.
+- **Questions**
+    - Q1: "Has the patient experienced left wrist and hand pain?"
+    - Q2: "Has the patient experienced numbness and tingling in the right hand and wrist?"
+    - Q3: "Does the numbness and tingling occur particularly at night?"
+    - Q4: "Has the patient experienced the symptoms for several months?"
+- **Answers**
+    - Has the patient experienced left wrist and hand pain?
+        - Reference text: ✅
+        - Evaluated text: ❌
+        - Match: ❌
+    - Has the patient experienced numbness and tingling in the right hand and wrist?
+        - Reference text: ❌
+        - Evaluated text: ✅
+        - Match: ❌
+    - Does the numbness and tingling occur particularly at night?
+        - Reference text: ✅
+        - Evaluated text: ✅
+        - Match: ✅
+    - Has the patient experienced the symptoms for several months?
+        - Reference text: ❓
+        - Evaluated text: ✅
+        - Match: ❌
+- **Evaluation Results**
+    - Accuracy: <LaTeX>{"\\frac{1}{4} = 0.25"}</LaTeX>
+    - Coverage: <LaTeX>{"\\frac{1}{2} = 0.5"}</LaTeX>
+    - Groundedness: <LaTeX>{"\\frac{1}{3} = 0.33"}</LaTeX>
+
+</Typography>

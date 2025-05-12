@@ -4,24 +4,33 @@
     "name": "ROUGE-L",
     "type": "method",
     "category": "automated",
-    "description_short": "Measures longest common subsequence between output and reference.",
-    "description_long_file": "rouge-l.md",
+    "description_short": "Measures the longest common subsequence (LCS) between the output and the reference.",
+    "description_long_file": "rouge-l.mdx",
     "link_implementation": "https://pypi.org/project/rouge-score/",
     "reference_requirement": "required",
-    "supported_tasks": ["summarization"],
+    "supported_tasks": ["summarization", "open-ended-qa", "text-generation"],
     "assessed_qualities": [{ "id": "correctness", "coverage": "Poor" }],
     "identified_risks": [
       { "id": "hallucination", "coverage": "Poor" },
       { "id": "omissions", "coverage": "Poor" }
     ],
-    "output_values": "F1 score between 0 and 1. Higher is better.",
-    "advantages": ["Automated", "Fast", "Widely used benchmark"],
+    "output_values": "F1 score between 0 and 1. Higher values are better.",
+    "advantages": [
+      "Automated",
+      "Fast",
+      "Widely used for benchmarking and evaluation"
+    ],
     "disadvantages": [
       "Poor correlation with human judgment",
-      "Doesn't capture factual errors well"
+      "Doesn't capture the semantic meaning of the evaluated text",
+      "Requires access to reference texts for evaluation"
     ],
     "references": [
-      { "name": "Lin, 2004", "url": "https://aclanthology.org/W04-1013/" }
+      {
+        "name": "Lin, 2004",
+        "url": "https://aclanthology.org/W04-1013/",
+        "bib_record": "@inproceedings{lin-2004-rouge,\n    title = \"{ROUGE}: A Package for Automatic Evaluation of Summaries\",\n    author = \"Lin, Chin-Yew\",\n    booktitle = \"Text Summarization Branches Out\",\n    month = jul,\n    year = \"2004\",\n    address = \"Barcelona, Spain\",\n    publisher = \"Association for Computational Linguistics\",\n    url = \"https://aclanthology.org/W04-1013/\",\n    pages = \"74--81\"\n}"
+      }
     ]
   },
   {
@@ -29,27 +38,32 @@
     "name": "BLEU",
     "type": "method",
     "category": "automated",
-    "description_short": "Measures n-gram precision between output and reference.",
-    "description_long_file": "bleu.md",
+    "description_short": "Measures modified n-gram precision between the output and the reference with a brevity penalty.",
+    "description_long_file": "bleu.mdx",
     "link_implementation": "https://www.nltk.org/_modules/nltk/translate/bleu_score.html",
     "reference_requirement": "required",
-    "supported_tasks": ["summarization"],
+    "supported_tasks": ["summarization", "open-ended-qa", "text-generation"],
     "assessed_qualities": [{ "id": "correctness", "coverage": "Poor" }],
     "identified_risks": [
       { "id": "hallucination", "coverage": "Poor" },
       { "id": "omissions", "coverage": "Poor" }
     ],
-    "output_values": "Score between 0 and 1. Higher is better.",
-    "advantages": ["Automated", "Fast", "Well-established in MT evaluation"],
+    "output_values": "Precision values between 0 and 1. Higher is better.",
+    "advantages": [
+      "Automated",
+      "Fast",
+      "Widely used for benchmarking and evaluation"
+    ],
     "disadvantages": [
-      "Doesn't capture semantic meaning",
-      "Sensitive to reference choice",
-      "Low correlation with human judgment for non-MT tasks"
+      "Poor correlation with human judgment",
+      "Doesn't capture the semantic meaning of the evaluated text",
+      "Requires access to reference texts for evaluation"
     ],
     "references": [
       {
         "name": "Papineni et al., 2002",
-        "url": "https://aclanthology.org/P02-1040/"
+        "url": "https://aclanthology.org/P02-1040/",
+        "bib_record": "@inproceedings{papineni-etal-2002-bleu,\n    title = \"{B}leu: a Method for Automatic Evaluation of Machine Translation\",\n    author = \"Papineni, Kishore  and\\n      Roukos, Salim  and\\n      Ward, Todd  and\\n      Zhu, Wei-Jing\",\n    editor = \"Isabelle, Pierre  and\\n      Charniak, Eugene  and\\n      Lin, Dekang\",\n    booktitle = \"Proceedings of the 40th Annual Meeting of the Association for Computational Linguistics\",\n    month = jul,\n    year = \"2002\",\n    address = \"Philadelphia, Pennsylvania, USA\",\n    publisher = \"Association for Computational Linguistics\",\n    url = \"https://aclanthology.org/P02-1040/\",\n    doi = \"10.3115/1073083.1073135\",\n    pages = \"311--318\"\n}"
       }
     ]
   },
@@ -58,36 +72,33 @@
     "name": "BERTScore",
     "type": "method",
     "category": "automated",
-    "description_short": "Uses contextual embeddings to measure semantic similarity between output and reference.",
-    "description_long_file": "bertscore.md",
+    "description_short": "Measures semantic similarity between tokens in candidate and reference texts using contextual embeddings from BERT.",
+    "description_long_file": "bertscore.mdx",
     "link_implementation": "https://github.com/Tiiiger/bert_score",
     "reference_requirement": "required",
-    "supported_tasks": [
-      "summarization",
-      "machine-translation",
-      "text-generation"
-    ],
+    "supported_tasks": ["summarization", "open-ended-qa", "text-generation"],
     "assessed_qualities": [{ "id": "correctness", "coverage": "Partial" }],
     "identified_risks": [
       { "id": "hallucination", "coverage": "Partial" },
       { "id": "omissions", "coverage": "Partial" }
     ],
-    "output_values": "Precision, Recall, and F1 scores between 0 and 1. Higher is better.",
+    "output_values": "Precision, Recall, and F1 scores between 0 and 1. Higher values are better.",
     "advantages": [
-      "Captures semantic similarity",
-      "More aligned with human judgment than n-gram methods",
+      "Can better capture semantic similarity beyond textual overlap",
       "More robust to paraphrasing"
     ],
     "disadvantages": [
-      "Computationally intensive",
-      "Still requires references",
-      "Performance varies based on underlying language model",
-      "May still not fully capture semantic meaning"
+      "Poor correlation with human judgment",
+      "May still not fully capture correctness, as it focuses on token representations rather than higher-level meaning",
+      "Computationally more intensive than lexical metrics",
+      "Requires access to reference texts for evaluation",
+      "Performance can vary based on the choice of underlying language model and layers"
     ],
     "references": [
       {
         "name": "Zhang et al., 2020",
-        "url": "https://arxiv.org/abs/1904.09675"
+        "url": "https://openreview.net/forum?id=SkeHuCVFDr",
+        "bib_record": "@inproceedings{zhang-etal-2020-bertscore,\n  author       = {Tianyi Zhang and\n                  Varsha Kishore and\n                  Felix Wu and\n                  Kilian Q. Weinberger and\n                  Yoav Artzi},\n  title        = {BERTScore: Evaluating Text Generation with {BERT}},\n  booktitle    = {8th International Conference on Learning Representations, {ICLR} 2020,\n                  Addis Ababa, Ethiopia, April 26-30, 2020},\n  publisher    = {OpenReview.net},\n  year         = {2020},\n  url          = {https://openreview.net/forum?id=SkeHuCVFDr}\n}"
       }
     ]
   },
@@ -96,31 +107,35 @@
     "name": "MEDCON",
     "type": "method",
     "category": "automated",
-    "description_short": "Domain-specific metric for healthcare. Computes F1 score based on Unified Medical Language System (UMLS) concepts, extracted using fuzzy matching.",
-    "description_long_file": "medcon.md",
+    "description_short": "Domain-specific metric for healthcare. Computes F1 score based on overlap of Unified Medical Language System (UMLS) concepts between candidate and reference texts.",
+    "description_long_file": "medcon.mdx",
     "link_implementation": "https://github.com/Stanford-AIMI/discharge-me/tree/main/scoring",
     "reference_requirement": "required",
-    "supported_tasks": ["summarization"],
+    "supported_tasks": ["summarization", "text-generation"],
     "assessed_qualities": [{ "id": "correctness", "coverage": "Partial" }],
     "identified_risks": [
       { "id": "hallucination", "coverage": "Partial" },
       { "id": "omissions", "coverage": "Partial" }
     ],
-    "output_values": "Score between 0 and 1. Higher scores indicate better alignemtn in medical concepts.",
+    "output_values": "F1 score between 0 and 1. Higher scores indicate better alignment in extracted medical concepts.",
     "advantages": [
-      "Domain-specific metric for medical content",
-      "Deterministic and fast to compute",
-      "Can better detect discrepancies in medical content"
+      "Domain-specific for evaluating clinical/medical texts.",
+      "Focuses on clinically relevant concepts via UMLS semantic groups.",
+      "Deterministic and relatively fast.",
+      "Can detect discrepancies in specific medical terminology."
     ],
     "disadvantages": [
-      "Limited to medical domain",
-      "Requires specialized knowledge",
-      "May not capture general linguistic quality"
+      "May still not fully capture correctness, as it only considers mentioned concepts rather than the overall meaning.",
+      "Limited to the medical domain and texts where UMLS concept extraction is meaningful.",
+      "Requires access to reference texts for evaluation",
+      "Requires access to UMLS database and concept extraction tools (e.g., QuickUMLS).",
+      "The specific list of UMLS semantic groups can impact results and may need tuning."
     ],
     "references": [
       {
         "name": "Yim et al., 2023",
-        "url": "https://arxiv.org/pdf/2306.02022"
+        "url": "https://doi.org/10.1038/s41597-023-02487-3",
+        "bib_record": "@article{yim-etal-2023-medcon,\n  author    = {Yim, Wen-wai and\n               Fu, Yujuan and\n               Ben Abacha, Asma and\n               Snider, Neal and\n               Lin, Thomas and\n               Yetisgen, Meliha},\n  title     = {Aci-bench: a Novel Ambient Clinical Intelligence Dataset for Benchmarking Automatic Visit Note Generation},\n  journal   = {Scientific Data},\n  year      = {2023},\n  month     = {Sep},\n  day       = {06},\n  volume    = {10},\n  number    = {1},\n  pages     = {586},\n  issn      = {2052-4463},\n  doi       = {10.1038/s41597-023-02487-3},\n  url       = {https://doi.org/10.1038/s41597-023-02487-3}\n}"
       }
     ]
   },
@@ -129,42 +144,324 @@
     "name": "G-Eval",
     "type": "method",
     "category": "automated",
-    "description_short": "Uses LLMs as judges to evaluate content against specific criteria.",
-    "description_long_file": "g-eval.md",
+    "description_short": "Leverages large language models (LLMs) as judges to evaluate text quality based on user-defined criteria and scoring rubrics provided in a prompt.",
+    "description_long_file": "g-eval.mdx",
     "link_implementation": "https://github.com/nlpyang/geval",
     "reference_requirement": "optional",
-    "supported_tasks": ["summarization", "qa"],
+    "supported_tasks": [
+      "summarization",
+      "close-ended-qa",
+      "open-ended-qa",
+      "ner-re",
+      "text-classification",
+      "text-generation"
+    ],
     "assessed_qualities": [
       { "id": "correctness", "coverage": "Good" },
       { "id": "conciseness", "coverage": "Good" },
       { "id": "fluency", "coverage": "Good" },
-      { "id": "fairness", "coverage": "Poor" },
       { "id": "safety", "coverage": "Good" },
-      { "id": "privacy", "coverage": "Good" }
+      { "id": "privacy", "coverage": "Good" },
+      { "id": "fairness", "coverage": "Poor" }
     ],
     "identified_risks": [
       { "id": "hallucination", "coverage": "Good" },
       { "id": "omissions", "coverage": "Good" },
-      { "id": "bias", "coverage": "Poor" },
       { "id": "harmful-content", "coverage": "Good" },
-      { "id": "confidentiality-breach", "coverage": "Good" }
+      { "id": "confidentiality-breach", "coverage": "Good" },
+      { "id": "bias", "coverage": "Poor" }
     ],
-    "output_values": "Scores typically on a scale (e.g., 1-5). Higher is better.",
+    "output_values": "Numerical scores (e.g., on a 1-10 Likert scale) for the evaluated aspect, as determined by the LLM judge based on evaluation criteria. Higher values are better.",
     "advantages": [
-      "Can evaluate without references",
-      "Flexible criteria definition",
-      "Decent correlation with human judgment",
-      "Adaptable to a wide range of tasks"
+      "Highly flexible due to customizable criteria and rubrics.",
+      "Can evaluate text qualities without access to ground-truth references.",
+      "Shows good correlation with human judgment for certain tasks and criteria.",
+      "Adaptable to a wide range of generation tasks."
     ],
     "disadvantages": [
-      "Computationally expensive",
-      "Dependent on judge LLM quality",
-      "Affected by the used prompt",
-      "Potential for judge model bias",
-      "Less transparent than traditional metrics"
+      "Depends heavily on the quality and potential biases of the LLM judge.",
+      "Potentially sensitive to prompt engineering for criteria and scoring rubrics.",
+      "Computationally expensive due to using an LLM for evaluation.",
+      "Less transparent due to opaque nature of LLMs (self-explanations have been found to be unfaithful to the actual model reasoning).",
+      "LLM judges may incorrectly prefer model-generated texts over human-written ones."
     ],
     "references": [
-      { "name": "Liu et al., 2023", "url": "https://arxiv.org/abs/2303.16634" }
+      {
+        "name": "Liu et al., 2023",
+        "url": "https://aclanthology.org/2023.emnlp-main.153/",
+        "bib_record": "@inproceedings{liu-etal-2023-g-eval,\n  title     = {{G}-Eval: {NLG} Evaluation using Gpt-4 with Better Human Alignment},\n  author    = {Liu, Yang  and\n               Iter, Dan  and\n               Xu, Yichong  and\n               Wang, Shuohang  and\n               Xu, Ruochen  and\n               Zhu, Chenguang},\n  editor    = {Bouamor, Houda  and\n               Pino, Juan  and\n               Bali, Kalika},\n  booktitle = {Proceedings of the 2023 Conference on Empirical Methods in Natural Language Processing},\n  month     = {dec},\n  year      = {2023},\n  address   = {Singapore},\n  publisher = {Association for Computational Linguistics},\n  url       = {https://aclanthology.org/2023.emnlp-main.153/},\n  doi       = {10.18653/v1/2023.emnlp-main.153},\n  pages     = {2511--2522}\n}"
+      }
     ]
+  },
+  {
+    "id": "qags",
+    "name": "QAGS",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Evaluates factual consistency by comparing answers to questions generated from a background text and the model output, using an LLM.",
+    "description_long_file": "qags.mdx",
+    "link_implementation": "https://github.com/huggingface/evaluate/tree/main/metrics/qags",
+    "reference_requirement": "optional",
+    "supported_tasks": ["summarization", "text-generation", "open-ended-qa"],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Very Good" }],
+    "identified_risks": [
+      { "id": "hallucination", "coverage": "Very Good" },
+      { "id": "omissions", "coverage": "Very Good" }
+    ],
+    "output_values": "An aggregate score reflecting accuracy of the answers, typically between 0 and 1. Higher values are better. When using binary questions, can also report more fine-grained measures like coverage (share of facts from reference/context covered in model output) or groundedness (share of facts in model output supported by reference/context)",
+    "advantages": [
+      "Assesses factual consistency and information coverage.",
+      "Good interpretability due to question-answer format and ability to highlight mismatches in answers.",
+      "Can only use weak references, such as background text/information.",
+      "Flexible modes of operation (ternary, exact match, LLM-judged answers).",
+      "Robust to paraphrasing if the evaluation model is strong."
+    ],
+    "disadvantages": [
+      "Performance heavily depends on the quality of the used LLM.",
+      "Very computationally expensive due to a large number of LLM inferences."
+    ],
+    "references": [
+      {
+        "name": "Wang et al., 2020",
+        "url": "https://aclanthology.org/2020.acl-main.450/",
+        "bib_record": "@inproceedings{wang-etal-2020-qags,\n  title     = {Asking and Answering Questions to Evaluate the Factual Consistency of Summaries},\n  author    = {Wang, Alex  and\n               Cho, Kyunghyun  and\n               Lewis, Mike},\n  editor    = {Jurafsky, Dan  and\n               Chai, Joyce  and\n               Schluter, Natalie  and\n               Tetreault, Joel},\n  booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},\n  month     = {jul},\n  year      = {2020},\n  address   = {Online},\n  publisher = {Association for Computational Linguistics},\n  url       = {https://aclanthology.org/2020.acl-main.450/},\n  doi       = {10.18653/v1/2020.acl-main.450},\n  pages     = {5008--5020}\n}"
+      }
+    ]
+  },
+  {
+    "id": "stratified-performance",
+    "name": "Stratified Performance Evaluation",
+    "type": "method",
+    "category": "strategy",
+    "description_short": "Evaluates model performance across different subgroups of data to identify potential biases or performance disparities.",
+    "description_long_file": "stratified-performance.mdx",
+    "link_implementation": "",
+    "reference_requirement": "optional",
+    "supported_tasks": [
+      "summarization",
+      "close-ended-qa",
+      "open-ended-qa",
+      "ner-re",
+      "text-classification",
+      "text-generation"
+    ],
+    "assessed_qualities": [{ "id": "fairness", "coverage": "Good" }],
+    "identified_risks": [{ "id": "bias", "coverage": "Good" }],
+    "output_values": "Depends on the underlying performance metric used for each subgroup (e.g., accuracy, F1-score, BLEU). Results are typically presented as a comparison of these metric values across subgroups.",
+    "advantages": [
+      "Helps identify and quantify performance disparities across different population subgroups or data slices.",
+      "Applicable to a wide range of tasks and can be used with any underlying evaluation metric.",
+      "Provides insights into potential model biases."
+    ],
+    "disadvantages": [
+      "Requires careful definition and identification of relevant subgroups.",
+      "Relies on subgroup-annotated data.",
+      "Does not provide a direct quantitative measure of fairness.",
+      "Interpretation of disparities may be challenging."
+    ],
+    "references": []
+  },
+  {
+    "id": "word-count",
+    "name": "Word Count",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Measures the total number of words in the generated text. A basic indicator of output conciseness.",
+    "description_long_file": "word-count.mdx",
+    "link_implementation": "",
+    "reference_requirement": "not applicable",
+    "supported_tasks": ["summarization", "text-generation", "open-ended-qa"],
+    "assessed_qualities": [{ "id": "conciseness", "coverage": "Good" }],
+    "identified_risks": [],
+    "output_values": "An integer representing the total number of words. For evaluating conciseness, lower values are better.",
+    "advantages": [
+      "Extremely simple to calculate and understand.",
+      "Provides a quick check on output verbosity or conciseness.",
+      "Can be useful for tasks with length constraints (e.g., producing short summaries)."
+    ],
+    "disadvantages": [
+      "Optimal word count is task-dependent and subjective.",
+      "Does not assess the relevance of information in the model output, which is important for conciseness."
+    ],
+    "references": []
+  },
+  {
+    "id": "compression-ratio",
+    "name": "Compression Ratio",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Measures the ratio of the length of the generated text (e.g., summary) to the length of the source or reference text.",
+    "description_long_file": "compression-ratio.mdx",
+    "link_implementation": "",
+    "reference_requirement": "required",
+    "supported_tasks": ["summarization"],
+    "assessed_qualities": [{ "id": "conciseness", "coverage": "Good" }],
+    "identified_risks": [],
+    "output_values": "A ratio, typically between 0 and 1 (e.g., length of summary / length of source). Lower values indicate higher compression. Can also be expressed as a percentage reduction.",
+    "advantages": [
+      "Simple to calculate and understand.",
+      "Provides a quantitative measure of how much the input text has been shortened.",
+      "Useful for tasks like summarization where achieving a certain level of brevity is important."
+    ],
+    "disadvantages": [
+      "A high compression ratio might indicate loss of critical information (omissions).",
+      "Optimal compression ratio is task-dependent and not universally defined.",
+      "Does not assess the relevance of information in the model output, which is important for conciseness."
+    ],
+    "references": []
+  },
+  {
+    "id": "accuracy",
+    "name": "Accuracy",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Measures the proportion of correct predictions out of all predictions made in a classification task.",
+    "description_long_file": "accuracy.mdx",
+    "link_implementation": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.accuracy_score.html",
+    "reference_requirement": "required",
+    "supported_tasks": ["text-classification", "close-ended-qa", "ner-re"],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Good" }],
+    "identified_risks": [],
+    "output_values": "A score between 0 and 1, where 1 indicates perfect accuracy. Higher is better.",
+    "advantages": [
+      "Simple to understand and compute.",
+      "Provides a quick overview of overall model performance."
+    ],
+    "disadvantages": [
+      "Can be misleading for imbalanced datasets, where a high accuracy might be achieved by simply predicting the majority class.",
+      "Does not distinguish between types of errors (false positives vs. false negatives)."
+    ],
+    "references": []
+  },
+  {
+    "id": "precision",
+    "name": "Precision",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Measures the proportion of true positive predictions among all positive predictions made by the model.",
+    "description_long_file": "precision.mdx",
+    "link_implementation": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_score.html",
+    "reference_requirement": "required",
+    "supported_tasks": ["text-classification", "close-ended-qa", "ner-re"],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Partial" }],
+    "identified_risks": [],
+    "output_values": "A score between 0 and 1. Higher precision indicates fewer false positives.",
+    "advantages": [
+      "Useful when the cost of a false positive is high (e.g., medical diagnosis, fraud detection).",
+      "Focuses on the reliability of positive predictions."
+    ],
+    "disadvantages": [
+      "Does not consider false negatives (i.e., actual positive instances missed by the model).",
+      "A model can trivially achieve high precision by being very conservative and only making a few positive predictions."
+    ],
+    "references": []
+  },
+  {
+    "id": "recall",
+    "name": "Recall",
+    "type": "method",
+    "category": "automated",
+    "description_short": "Measures the proportion of actual positive instances that were correctly identified by the model.",
+    "description_long_file": "recall.mdx",
+    "link_implementation": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.recall_score.html",
+    "reference_requirement": "required",
+    "supported_tasks": ["text-classification", "close-ended-qa", "ner-re"],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Partial" }],
+    "identified_risks": [],
+    "output_values": "A score between 0 and 1. Higher recall indicates fewer false negatives. For multi-class, average recall (e.g., micro, macro, weighted) is reported.",
+    "advantages": [
+      "Useful when the cost of a false negative is high (e.g., medical screening for a disease).",
+      "Focuses on the model's ability to find all positive instances."
+    ],
+    "disadvantages": [
+      "Does not consider false positives (i.e., instances incorrectly labeled as positive).",
+      "A model can achieve high recall by predicting almost all instances as positive, leading to many false positives."
+    ],
+    "references": []
+  },
+  {
+    "id": "f1-score",
+    "name": "F1-Score",
+    "type": "method",
+    "category": "automated",
+    "description_short": "The harmonic mean of precision and recall, providing a single score that balances both concerns.",
+    "description_long_file": "f1-score.mdx",
+    "link_implementation": "https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html",
+    "reference_requirement": "required",
+    "supported_tasks": ["text-classification", "close-ended-qa", "ner-re"],
+    "assessed_qualities": [{ "id": "correctness", "coverage": "Good" }],
+    "identified_risks": [],
+    "output_values": "A score between 0 and 1. Higher F1-score indicates a better balance between precision and recall. For multi-class, average F1-score (e.g., micro, macro, weighted) is reported.",
+    "advantages": [
+      "Provides a more balanced measure than accuracy, especially for imbalanced datasets.",
+      "Useful when both precision and recall are important."
+    ],
+    "disadvantages": [
+      "Less interpretable than precision or recall alone.",
+      "Treats precision and recall as equally important, which may not always be the case (F-beta score can be used for differential weighting)."
+    ],
+    "references": []
+  },
+  {
+    "id": "ood-performance",
+    "name": "OOD Performance Evaluation",
+    "type": "method",
+    "category": "strategy",
+    "description_short": "Assesses model performance on out-of-distribution (OOD) data that differs significantly from the training data distribution.",
+    "description_long_file": "ood-performance.mdx",
+    "link_implementation": "",
+    "reference_requirement": "optional",
+    "supported_tasks": [
+      "summarization",
+      "close-ended-qa",
+      "open-ended-qa",
+      "ner-re",
+      "text-classification",
+      "text-generation",
+      "speech-recognition",
+      "image-classification"
+    ],
+    "assessed_qualities": [{ "id": "robustness", "coverage": "Good" }],
+    "identified_risks": [{ "id": "distributional-shift", "coverage": "Good" }],
+    "output_values": "Depends on the underlying performance metric used. Typically involves comparing in-distribution performance with OOD performance.",
+    "advantages": [
+      "Evaluates model's ability to generalize to unseen or new data.",
+      "Helps to identify potential model failure modes or weaknesses."
+    ],
+    "disadvantages": [
+      "Requires access to or creation of representative OOD datasets, which can be challenging.",
+      "Doesn't guarantee robustness against all possible OOD scenarios, only those represented in the used data.",
+      "Interpretation of results and determining an acceptable performance drop can be subjective."
+    ],
+    "references": []
+  },
+  {
+    "id": "adversarial-robustness",
+    "name": "Adversarial Robustness Evaluation",
+    "type": "method",
+    "category": "strategy",
+    "description_short": "Assesses model resilience against small, intentionally crafted perturbations to inputs designed to cause mispredictions or undesirable behavior.",
+    "description_long_file": "adversarial-robustness.mdx",
+    "reference_requirement": "optional",
+    "supported_tasks": [
+      "summarization",
+      "close-ended-qa",
+      "open-ended-qa",
+      "ner-re",
+      "text-classification",
+      "text-generation",
+      "speech-recognition",
+      "image-classification"
+    ],
+    "assessed_qualities": [{ "id": "robustness", "coverage": "Partial" }],
+    "identified_risks": [{ "id": "adversarial-attacks", "coverage": "Good" }],
+    "output_values": "Depends on the underlying performance metric used. Typically involves comparing in-distribution performance with adversarial performance.",
+    "advantages": ["Identifies vulnerabilities to malicious manipulations."],
+    "disadvantages": [
+      "Generating effective adversarial examples can be computationally expensive.",
+      "Doesn't guarantee robustness against all possible attacks, only those represented in the used data.",
+      "Adversarial attacks may not be a realistic risk for many applications."
+    ],
+    "references": []
   }
 ]

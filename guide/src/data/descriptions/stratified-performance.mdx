@@ -1,0 +1,29 @@
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+
+<Typography variant="body2" gutterBottom>
+  Stratified performance evaluation can be used to assess whether a model
+  performs consistently across different population subgroups. Instead or
+  relying on a single, aggregate performance score, this approach involves
+  splitting the evaluation data into smaller segments according to a specific
+  caracteristic (e.g., gender or ethnicity) and then calculating performance
+  metrics separately for each subgoup. This method allows for the identification
+  of potential biases, where a model might perform well on average but poorly
+  for specific subgroups.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Evaluation Process
+</Typography>
+
+<Typography variant="body2" component="div" gutterBottom>
+1. **Subgroup Definition**
+    - Identify relevant subgroups based on the considered task, data, intended model usage and potential fairness concerns. These subgroups could be based on key protected attributes or other data characteristics.
+1. **Data Segmentation**
+    - Divide the evaluation dataset according to the defined subgroups.
+1. **Performance Evaluation**
+    - Evaluate the model's performance for each subgroup using the chosen evaluation metri(s).
+1. **Comparison and Analysis**
+    - Compare performance scores across subgroups to identify any substantial disparities. Investigate any observed differences and determine whether the model's performance is at acceptable level for all relevant subgroups.
+
+</Typography>

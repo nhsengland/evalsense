@@ -1,14 +1,14 @@
 [
   {
     "id": "automated",
-    "name": "Automated",
+    "name": "Automated Metric",
     "description": "Fully automated evaluation metric.",
     "type": "category"
   },
   {
-    "id": "human-eval",
-    "name": "Human Evaluation",
-    "description": "Manual review by human evaluators.",
+    "id": "strategy",
+    "name": "Evaluation Strategy",
+    "description": "General evaluation strategy.",
     "type": "category"
   }
 ]

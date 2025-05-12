@@ -1,0 +1,72 @@
+import Typography from "@mui/material/Typography";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+import Box from "@mui/material/Box";
+
+<Typography variant="body2" gutterBottom>
+  The F1-Score is a metric that combines precision and recall into a single
+  value. It is the harmonic mean of precision and recall, providing a single
+  score that aggregates both metrics.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Formula
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  The F1-Score is calculated as:
+  <LaTeX>
+    {"F_1 = 2 \\cdot \\frac{\\text{Precision} \\cdot \\text{Recall}}{\\text{Precision} + \\text{Recall}}"}
+  </LaTeX>
+  Where:
+
+- Precision = <LaTeX>{"\\frac{TP}{TP + FP}"}</LaTeX>
+- Recall = <LaTeX>{"\\frac{TP}{TP + FN}"}</LaTeX>
+
+  In the above formula, TP denotes True Positives (instances correctly predicted as positive), FP denotes False Positives (instances incorrectly predicted as positive), and FN denotes False Negatives (instances incorrectly predicted as negative). Note that F1-Score doesn't directly reflect the number of true negatives (TN) in its calculation.
+
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Interpretation
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  The F1-Score ranges from 0 to 1. An F1-Score of 1 indicates perfect precision
+  and recall, while an F1-Score of 0 indicates that either precision or recall
+  (or both) is zero. The F1-score is often preferred over accuracy when dealing
+  with imbalanced datasets because it takes into account both false positives
+  and false negatives. It gives equal weight to precision and recall. If one of
+  these measures is to be prioritised, the more general F-beta score can be used
+  instead.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Multi-Class and Multi-Label F1
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  For multi-class classification, F1 score can be calculated on a per-class
+  basis. These per-class scores can then be aggregated using different averaging
+  methods:
+
+- **Macro F1:** Calculates F1 for each class independently and
+  then takes the unweighted average. This results in equal treatment of all classes,
+  but may mask cases in which classes with more instances are more commonly
+  mispredicted.
+- **Micro F1:** Calculates F1 globally by counting the total true
+  positives and false positives across all classes. Gives equal weight to each
+  instance. In multi-class settings where each instance is assigned to exactly
+  one class, micro-F1 is equivalent to micro-precision, micro-recall, and accuracy.
+- **Weighted F1:** Calculates F1 for each class and then takes
+  the average, weighted by the number of true instances for each class.
+  This means that classes with more instances will have a greater impact on
+  the result.
+- **Per-instance F1:** Calculates F1 of the classes predicted
+  for each instance. This version can be used in multi-label settings, where
+  each instance can belong to multiple classes.
+- **Per-label F1:** Calculates F1 of the predictions for each
+  label. This is an alternative to per-instance F1 in multi-label
+  settings. The F1 scores computed in this way can be macor-, micro- or
+  weighted-averaged, using the methods described above.
+
+</Typography>

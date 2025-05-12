@@ -1,0 +1,71 @@
+import Typography from "@mui/material/Typography";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+import Box from "@mui/material/Box";
+
+<Typography variant="body2" gutterBottom>
+  Recall, also known as Sensitivity or True Positive Rate (TPR), measuers the
+  proportion of positive instances that were correctly classified as such by the
+  model. It indicates the model's ability to identify all the positive
+  instances, ignoring any incorrect positive predictions.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Formula
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Recall is calculated using the number of True Positives (TP) and False
+  Negatives (FN):
+  <LaTeX>{"\\text{Recall} = \\frac{TP}{TP + FN}"}</LaTeX>
+  Where:
+
+- TP (True Positives): Instances correctly predicted as positive.
+- FN (False Negatives): Instances incorrectly predicted as negative.
+
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Interpretation
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Recall scores range from 0 to 1. A recall of 1 means that every actual
+  positive instance was correctly identified by the model (no false negatives).
+  A low recall indicates that the model misses many actual positive instances.
+  Recall is particularly important in scenarios where the cost of a false
+  negative is high. For example, in medical diagnosis, failing to detect a
+  disease (a false negative) can potentially have severe consequences. Since
+  recall only focuses on positive samples, it should typically be used alongside
+  other metrics like accuracy, precision and F1-score.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Multi-Class and Multi-Label Recall
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  For multi-class classification, recall can be calculated on a per-class
+  basis. These per-class scores can then be aggregated using different averaging
+  methods:
+
+- **Macro Recall:** Calculates recall for each class independently and
+  then takes the unweighted average. This results in equal treatment of all classes,
+  but may mask cases in which classes with more instances are more commonly
+  mispredicted.
+- **Micro Recall:** Calculates recall globally by counting the total true
+  positives and false positives across all classes. Gives equal weight to each
+  instance. In multi-class settings where each instance is assigned to exactly
+  one class, micro-recall is equivalent to micro-precision, micro-F1, and accuracy.
+- **Weighted Recall:** Calculates recall for each class and then takes
+  the average, weighted by the number of true instances for each class.
+  This means that classes with more instances will have a greater impact on
+  the result.
+- **Per-instance Recall:** Calculates recall of the classes predicted
+  for each instance. This version can be used in multi-label settings, where
+  each instance can belong to multiple classes.
+- **Per-label Recall:** Calculates recall of the predictions for each
+  label. This is an alternative to per-instance recall in multi-label
+  settings. The recall scores computed in this way can be macor-, micro- or
+  weighted-averaged, using the methods described above.
+
+</Typography>

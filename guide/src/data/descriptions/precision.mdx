@@ -1,0 +1,71 @@
+import Typography from "@mui/material/Typography";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+import Box from "@mui/material/Box";
+
+<Typography variant="body2" gutterBottom>
+  Precision measures the proportion of positively classified instances that are
+  actually positive. It indicates the quality of the positive model predictions,
+  ignoring any negative predictions.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Formula
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Precision is calculated using the number of True Positives (TP) and False
+  Positives (FP):
+  <LaTeX>{"\\text{Precision} = \\frac{TP}{TP + FP}"}</LaTeX>
+
+Where:
+
+- TP (True Positives): Instances correctly predicted as positive.
+- FP (False Positives): Instances incorrectly predicted as positive.
+
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Interpretation
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Precision scores range from 0 to 1. A precision of 1 means that every instance
+  predicted as positive was indeed positive (no false positives). A low
+  precision indicates that the model generates many false positive predictions.
+  Precision is particularly important in scenarios where the cost of a false
+  positive is high. For example, in a fraud detection system, a false positive
+  (classifying a legitimate transaction as fraud) can be very problematic. Since
+  precision only focuses on positive predictions, it should typically be used
+  alongside other metrics like accuracy, recall and F1-score.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Multi-Class and Multi-Label Precision
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  For multi-class classification, precision can be calculated on a per-class
+  basis. These per-class scores can then be aggregated using different averaging
+  methods:
+
+- **Macro Precision:** Calculates precision for each class independently and
+  then takes the unweighted average. This results in equal treatment of all classes,
+  but may mask cases in which classes with more instances are more commonly
+  mispredicted.
+- **Micro Precision:** Calculates precision globally by counting the total true
+  positives and false positives across all classes. Gives equal weight to each
+  instance. In multi-class settings where each instance is assigned to exactly
+  one class, micro-precision is equivalent to micro-recall, micro-F1, and accuracy.
+- **Weighted Precision:** Calculates precision for each class and then takes
+  the average, weighted by the number of true instances for each class.
+  This means that classes with more instances will have a greater impact on
+  the result.
+- **Per-instance Precision:** Calculates precision of the classes predicted
+  for each instance. This version can be used in multi-label settings, where
+  each instance can belong to multiple classes.
+- **Per-label Precision:** Calculates precision of the predictions for each
+  label. This is an alternative to per-instance precision in multi-label
+  settings. The precision scores computed in this way can be macor-, micro- or
+  weighted-averaged, using the methods described above.
+
+</Typography>

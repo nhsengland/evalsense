@@ -1,0 +1,44 @@
+import Typography from "@mui/material/Typography";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+import Box from "@mui/material/Box";
+
+<Typography variant="body2" gutterBottom>
+  Accuracy is a fundamental metric for evaluating classification models. It
+  measures the proportion of instances for which the model made a correct
+  prediction out of the total number of instances.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Formula
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  For a binary or multi-class classification task, accuracy is calculated as:
+  <LaTeX>
+    {
+      "\\text{Accuracy} = \\frac{\\text{Number of Correct Predictions}}{\\text{Total Number of Predictions}}"
+    }
+  </LaTeX>
+</Typography>
+<Typography variant="body2" gutterBottom>
+  The formula can also be rewritten in terms of True Positives (TP), True
+  Negatives (TN), False Positives (FP), and False Negatives (FN) for a binary
+  case (which can be extended to multi-class settings by considering one class
+  vs. rest):
+  <LaTeX>{"\\text{Accuracy} = \\frac{TP + TN}{TP + TN + FP + FN}"}</LaTeX>
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Interpretation
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Accuracy ranges from 0 to 1, where 1 signifies that all predictions were
+  correct, and 0 signifies that no predictions were correct. While intuitive,
+  the overall accuracy can be a misleading metric, especially when dealing with
+  imbalanced datasets. For example, if 95% of instances belong to Class A and 5%
+  to Class B, a model that always predicts Class A will achieve 95% accuracy,
+  even though it completely fails to identify Class B instances. In such
+  scenarios, it is often useful to also consider other metrics like Precision,
+  Recall, and F1-score.
+</Typography>

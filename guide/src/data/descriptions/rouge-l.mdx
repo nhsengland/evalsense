@@ -1,0 +1,37 @@
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+import ReactMarkdown from "react-markdown";
+import LaTeX from "@site/src/components/LaTeX/LaTeX";
+
+<Typography variant="body2">
+  ROUGE-L (Recall-Oriented Understudy for Gisting Evaluation) is an evaluation
+  metric that measures the [F1 score](https://en.wikipedia.org/wiki/F-score)
+  based on the [longest common subsequence
+  (LCS)](https://en.wikipedia.org/wiki/Longest_common_subsequence_problem) of
+  based of words of words between a reference and a generated text. While it is
+  very fast to compute and is still widely used, it relies on surface-level word
+  overlap and does not capture deeper semantic meaning. For more comprehensive
+  evaluation, consider model-based alternatives such as G-Eval or QAGS Score.
+</Typography>
+
+<Typography variant="subtitle1" gutterBottom>
+  Example
+</Typography>
+
+<Typography variant="body2">
+
+- **Reference text:** The patient presents with chest pain, shortness of breath, lightheadedness and dizziness.
+- **Evaluated text:** The patient denies any chest pain, shortness of breath or lightheadedness.
+- **Longest common subsequence (LCS):** The patient chest pain shortness of breath lightheadedness
+- **LCS precision:**
+  - LCS length: 8
+  - Evaluated text length: 11
+  - LCS precision: <LaTeX>{"\\frac{8}{11} = 0.73"}</LaTeX>
+- **LCS recall:**
+  - LCS length: 8
+  - Reference text length: 12
+  - LCS recall: <LaTeX>{"\\frac{8}{12} = 0.66"}</LaTeX>
+- **ROUGE-L (F1 score):**
+  - ROUGE-L = <LaTeX>{"\\frac{2 \\cdot \\text{LCS precision} \\cdot \\text{LCS recall}}{\\text{LCS precision} + \\text{LCS recall}} = \\frac{2 \\cdot 0.73 \\cdot 0.66}{0.73 + 0.66} = 0.69"}</LaTeX>
+
+</Typography>
