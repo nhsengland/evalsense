@@ -14,10 +14,11 @@
       "source_data_key": "tasks",
       "options": [
         { "value": "summarization" },
-        { "value": "qa" },
-        { "value": "ner" },
-        { "value": "relation-extraction" },
-        { "value": "text-classification" }
+        { "value": "close-ended-qa" },
+        { "value": "open-ended-qa" },
+        { "value": "ner-re" },
+        { "value": "text-classification" },
+        { "value": "text-generation" }
       ],
       "maps_to": "supported_tasks",
       "next": "q_risks"
@@ -30,9 +31,11 @@
       "options": [
         { "value": "hallucination" },
         { "value": "omissions" },
+        { "value": "distributional-shift" },
         { "value": "bias" },
         { "value": "harmful-content" },
-        { "value": "confidentiality-breach" }
+        { "value": "confidentiality-breach" },
+        { "value": "adversarial-attacks" }
       ],
       "maps_to": "identified_risks",
       "next": "q_qualities"
@@ -44,10 +47,11 @@
       "source_data_key": "qualities",
       "options": [
         { "value": "correctness" },
-        { "value": "conciseness" },
-        { "value": "fluency" },
+        { "value": "robustness" },
         { "value": "fairness" },
         { "value": "safety" },
+        { "value": "conciseness" },
+        { "value": "fluency" },
         { "value": "privacy" }
       ],
       "maps_to": "assessed_qualities",
