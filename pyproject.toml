@@ -27,11 +27,8 @@ keywords = [
     "Machine Learning",
 ]
 dependencies = [
-    "accelerate>=1.4.0",
-    "bert-score>=0.3.13",
     "datasets>=3.2.0",
     "evaluate>=0.4.3",
-    "flashinfer-python<0.2.3",
     "inspect-ai>=0.3.87",
     "matplotlib>=3.10.0",
     "numpy<2.0.0",
@@ -44,11 +41,8 @@ dependencies = [
     "rouge-score>=0.1.2",
     "seaborn>=0.13.2",
     "tenacity>=9.0.0",
-    "torch>=2.6",
     "tqdm>=4.67.1",
-    "transformers>=4.50.0",
     "typer>=0.15.1",
-    "vllm>=0.8.2",
 ]
 
 [project.urls]
@@ -59,6 +53,15 @@ Issues = "https://github.com/nhsengland/evalsense/issues"
 interactive = [
     "ipywidgets>=8.1.5",
     "jupyterlab>=4.3.5",
+]
+transformers = [
+    "bert-score>=0.3.13",
+    "transformers>=4.50.0",
+    "torch>=2.6",
+]
+vllm = [
+    "vllm>=0.8.2",
+    "flashinfer-python<0.2.3",
 ]
 
 [project.scripts]

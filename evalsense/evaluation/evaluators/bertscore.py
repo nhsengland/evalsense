@@ -12,7 +12,6 @@ from inspect_ai.scorer import (
 )
 from inspect_ai.solver import TaskState
 from inspect_ai.util import concurrency
-import torch
 
 from evalsense.evaluation import Evaluator, ScoreCalculator
 
@@ -240,6 +239,8 @@ def get_bertscore_evaluator(
                 )
 
     def cleanup_bertscore() -> None:
+        import torch
+
         del calculator.bertscore_module
         gc.collect()
         torch.cuda.empty_cache()
