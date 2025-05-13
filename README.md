@@ -67,8 +67,11 @@ To setup the Python environment for the project:
 To setup the Node environment for the LLM evaluation guide (located under [`guide/`](https://github.com/nhsengland/evalsense/tree/main/guide)):
 
 - Install [node](https://nodejs.org/en/download) if it's not installed already
-- `npm install` in the `guide/` directory
+- Change to the `guide/` directory (`cd guide`)
+- `npm install`
 - `npm run start` to run the development server
+
+See also the separate [README.md](https://github.com/nhsengland/evalsense/tree/main/guide/README.md) for the guide.
 
 ## Usage
 
