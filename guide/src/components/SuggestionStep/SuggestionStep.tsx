@@ -36,7 +36,7 @@ const SuggestionStep: React.FC<SuggestionStepProps> = ({
       item: q,
       type: "quality",
       methods: suggestedMethods.filter((m) =>
-        m.assessed_qualities.some((aq) => aq.id === q.id)
+        m.assessed_qualities.some((aq) => aq.id === q.id),
       ),
     };
   });
@@ -45,13 +45,13 @@ const SuggestionStep: React.FC<SuggestionStepProps> = ({
       item: r,
       type: "risk",
       methods: suggestedMethods.filter((m) =>
-        m.identified_risks.some((ir) => ir.id === r.id)
+        m.identified_risks.some((ir) => ir.id === r.id),
       ),
     };
   });
 
   const hasSuggestions = Object.values(groupedMethods).some(
-    (group) => group.methods.length > 0
+    (group) => group.methods.length > 0,
   );
 
   return (
@@ -61,8 +61,8 @@ const SuggestionStep: React.FC<SuggestionStepProps> = ({
       </Typography>
       <Typography variant="body1" gutterBottom>
         Based on your requirements, here are some suggested methods, grouped by
-        the qualities and risks you selected. The methods are ranked by how well
-        they cover your overall selections. Select the methods you plan to use.
+        the qualities and risks you selected. Please select the methods you plan
+        to use.
       </Typography>
 
       {!hasSuggestions && (

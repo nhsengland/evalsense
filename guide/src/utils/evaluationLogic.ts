@@ -182,6 +182,10 @@ export function calculateCoverage(
     qualities: [...significantQualities],
     risks: [...significantRisks],
   };
+  const partiallyCovered: UncoveredItems = {
+    qualities: [...significantQualities],
+    risks: [...significantRisks],
+  };
 
   significantQualities.forEach((quality) => {
     let bestCoverage = 0; // Use numeric score for comparison
@@ -201,6 +205,11 @@ export function calculateCoverage(
       uncovered.qualities = uncovered.qualities.filter(
         (q) => q.id !== quality.id,
       );
+      if (bestCoverage >= 3) {
+        partiallyCovered.qualities = partiallyCovered.qualities.filter(
+          (q) => q.id !== quality.id,
+        );
+      }
     }
   });
 
@@ -220,8 +229,20 @@ export function calculateCoverage(
     if (bestCoverageLevel) {
       coverageMap[risk.id] = bestCoverageLevel;
       uncovered.risks = uncovered.risks.filter((r) => r.id !== risk.id);
+      if (bestCoverage >= 3) {
+        partiallyCovered.risks = partiallyCovered.risks.filter(
+          (r) => r.id !== risk.id,
+        );
+      }
     }
   });
 
-  return { coverage: coverageMap, uncovered };
+  partiallyCovered.qualities = partiallyCovered.qualities.filter(
+    (q) => !uncovered.qualities.some((uq) => uq.id === q.id),
+  );
+  partiallyCovered.risks = partiallyCovered.risks.filter(
+    (r) => !uncovered.risks.some((ur) => ur.id === r.id),
+  );
+
+  return { coverage: coverageMap, uncovered, partiallyCovered };
 }

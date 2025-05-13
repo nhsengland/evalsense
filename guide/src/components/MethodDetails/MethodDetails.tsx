@@ -16,14 +16,12 @@ import { getItemById } from "@site/src/utils/dataLoaders";
 import { Method, CoverageLevel } from "@site/src/types/evaluation.types";
 import { useState, useEffect } from "react";
 
-// Define interface for component props
 interface MethodDetailsModalProps {
   method: Method | undefined;
   open: boolean;
   onClose: () => void;
 }
 
-// Basic styling for the modal content
 const modalStyle = {
   position: "absolute",
   top: "50%",
@@ -39,7 +37,6 @@ const modalStyle = {
   overflowY: "auto",
 };
 
-// Coverage level colors
 const coverageColors: Record<CoverageLevel, string> = {
   "Very Good": "#4caf50", // green
   Good: "#8bc34a", // lightGreen

@@ -125,4 +125,5 @@ export interface UncoveredItems {
 export interface CoverageResult {
   coverage: CoverageMap;
   uncovered: UncoveredItems;
+  partiallyCovered: UncoveredItems;
 }

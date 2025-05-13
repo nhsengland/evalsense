@@ -5,9 +5,9 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
-import Chip from "@mui/material/Chip";
 import Alert from "@mui/material/Alert";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import WarningIcon from "@mui/icons-material/Warning";
 import CancelIcon from "@mui/icons-material/Cancel";
 import { getItemById, getItemsByIds } from "@site/src/utils/dataLoaders";
 import { calculateCoverage } from "@site/src/utils/evaluationLogic";
@@ -15,6 +15,7 @@ import {
   GuideAnswers,
   ImportanceRating,
 } from "@site/src/types/evaluation.types";
+import CoverageChip from "../CoverageChip/CoverageChip";
 
 interface SummaryReportProps {
   answers: GuideAnswers;
@@ -44,13 +45,14 @@ export default function SummaryReport({
   const desiredRisks = getItemsByIds("risks", desiredRiskIds);
   const selectedMethods = getItemsByIds("methods", selectedMethodIds);
 
-  const { coverage, uncovered } = calculateCoverage(
+  const { coverage, uncovered, partiallyCovered } = calculateCoverage(
     selectedMethodIds,
     desiredQualities,
     desiredRisks,
     qualityRatings,
     riskRatings,
   );
+  console.log(partiallyCovered);
 
   return (
     <Paper elevation={2} sx={{ p: 3 }}>
@@ -98,7 +100,7 @@ export default function SummaryReport({
           <List dense disablePadding>
             {selectedMethods.map((method) => (
               <ListItem key={method.id}>
-                <ListItemText primary={method.name} />
+                <ListItemText primary={`• ${method.name}`} />
               </ListItem>
             ))}
           </List>
@@ -116,63 +118,93 @@ export default function SummaryReport({
         {desiredQualities.map((q) => (
           <Box key={q.id} display="flex" alignItems="center" mb={1}>
             {coverage[q.id] ? (
-              <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+              coverage[q.id] == "Good" || coverage[q.id] == "Very Good" ? (
+                <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+              ) : (
+                <WarningIcon color="warning" sx={{ mr: 1 }} />
+              )
             ) : (
               <CancelIcon color="error" sx={{ mr: 1 }} />
             )}
             <Typography component="span">Quality: {q.name}</Typography>
-            {coverage[q.id] && (
-              <Chip
-                label={`Covered (${coverage[q.id]})`}
-                size="small"
-                color="success"
-                variant="outlined"
-                sx={{ ml: 1 }}
-              />
-            )}
+            <CoverageChip
+              coverageLevel={coverage[q.id]}
+              size="small"
+              sx={{ ml: 1 }}
+            />
           </Box>
         ))}
         {desiredRisks.map((r) => (
           <Box key={r.id} display="flex" alignItems="center" mb={1}>
             {coverage[r.id] ? (
-              <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+              coverage[r.id] == "Good" || coverage[r.id] == "Very Good" ? (
+                <CheckCircleIcon color="success" sx={{ mr: 1 }} />
+              ) : (
+                <WarningIcon color="warning" sx={{ mr: 1 }} />
+              )
             ) : (
               <CancelIcon color="error" sx={{ mr: 1 }} />
             )}
             <Typography component="span">Risk: {r.name}</Typography>
-            {coverage[r.id] && (
-              <Chip
-                label={`Covered (${coverage[r.id]})`}
-                size="small"
-                color="success"
-                variant="outlined"
-                sx={{ ml: 1 }}
-              />
-            )}
+            <CoverageChip
+              coverageLevel={coverage[r.id]}
+              size="small"
+              sx={{ ml: 1 }}
+            />
           </Box>
         ))}
       </Box>
 
-      {(uncovered.qualities.length > 0 || uncovered.risks.length > 0) && (
+      {(uncovered.qualities.length > 0 ||
+        uncovered.risks.length > 0 ||
+        partiallyCovered.qualities.length > 0 ||
+        partiallyCovered.risks.length > 0) && (
         <Alert severity="warning">
-          <strong>Attention:</strong> The following requirements are not fully
-          covered by your selected methods:
-          <List dense>
-            {uncovered.qualities.map((q) => (
-              <ListItemText key={q.id} primary={`Quality: ${q.name}`} />
-            ))}
-            {uncovered.risks.map((r) => (
-              <ListItemText key={r.id} primary={`Risk: ${r.name}`} />
-            ))}
-          </List>
-          Consider adding more methods or reviewing suggestions in the
-          catalogue.
+          <strong>Attention</strong>
+          {(uncovered.qualities.length > 0 || uncovered.risks.length > 0) && (
+            <>
+              <br />
+              <br />
+              The following requirements are not covered by your selected
+              methods:
+              <List dense sx={{ listStyleType: "disc" }}>
+                {uncovered.qualities.map((q) => (
+                  <ListItemText key={q.id} primary={`• Quality: ${q.name}`} />
+                ))}
+                {uncovered.risks.map((r) => (
+                  <ListItemText key={r.id} primary={`• Risk: ${r.name}`} />
+                ))}
+              </List>
+              Consider using additional methods to achieve better coverage.
+            </>
+          )}
+          {(partiallyCovered.qualities.length > 0 ||
+            partiallyCovered.risks.length > 0) && (
+            <>
+              <br />
+              <br />
+              The following requirements are partially covered by your selected
+              methods:
+              <List dense>
+                {partiallyCovered.qualities.map((q) => (
+                  <ListItemText key={q.id} primary={`• Quality: ${q.name}`} />
+                ))}
+                {partiallyCovered.risks.map((r) => (
+                  <ListItemText key={r.id} primary={`• Risk: ${r.name}`} />
+                ))}
+              </List>
+              Consider choosing methods with better coverage for these
+              requirements.
+            </>
+          )}
         </Alert>
       )}
 
       {selectedMethods.length > 0 &&
         uncovered.qualities.length === 0 &&
-        uncovered.risks.length === 0 && (
+        uncovered.risks.length === 0 &&
+        partiallyCovered.qualities.length === 0 &&
+        partiallyCovered.risks.length === 0 && (
           <Alert severity="success">
             All specified qualities and risks appear to be addressed by your
             selected methods based on available data. Remember to consult method

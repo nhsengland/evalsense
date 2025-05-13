@@ -7,8 +7,14 @@ import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
 
 import MethodDetails from "@site/src/components/MethodDetails/MethodDetails";
-import { Method, Quality, Risk } from "@site/src/types/evaluation.types";
+import {
+  CoverageLevel,
+  Method,
+  Quality,
+  Risk,
+} from "@site/src/types/evaluation.types";
 import { getItemById } from "@site/src/utils/dataLoaders";
+import CoverageInfo from "../CoverageChip/CoverageChip";
 
 interface MethodCardProps {
   method: Method | undefined;
@@ -30,18 +36,15 @@ const MethodCard: React.FC<MethodCardProps> = ({
   const category = getItemById("categories", method.category);
   const categoryName = category?.name || method.category;
 
-  let coverageInfo: string | null = null;
+  let coverage: CoverageLevel | null = null;
   if (showCoverageFor) {
     const coverageList =
       showCoverageFor.type === "quality"
         ? method.assessed_qualities
         : method.identified_risks;
-    const coverage = coverageList.find(
-      (cov) => cov.id === showCoverageFor.id
+    coverage = coverageList.find(
+      (cov) => cov.id === showCoverageFor.id,
     )?.coverage;
-    if (coverage) {
-      coverageInfo = `Coverage: ${coverage}`;
-    }
   }
 
   const handleOpenModal = () => setModalOpen(true);
@@ -58,17 +61,12 @@ const MethodCard: React.FC<MethodCardProps> = ({
           <Typography variant="body2" color="text.secondary">
             {method.description_short || "No description."}
           </Typography>
-          {coverageInfo && (
-            <Typography
-              variant="caption"
-              color="primary"
-              display="block"
-              sx={{ mt: 1 }}
-            >
-              {coverageInfo}
-            </Typography>
-          )}
         </CardContent>
+        {coverage && (
+          <CardContent sx={{ mt: 0, mb: 0 }}>
+            <CoverageInfo coverageLevel={coverage} size="small" />
+          </CardContent>
+        )}
         <CardActions>
           <Button size="small" onClick={handleOpenModal}>
             Details
