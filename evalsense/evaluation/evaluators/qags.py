@@ -257,9 +257,9 @@ class QagsScoreCalculator(ScoreCalculator):
         Use `calculate_async` instead.
 
         Args:
-            predictions (str): The model output to evaluate.
+            prediction (str): The model output to evaluate.
             input (str, optional): The input to the model. Optional.
-            references (str, optional): The reference output to compare against.
+            reference (str, optional): The reference output to compare against.
                 Optional.
             metadata (dict[str, Any], optional): Additional Inspect AI sample/task
                 state metadata. Optional.
@@ -736,9 +736,9 @@ class QagsScoreCalculator(ScoreCalculator):
         """Asynchronously computes evaluation scores for QAGS.
 
         Args:
-            predictions (str): The model output to evaluate.
+            prediction (str): The model output to evaluate.
             input (str, optional): The input to the model. Optional.
-            references (str, optional): The reference output to compare against.
+            reference (str, optional): The reference output to compare against.
                 Optional.
             metadata (dict[str, Any], optional): Additional Inspect AI sample/task
                 state metadata. Optional.

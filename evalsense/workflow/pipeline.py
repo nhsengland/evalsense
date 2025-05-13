@@ -36,9 +36,8 @@ class Pipeline:
         """Initializes a new Pipeline.
 
         Args:
-            experiments (ExperimentBatchConfig | ExperimentConfig
-                | list[ExperimentBatchConfig | ExperimentConfig]): The experiments
-                to run in the pipeline.
+            experiments (ExperimentBatchConfig | ExperimentConfig | list[ExperimentBatchConfig | ExperimentConfig]):
+                The experiments to run in the pipeline.
             project (Project): The project in which to track the results and outputs.
             maintain_order (bool): Whether to maintain the order of the experiments or
                 whether to reorder them to reduce the number of model loads. Defaults

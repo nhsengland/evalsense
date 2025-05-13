@@ -25,9 +25,9 @@ class ScoreCalculator(Protocol):
         """Computes evaluation scores for the given evaluation method
 
         Args:
-            predictions (str): The model output to evaluate.
+            prediction (str): The model output to evaluate.
             input (str, optional): The input to the model. Optional.
-            references (str, optional): The reference output to compare against.
+            reference (str, optional): The reference output to compare against.
                 Optional.
             metadata (dict[str, Any], optional): Additional Inspect AI sample/task
                 state metadata. Optional.
@@ -52,9 +52,9 @@ class ScoreCalculator(Protocol):
         """Asynchronously computes evaluation scores for the given evaluation method
 
         Args:
-            predictions (str): The model output to evaluate.
+            prediction (str): The model output to evaluate.
             input (str, optional): The input to the model. Optional.
-            references (str, optional): The reference output to compare against.
+            reference (str, optional): The reference output to compare against.
                 Optional.
             metadata (dict[str, Any], optional): Additional Inspect AI sample/task
                 state metadata. Optional.

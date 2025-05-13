@@ -129,7 +129,7 @@ def get_bleu_evaluator(
 
     Args:
         name (str): The name of the metric and evaluator. Defaults to "BLEU".
-        metric_name (str): The name of the internal scorer. Defaults to "BLEU Precision".
+        scorer_name (str): The name of the internal scorer. Defaults to "BLEU Precision".
         metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
             The metrics to use for the evaluation. If `None`, the default metric
             will be used (BLEU).

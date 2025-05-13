@@ -70,10 +70,6 @@ class Project:
 
         Args:
             name (str): The name of the project.
-            result_aggregator (ResultAggregator | None, optional): The result aggregator
-                to use. Defaults to DefaultAggregator if None.
-            cache_generations (bool): Whether to cache generations. Defaults to True.
-            cache_results (bool): Whether to cache evaluation results. Defaults to True.
             load_existing (bool): Whether to load an existing project if it exists.
                 Defaults to True.
             reset_project (bool): Whether to reset the project if it exists. Defaults
@@ -162,9 +158,10 @@ class Project:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to update.
             record_value (ResultRecord): The generation or evaluation result.
-            init_for_evaluation (bool): Whether to initialise a new evaluation
-                record if the evaluation record does not exist. Defaults to False.
-                This is only applicable if the record_key is an EvaluationRecord.
+            init_eval_record_from_generations (bool): Whether to initialise a new
+                evaluation record if the evaluation record does not exist. Defaults
+                to False. This is only applicable if the record_key is an
+                EvaluationRecord.
         """
         current_record = self.get_record(
             record_key,

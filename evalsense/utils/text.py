@@ -12,7 +12,7 @@ def format_template(template: str, **kwargs) -> str:
 
     Args:
         template (str): The template string to format.
-        **kwargs: Keyword arguments to replace placeholders in the template.
+        **kwargs (dict[str, any]): Keyword arguments to replace placeholders in the template.
 
     Returns:
         str: The formatted string.

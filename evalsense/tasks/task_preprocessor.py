@@ -57,7 +57,7 @@ class TaskPreprocessor:
         """Preprocesses the input dataset for a specific task.
 
         Args:
-            dataset (datasets.Dataset): The input dataset to preprocess,
+            hf_dataset (datasets.Dataset): The input dataset to preprocess,
                 in HuggingFace format.
             dataset_manager (DatasetManager): The dataset manager used to
                 retrieve the dataset.

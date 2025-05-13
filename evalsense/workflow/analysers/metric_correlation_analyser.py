@@ -84,7 +84,7 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
 
         Returns:
             T: The correlation results containing the correlation matrix and
-               optionally a visualization.
+                optionally a visualization.
         """
         eval_logs = project.get_logs(type="evaluation", status="success")
 
