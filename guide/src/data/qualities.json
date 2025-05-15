@@ -24,14 +24,14 @@
     "type": "quality"
   },
   {
-    "id": "safety",
-    "name": "Safety",
-    "description": "The degree to which the model's outputs are safe and non-harmful.",
+    "id": "adherance",
+    "name": "Policy adherance",
+    "description": "The degree to which the model outputs adhere to the relevant policies.",
     "type": "quality"
   },
   {
     "id": "privacy",
-    "name": "Privacy",
+    "name": "Output privacy",
     "description": "The degree to which the model's outputs protect sensitive information.",
     "type": "quality"
   },

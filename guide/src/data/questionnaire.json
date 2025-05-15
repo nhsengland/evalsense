@@ -31,10 +31,10 @@
       "options": [
         { "value": "hallucination" },
         { "value": "omissions" },
-        { "value": "distributional-shift" },
+        { "value": "data-drift" },
         { "value": "bias" },
         { "value": "harmful-content" },
-        { "value": "confidentiality-breach" },
+        { "value": "disclosure" },
         { "value": "adversarial-attacks" }
       ],
       "maps_to": "identified_risks",
@@ -49,7 +49,7 @@
         { "value": "correctness" },
         { "value": "robustness" },
         { "value": "fairness" },
-        { "value": "safety" },
+        { "value": "adherance" },
         { "value": "conciseness" },
         { "value": "fluency" },
         { "value": "privacy" }

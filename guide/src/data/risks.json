@@ -25,18 +25,18 @@
     "name": "Harmful Content",
     "description": "Generating content that is harmful or unsafe.",
     "type": "risk",
-    "related_qualities": ["safety"]
+    "related_qualities": ["adherance"]
   },
   {
-    "id": "confidentiality-breach",
-    "name": "Confidentiality Breach",
-    "description": "Inadvertently revealing sensitive information.",
+    "id": "disclosure",
+    "name": "Confidential Data in Outputs",
+    "description": "Inadvertently revealing sensitive information in model outputs.",
     "type": "risk",
     "related_qualities": ["privacy"]
   },
   {
-    "id": "distributional-shift",
-    "name": "Distributional Shift",
+    "id": "data-drift",
+    "name": "Data Drift",
     "description": "Performance degradation due to changes in data distribution.",
     "type": "risk",
     "related_qualities": ["robustness"]

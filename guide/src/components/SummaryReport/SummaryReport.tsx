@@ -183,8 +183,8 @@ export default function SummaryReport({
             <>
               <br />
               <br />
-              The following requirements are partially covered by your selected
-              methods:
+              The following requirements are only partially covered by your
+              selected methods:
               <List dense>
                 {partiallyCovered.qualities.map((q) => (
                   <ListItemText key={q.id} primary={`• Quality: ${q.name}`} />

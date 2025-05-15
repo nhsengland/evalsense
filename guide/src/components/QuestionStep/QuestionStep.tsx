@@ -236,7 +236,7 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
                     <Typography
                       variant="body2"
                       color="text.secondary"
-                      sx={{ mr: 1, minWidth: 100 }}
+                      sx={{ mr: 1, minWidth: 100, fontWeight: 400 }}
                     >
                       Importance:
                     </Typography>

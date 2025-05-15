@@ -16,12 +16,19 @@ export default function WelcomeStep() {
             with this topic, we suggest liaising with someone more experienced
             to help you with the selection process.
           </Typography>
+          <Typography sx={{ mb: 1, textAlign: "justify" }}>
+            The tool aims to provide helpful information on relevant evaluation
+            methods, but cannot cover all possible scenarios and requirements.
+            We recommend considering the details of your use-case and potential
+            domain-specific evaluation methods beyond the recommendations
+            provided by this guide.
+          </Typography>
           <Typography sx={{ textAlign: "justify" }}>
-            The guide is intended to provide helpful information on relevant
-            evaluation methods, but cannot cover all possible scenarios and
-            requirements. We recommend considering the details of your use-case
-            and potential domain-specific evaluation methods beyond the
-            recommendations provided by this guide.
+            Additionally, note that this guide only focuses on the technical
+            evaluation of LLM outputs. Other important aspects of using LLMs in
+            real-world systems, such as information security of the used
+            infrastructure or human-computer interaction factors are out of
+            scope of this tool and should be considered separately.
           </Typography>
         </Alert>
       </Box>

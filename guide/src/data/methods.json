@@ -160,7 +160,7 @@
       { "id": "correctness", "coverage": "Good" },
       { "id": "conciseness", "coverage": "Good" },
       { "id": "fluency", "coverage": "Good" },
-      { "id": "safety", "coverage": "Good" },
+      { "id": "adherance", "coverage": "Good" },
       { "id": "privacy", "coverage": "Good" },
       { "id": "fairness", "coverage": "Poor" }
     ],
@@ -168,7 +168,7 @@
       { "id": "hallucination", "coverage": "Good" },
       { "id": "omissions", "coverage": "Good" },
       { "id": "harmful-content", "coverage": "Good" },
-      { "id": "confidentiality-breach", "coverage": "Good" },
+      { "id": "disclosure", "coverage": "Good" },
       { "id": "bias", "coverage": "Poor" }
     ],
     "output_values": "Numerical scores (e.g., on a 1-10 Likert scale) for the evaluated aspect, as determined by the LLM judge based on evaluation criteria. Higher values are better.",
@@ -422,7 +422,7 @@
       "image-classification"
     ],
     "assessed_qualities": [{ "id": "robustness", "coverage": "Good" }],
-    "identified_risks": [{ "id": "distributional-shift", "coverage": "Good" }],
+    "identified_risks": [{ "id": "data-drift", "coverage": "Good" }],
     "output_values": "Depends on the underlying performance metric used. Typically involves comparing in-distribution performance with OOD performance.",
     "advantages": [
       "Evaluates model's ability to generalize to unseen or new data.",

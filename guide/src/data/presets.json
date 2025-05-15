@@ -21,7 +21,7 @@
             "importance": 4
           },
           {
-            "id": "safety",
+            "id": "adherance",
             "importance": 3
           }
         ],
@@ -35,7 +35,7 @@
             "importance": 5
           },
           {
-            "id": "distributional-shift",
+            "id": "data-drift",
             "importance": 4
           },
           {
