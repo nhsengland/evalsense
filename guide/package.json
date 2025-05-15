@@ -19,13 +19,13 @@
     "@docusaurus/preset-classic": "3.7.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
-    "@mdx-js/react": "^3.0.0",
-    "@mui/icons-material": "^7.0.1",
-    "@mui/material": "^7.0.1",
-    "clsx": "^2.0.0",
-    "prism-react-renderer": "^2.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "@mdx-js/react": "^3.1.0",
+    "@mui/icons-material": "^7.1.0",
+    "@mui/material": "^7.1.0",
+    "clsx": "^2.1.1",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0"
@@ -35,12 +35,12 @@
     "@docusaurus/tsconfig": "3.7.0",
     "@docusaurus/types": "3.7.0",
     "@eslint/js": "^9.24.0",
-    "eslint": "^9.24.0",
+    "eslint": "^9.26.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
     "prettier": "3.5.3",
     "typescript": "~5.6.2",
-    "typescript-eslint": "^8.29.1"
+    "typescript-eslint": "^8.32.1"
   },
   "browserslist": {
     "production": [
@@ -56,5 +56,8 @@
   },
   "engines": {
     "node": ">=18.0"
+  },
+  "overrides": {
+    "react-json-view-lite": "^2.0.0"
   }
 }
