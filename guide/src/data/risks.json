@@ -21,9 +21,9 @@
     "related_qualities": ["fairness"]
   },
   {
-    "id": "harmful-content",
-    "name": "Harmful Content",
-    "description": "Generating content that is harmful or unsafe.",
+    "id": "policy-violations",
+    "name": "Policy Violations",
+    "description": "Generating harmful content that violates safety policies.",
     "type": "risk",
     "related_qualities": ["adherance"]
   },
@@ -44,7 +44,8 @@
   {
     "id": "adversarial-attacks",
     "name": "Adversarial Attacks and Jailbreaks",
-    "description": "Exploiting vulnerabilities to manipulate model behavior.",
+    "description": "Being vulnerable to exploits that manipulate model behavior.",
+
     "type": "risk",
     "related_qualities": ["robustness"]
   }

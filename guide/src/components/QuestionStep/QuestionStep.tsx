@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Radio from "@mui/material/Radio";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormGroup from "@mui/material/FormGroup";
@@ -9,6 +9,7 @@ import Box from "@mui/material/Box";
 import Chip from "@mui/material/Chip";
 import Rating from "@mui/material/Rating";
 import Typography from "@mui/material/Typography";
+import Tooltip from "@mui/material/Tooltip";
 import StarsIcon from "@mui/icons-material/Stars";
 import SignalCellular0Bar from "@mui/icons-material/SignalCellular0Bar";
 import SignalCellular1Bar from "@mui/icons-material/SignalCellular1Bar";
@@ -28,7 +29,7 @@ const customIcons = {
   1: { icon: <SignalCellular0Bar />, label: "Not important" },
   2: { icon: <SignalCellular1Bar />, label: "Slightly important" },
   3: { icon: <SignalCellular2Bar />, label: "Moderately important" },
-  4: { icon: <SignalCellular3Bar />, label: "Important" },
+  4: { icon: <SignalCellular3Bar />, label: "Quite important" },
   5: { icon: <SignalCellular4Bar />, label: "Very important" },
 };
 
@@ -49,12 +50,23 @@ interface QuestionStepProps {
   allAnswers?: GuideAnswers;
 }
 
+interface HoverState {
+  optionId: string | null;
+  hoverValue: number;
+}
+
 const QuestionStep: React.FC<QuestionStepProps> = ({
   questionConfig,
   currentAnswer,
   onChange,
   allAnswers = {},
 }) => {
+  // State to track hover feedback for ratings
+  const [hoverState, setHoverState] = useState<HoverState>({
+    optionId: null,
+    hoverValue: -1,
+  });
+
   // For the qualities step, pre-select qualities based on selected risks
   useEffect(() => {
     if (!questionConfig) return;
@@ -95,6 +107,17 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
       return item?.name || option.value;
     }
     return option.value;
+  };
+
+  const getOptionDescription = (option: {
+    value: string;
+    label?: string;
+  }): string => {
+    if (questionConfig.source_data_key) {
+      const item = getItemById(questionConfig.source_data_key, option.value);
+      return item?.description || "";
+    }
+    return "";
   };
 
   const handleRadioChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,12 +186,13 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
             onChange={handleRadioChange}
           >
             {questionConfig.options.map((option) => (
-              <FormControlLabel
-                key={option.value}
-                value={option.value}
-                control={<Radio />}
-                label={getOptionLabel(option)}
-              />
+              <Tooltip key={option.value} title={getOptionDescription(option)}>
+                <FormControlLabel
+                  value={option.value}
+                  control={<Radio />}
+                  label={getOptionLabel(option)}
+                />
+              </Tooltip>
             ))}
           </RadioGroup>
         )}
@@ -211,9 +235,11 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
                       flexWrap: "wrap",
                     }}
                   >
-                    <Typography variant="body1" sx={{ mr: 2 }}>
-                      {getOptionLabel(option)}
-                    </Typography>
+                    <Tooltip title={getOptionDescription(option)}>
+                      <Typography variant="body1" sx={{ mr: 2 }}>
+                        {getOptionLabel(option)}
+                      </Typography>
+                    </Tooltip>
 
                     {relatedRiskNames.length > 0 && (
                       <Chip
@@ -246,7 +272,13 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
                       onChange={(event, newValue) => {
                         handleImportanceChange(option.value, newValue);
                       }}
-                      IconContainerComponent={IconContainer}
+                      onChangeActive={(event, newHover) => {
+                        setHoverState({
+                          optionId: option.value,
+                          hoverValue: newHover,
+                        });
+                      }}
+                      slotProps={{ icon: { component: IconContainer } }}
                       max={5}
                       sx={{ color: "primary.main" }}
                     />
@@ -255,8 +287,12 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
                       color="text.secondary"
                       sx={{ ml: 1 }}
                     >
-                      {customIcons[getImportanceValue(option.value)]?.label ||
-                        "Not important"}
+                      {hoverState.optionId === option.value &&
+                      hoverState.hoverValue !== -1
+                        ? customIcons[hoverState.hoverValue]?.label ||
+                          "Not important"
+                        : customIcons[getImportanceValue(option.value)]
+                            ?.label || "Not important"}
                     </Typography>
                   </Box>
                 </Box>

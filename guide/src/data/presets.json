@@ -43,7 +43,7 @@
             "importance": 4
           },
           {
-            "id": "harmful-content",
+            "id": "policy-violations",
             "importance": 3
           }
         ],

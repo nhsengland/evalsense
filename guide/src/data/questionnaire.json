@@ -33,7 +33,7 @@
         { "value": "omissions" },
         { "value": "data-drift" },
         { "value": "bias" },
-        { "value": "harmful-content" },
+        { "value": "policy-violations" },
         { "value": "disclosure" },
         { "value": "adversarial-attacks" }
       ],

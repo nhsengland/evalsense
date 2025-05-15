@@ -167,7 +167,7 @@
     "identified_risks": [
       { "id": "hallucination", "coverage": "Good" },
       { "id": "omissions", "coverage": "Good" },
-      { "id": "harmful-content", "coverage": "Good" },
+      { "id": "policy-violations", "coverage": "Good" },
       { "id": "disclosure", "coverage": "Good" },
       { "id": "bias", "coverage": "Poor" }
     ],
