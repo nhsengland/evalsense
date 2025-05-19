@@ -12,7 +12,7 @@ on:
           - production
         default: test
       version:
-        description: "Release version"
+        description: "Release version (e.g., 0.1.0)"
         required: true
         type: string
       description:
