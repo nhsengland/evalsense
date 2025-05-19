@@ -7,24 +7,24 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
-
-- Make local model dependencies optional during package installation. If you are using EvalSense with local models, you should install `evalsense[all]` or `evalsense[local]` instead of `evalsense`.
+- None
 
 ### Enhancements
-
 - None
 
 ### Bug fixes
-
 - None
 
 ### Documentation
-
 - None
 
 ### Miscellaneous
-
 - None
+
+## v0.1.3
+
+### Breaking changes
+- Make local model dependencies optional during package installation. If you are using EvalSense with local models, you should install `evalsense[all]` or `evalsense[local]` instead of `evalsense`.
 
 ## v0.1.2
 
