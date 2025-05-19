@@ -50,13 +50,14 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
           RELEASE_DESCRIPTION: ${{ inputs.description }}
+        # This step also generates release_notes.md
         run: python3 scripts/update_changelog.py
       - name: "Commit changes to CHANGELOG.md"
         if: ${{ inputs.type == 'production' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
+          git add CHANGELOG.md
           git commit -m "Update CHANGELOG.md for v${{ inputs.version }}"
           git push
       - name: Build project
@@ -102,7 +103,7 @@ jobs:
           gh release create "v${{ inputs.version }}"\
             --repo "$GITHUB_REPOSITORY" \
             --title "v${{ inputs.version }}" \
-            --notes "${{ steps.update_changelog.outputs.release_notes }}" \
+            --notes-file release_notes.md \
             --draft
       - name: Upload release artifacts
         if: ${{ inputs.type == 'production' }}

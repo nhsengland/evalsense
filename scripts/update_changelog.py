@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Literal, overload
 
 CHANGELOG_PATH = Path("CHANGELOG.md")
+RELEASE_NOTES_PATH = Path("release_notes.md")
 UNRELEASED_HEADER = "## Unreleased"
 SECTION_HEADERS = [
     "### Breaking changes",
@@ -149,16 +150,7 @@ def main():
         changelog_lines, start, end, release_version, release_notes
     )
     CHANGELOG_PATH.write_text("\n".join(updated_changelog) + "\n", encoding="utf-8")
-
-    github_output = get_env_var("GITHUB_OUTPUT", required=False)
-    if github_output:
-        with open(github_output, "a", encoding="utf-8") as ghf:
-            ghf.write("release_notes<<EOF\n")
-            ghf.write("\n".join(release_notes))
-            ghf.write("\nEOF\n")
-    else:
-        print("release_notes:")
-        print("\n".join(release_notes))
+    RELEASE_NOTES_PATH.write_text("\n".join(release_notes), encoding="utf-8")
 
 
 if __name__ == "__main__":
