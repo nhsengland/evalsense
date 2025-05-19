@@ -49,6 +49,19 @@ pip install evalsense
 
 This will install the latest released version of the package from [PyPI](https://pypi.org/project/evalsense/).
 
+Depending on your use-case, you may want to install additional optional dependencies from the following groups:
+* `interactive`: For running experiments interactively in Jupyter notebooks (only needed if you don't already have the necessary libraries installed).
+* `transformers`: For using models and metrics requiring the [Hugging Face Transformers](https://huggingface.co/docs/transformers/index) library.
+* `vllm`: For using models and metrics requiring [vLLM](https://docs.vllm.ai/en/stable/).
+* `local`: For installing all local model dependencies (currently includes `transformers` and `vllm`).
+* `all`: For installing all optional dependencies.
+
+For example, if you want to use EvalSense with Jupyter notebooks (`interactive`) and Hugging Face Transformers (`transformers`), you can run:
+
+```bash
+pip install evalsense[interactive,transformers]
+```
+
 ### Installation for Development
 
 To install the project for local development, you can follow the steps below:

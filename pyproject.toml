@@ -1,6 +1,6 @@
 [project]
 name = "evalsense"
-version = "0.1.2"
+version = "0.1.3"
 description = "Tools for evaluating large language models."
 readme = "README.md"
 authors = [
@@ -63,6 +63,8 @@ vllm = [
     "vllm>=0.8.2",
     "flashinfer-python<0.2.3",
 ]
+local = ["evalsense[transformers,vllm]"]
+all = ["evalsense[interactive,transformers,vllm]"]
 
 [project.scripts]
 evalsense = "evalsense.cli.main:app"
