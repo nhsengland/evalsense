@@ -56,11 +56,19 @@ Depending on your use-case, you may want to install additional optional dependen
 * `local`: For installing all local model dependencies (currently includes `transformers` and `vllm`).
 * `all`: For installing all optional dependencies.
 
-For example, if you want to use EvalSense with Jupyter notebooks (`interactive`) and Hugging Face Transformers (`transformers`), you can run:
+For example, if you want to install EvalSense with all optional dependencies, you can run:
 
 ```bash
-pip install evalsense[interactive,transformers]
+pip install "evalsense[all]"
 ```
+
+If you want to use EvalSense with Jupyter notebooks (`interactive`) and Hugging Face Transformers (`transformers`), you can run:
+
+```bash
+pip install "evalsense[interactive,transformers]"
+```
+
+and similarly for other combinations.
 
 ### Installation for Development
 
