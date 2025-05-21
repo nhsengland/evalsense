@@ -36,6 +36,7 @@ export interface Method extends BaseItem {
   description_short: string;
   description_long_file?: string;
   link_implementation?: string | null;
+  link_name?: string | null;
   reference_requirement: ReferenceRequirement;
   supported_tasks: string[];
   assessed_qualities: MethodQualityCoverage[];

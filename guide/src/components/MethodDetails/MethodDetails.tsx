@@ -220,16 +220,24 @@ export default function MethodDetailsModal({
           </>
         )}
 
-        {method.link_implementation && (
+        {method.link_implementation ? (
           <>
-            <Typography variant="h6">Implementation</Typography>
+            <Typography variant="h6">EvalSense Implementation</Typography>
             <Link
               href={method.link_implementation}
               target="_blank"
               rel="noopener noreferrer"
             >
-              {method.link_implementation}
+              {method.link_name || method.link_implementation}
             </Link>
+            <Divider sx={{ my: 2 }} />
+          </>
+        ) : (
+          <>
+            <Typography variant="h6">Implementation</Typography>
+            <Typography variant="body2">
+              This metric is not yet implemented in EvalSense.
+            </Typography>
             <Divider sx={{ my: 2 }} />
           </>
         )}
