@@ -256,19 +256,6 @@ class QagsScoreCalculator(ScoreCalculator):
 
         Use `calculate_async` instead.
 
-        Args:
-            prediction (str): The model output to evaluate.
-            input (str, optional): The input to the model. Optional.
-            reference (str, optional): The reference output to compare against.
-                Optional.
-            metadata (dict[str, Any], optional): Additional Inspect AI sample/task
-                state metadata. Optional.
-            **kwargs (dict): Additional keyword arguments specific to the given
-                evaluation method.
-
-        Returns:
-            Score: The Inspect AI Score object with the calculated result.
-
         Raises:
             NotImplementedError: When called, as synchronous evaluation is not
                 supported for QAGS.

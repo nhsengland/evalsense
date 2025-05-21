@@ -24,6 +24,8 @@ logger = get_logger(__name__)
 
 
 class GEvalScoreCalculator(ScoreCalculator):
+    """G-Eval score calculator."""
+
     def __init__(
         self,
         model: Model,
@@ -35,6 +37,20 @@ class GEvalScoreCalculator(ScoreCalculator):
         normalise: bool = True,
         debug: bool = False,
     ):
+        """
+        Initializes the G-Eval score calculator.
+
+        Args:
+            model (Model): The model to use for evaluation.
+            prompt_template (str): The prompt template with the scoring instructions.
+            logprobs (bool): Whether to use model log probabilities to compute weighted
+                evaluation score instead of a standard score.
+            top_logprobs (int): The number of top log probabilities to consider.
+            min_score (int): The minimum valid score.
+            max_score (int): The maximum valid score.
+            normalise (bool): Whether to normalise the scores between 0 and 1.
+            debug (bool): Whether to report repeated errors in the log.
+        """
         self.model = model
         self.prompt_template = prompt_template
         self.logprobs = logprobs
@@ -55,6 +71,14 @@ class GEvalScoreCalculator(ScoreCalculator):
         metadata: dict[str, Any] | None = None,
         **kwargs: dict,
     ) -> Score:
+        """This method is not supported for G-Eval and will raise an error when called.
+
+        Use `calculate_async` instead.
+
+        Raises:
+            NotImplementedError: When called, as synchronous evaluation is not
+                supported for G-Eval.
+        """
         raise NotImplementedError(
             "Synchronous evaluation is not supported for G-Eval. "
             "Use calculate_async instead."
@@ -70,6 +94,19 @@ class GEvalScoreCalculator(ScoreCalculator):
         metadata: dict[str, Any] | None = None,
         **kwargs: dict,
     ) -> Score:
+        """Calculates the G-Eval score asynchronously.
+
+        Args:
+            prediction (str): The predicted output to evaluate.
+            input (str | None): The input text for the model. Defaults to `None`.
+            reference (str | None): The reference text for the model. Defaults to `None`.
+            metadata (dict[str, Any] | None): Additional metadata for the evaluation.
+                Defaults to `None`.
+            **kwargs: Additional keyword arguments.
+
+        Returns:
+            Score: The calculated score.
+        """
         logprobs_config = GenerateConfig(
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,
@@ -146,7 +183,7 @@ class GEvalScorerFactory(ScorerFactory):
 
         Args:
             name (str): The name of the scorer.
-            prompt_template (str): The prompt template to use.
+            prompt_template (str): The prompt template with the scoring instructions.
             metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
                 The metrics to use for the evaluation. If `None`, the default metric
                 will be used (G-Eval with mean aggregation).
