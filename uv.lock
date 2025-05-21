@@ -1110,11 +1110,11 @@ wheels = [
 
 [[package]]
 name = "fsspec"
-version = "2025.3.0"
+version = "2024.12.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/34/f4/5721faf47b8c499e776bc34c6a8fc17efdf7fdef0b00f398128bc5dcb4ac/fsspec-2025.3.0.tar.gz", hash = "sha256:a935fd1ea872591f2b5148907d103488fc523295e6c64b835cfad8c3eca44972", size = 298491 }
+sdist = { url = "https://files.pythonhosted.org/packages/ee/11/de70dee31455c546fbc88301971ec03c328f3d1138cfba14263f651e9551/fsspec-2024.12.0.tar.gz", hash = "sha256:670700c977ed2fb51e0d9f9253177ed20cbde4a3e5c0283cc5385b5870c8533f", size = 291600 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/56/53/eb690efa8513166adef3e0669afd31e95ffde69fb3c52ec2ac7223ed6018/fsspec-2025.3.0-py3-none-any.whl", hash = "sha256:efb87af3efa9103f94ca91a7f8cb7a4df91af9f74fc106c9c7ea0efd7277c1b3", size = 193615 },
+    { url = "https://files.pythonhosted.org/packages/de/86/5486b0188d08aa643e127774a99bac51ffa6cf343e3deb0583956dca5b22/fsspec-2024.12.0-py3-none-any.whl", hash = "sha256:b520aed47ad9804237ff878b504267a3b0b441e97508bd6d2d8774e3db85cee2", size = 183862 },
 ]
 
 [package.optional-dependencies]
@@ -1371,7 +1371,7 @@ wheels = [
 
 [[package]]
 name = "inspect-ai"
-version = "0.3.92"
+version = "0.3.88"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1404,9 +1404,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "zipp" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/9b/1b/099cf90459e5ae22fe5c46d36b5fa9b25f733a0326e46705a86bae360b8d/inspect_ai-0.3.92.tar.gz", hash = "sha256:96db91acfa9320ac951e99ec24599f4518faa7945ca7200c2669129df5a742fe", size = 11533925 }
+sdist = { url = "https://files.pythonhosted.org/packages/d0/25/5f3848ad004ad88216521cfc7e95e80a5d4124a82aeb7c7026b83e23d989/inspect_ai-0.3.88.tar.gz", hash = "sha256:99789228b89f5074e3361af4f500ee9f56974460300e869e433ef1c29d066f50", size = 11265134 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/62/bb/17efc84c0d2f8f14342357596d47ed1a206dc67edc352ff7e64198549064/inspect_ai-0.3.92-py3-none-any.whl", hash = "sha256:ebe32169909079383bbdfe2a36e17098130e273c5ce56e41a2ff7020becdc142", size = 3128167 },
+    { url = "https://files.pythonhosted.org/packages/bc/be/2ca3ba97b93af3bdba395002bcebe39b8efc4b84fa85f1d531555deed76a/inspect_ai-0.3.88-py3-none-any.whl", hash = "sha256:231e3b63057d386f4b5f0fb1d28dee34329c6e8fa8f4cb6206a990ddae155521", size = 2980261 },
 ]
 
 [[package]]
@@ -3921,16 +3921,16 @@ wheels = [
 
 [[package]]
 name = "s3fs"
-version = "2025.3.0"
+version = "2024.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobotocore" },
     { name = "aiohttp" },
     { name = "fsspec" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/cd/5dde2fed1699ff48120336249d9857a574e39feb8afaff694568ab1499b3/s3fs-2025.3.0.tar.gz", hash = "sha256:446dd539eb0d0678209723cb7ad1bedbb172185b0d34675b09be1ad81843a644", size = 77153 }
+sdist = { url = "https://files.pythonhosted.org/packages/96/88/e2fc4fc2a618126ac3cea9b16a4abc5a37dff2522067c9730b5d72d67ac3/s3fs-2024.12.0.tar.gz", hash = "sha256:1b0f3a8f5946cca5ba29871d6792ab1e4528ed762327d8aefafc81b73b99fd56", size = 76578 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3a/3f/35f4041a82a68df89fe4af97c8bb44aa492dad924799cbb02078e9e303e6/s3fs-2025.3.0-py3-none-any.whl", hash = "sha256:88d803615baa04945156ca0e1498009b7acd3132c07198bd81b3e874846e0aa2", size = 30454 },
+    { url = "https://files.pythonhosted.org/packages/f7/af/eaec1466887348d7f6cc9d3a668b30b62a4629fb187d0268146118ba3d5e/s3fs-2024.12.0-py3-none-any.whl", hash = "sha256:d8665549f9d1de083151582437a2f10d5f3b3227c1f8e67a2b0b730db813e005", size = 30196 },
 ]
 
 [[package]]
