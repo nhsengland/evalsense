@@ -26,6 +26,8 @@ MODELS_PATH = STORAGE_PATH / "models"
 PROJECTS_PATH = STORAGE_PATH / "projects"
 if "HF_HUB_CACHE" not in os.environ:
     os.environ["HF_HUB_CACHE"] = str(STORAGE_PATH / "huggingface")
+if "HF_XET_CACHE" not in os.environ:
+    os.environ["HF_XET_CACHE"] = str(STORAGE_PATH / "huggingface" / "xet")
 
 DATASET_CONFIG_PATHS = [Path(__file__).parent / "dataset_config"]
 if "DATASET_CONFIG_PATH" in os.environ:
