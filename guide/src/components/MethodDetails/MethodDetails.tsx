@@ -153,6 +153,7 @@ export default function MethodDetailsModal({
                 <Tooltip
                   key={quality.id}
                   title={qualityItem.description || qualityItem.name}
+                  arrow
                 >
                   <Chip
                     label={`${qualityItem.name} (${quality.coverage})`}
@@ -186,6 +187,7 @@ export default function MethodDetailsModal({
                 <Tooltip
                   key={risk.id}
                   title={riskItem.description || riskItem.name}
+                  arrow
                 >
                   <Chip
                     label={`${riskItem.name} (${risk.coverage})`}
@@ -294,6 +296,7 @@ export default function MethodDetailsModal({
                                 ? "Copied!"
                                 : "Copy BibTeX"
                             }
+                            arrow
                           >
                             <IconButton
                               size="small"

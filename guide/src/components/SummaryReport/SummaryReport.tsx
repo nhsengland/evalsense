@@ -1,3 +1,4 @@
+import { useState } from "react";
 import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
@@ -6,6 +7,8 @@ import ListItem from "@mui/material/ListItem";
 import ListItemText from "@mui/material/ListItemText";
 import Divider from "@mui/material/Divider";
 import Alert from "@mui/material/Alert";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import IconButton from "@mui/material/IconButton";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import WarningIcon from "@mui/icons-material/Warning";
 import CancelIcon from "@mui/icons-material/Cancel";
@@ -14,8 +17,10 @@ import { calculateCoverage } from "@site/src/utils/evaluationLogic";
 import {
   GuideAnswers,
   ImportanceRating,
+  Method,
 } from "@site/src/types/evaluation.types";
 import CoverageChip from "../CoverageChip/CoverageChip";
+import MethodDetails from "@site/src/components/MethodDetails/MethodDetails";
 
 interface SummaryReportProps {
   answers: GuideAnswers;
@@ -26,6 +31,11 @@ export default function SummaryReport({
   answers,
   selectedMethodIds,
 }: SummaryReportProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<Method | undefined>(
+    undefined,
+  );
+
   const task = getItemById("tasks", answers.q_task_type as string);
 
   // Get quality and risk ratings
@@ -52,7 +62,15 @@ export default function SummaryReport({
     qualityRatings,
     riskRatings,
   );
-  console.log(partiallyCovered);
+
+  const handleOpenMethodDetails = (method: Method) => {
+    setSelectedMethod(method);
+    setModalOpen(true);
+  };
+
+  const handleCloseMethodDetails = () => {
+    setModalOpen(false);
+  };
 
   return (
     <Paper elevation={2} sx={{ p: 3 }}>
@@ -97,10 +115,25 @@ export default function SummaryReport({
       <Box mb={3}>
         <Typography variant="h6">Selected Evaluation Methods:</Typography>
         {selectedMethods.length > 0 ? (
-          <List dense disablePadding>
+          <List dense disablePadding sx={{ pt: 0.7 }}>
             {selectedMethods.map((method) => (
-              <ListItem key={method.id}>
-                <ListItemText primary={`• ${method.name}`} />
+              <ListItem key={method.id} sx={{ py: 0.0 }}>
+                <ListItemText
+                  primary={
+                    <Box display="flex" alignItems="center">
+                      <span>• {method.name}</span>
+                      <IconButton
+                        aria-label="details"
+                        onClick={() => handleOpenMethodDetails(method)}
+                        size="small"
+                        sx={{ ml: 0.2 }}
+                        color="primary"
+                      >
+                        <InfoOutlinedIcon fontSize="inherit" />
+                      </IconButton>
+                    </Box>
+                  }
+                />
               </ListItem>
             ))}
           </List>
@@ -211,6 +244,13 @@ export default function SummaryReport({
             details for nuances.
           </Alert>
         )}
+
+      {/* Method details modal */}
+      <MethodDetails
+        method={selectedMethod}
+        open={modalOpen}
+        onClose={handleCloseMethodDetails}
+      />
     </Paper>
   );
 }

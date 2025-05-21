@@ -186,13 +186,20 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
             onChange={handleRadioChange}
           >
             {questionConfig.options.map((option) => (
-              <Tooltip key={option.value} title={getOptionDescription(option)}>
-                <FormControlLabel
-                  value={option.value}
-                  control={<Radio />}
-                  label={getOptionLabel(option)}
-                />
-              </Tooltip>
+              <FormControlLabel
+                key={option.value}
+                value={option.value}
+                control={<Radio />}
+                label={
+                  <Tooltip
+                    title={getOptionDescription(option)}
+                    arrow
+                    placement="right"
+                  >
+                    <span>{getOptionLabel(option)}</span>
+                  </Tooltip>
+                }
+              />
             ))}
           </RadioGroup>
         )}
@@ -235,7 +242,11 @@ const QuestionStep: React.FC<QuestionStepProps> = ({
                       flexWrap: "wrap",
                     }}
                   >
-                    <Tooltip title={getOptionDescription(option)}>
+                    <Tooltip
+                      title={getOptionDescription(option)}
+                      arrow
+                      placement="right"
+                    >
                       <Typography variant="body1" sx={{ mr: 2 }}>
                         {getOptionLabel(option)}
                       </Typography>

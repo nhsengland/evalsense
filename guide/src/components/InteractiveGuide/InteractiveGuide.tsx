@@ -259,7 +259,7 @@ export default function InteractiveGuide() {
           Back
         </Button>
 
-        <Tooltip title="Reset Progress">
+        <Tooltip title="Reset Progress" arrow>
           <IconButton onClick={handleReset} color="warning" size="small">
             <ReplayIcon />
           </IconButton>

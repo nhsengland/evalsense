@@ -23,6 +23,14 @@
           {
             "id": "adherance",
             "importance": 3
+          },
+          {
+            "id": "conciseness",
+            "importance": 3
+          },
+          {
+            "id": "readability",
+            "importance": 3
           }
         ],
         "q_risks": [
@@ -35,11 +43,11 @@
             "importance": 5
           },
           {
-            "id": "data-drift",
+            "id": "bias",
             "importance": 4
           },
           {
-            "id": "bias",
+            "id": "data-drift",
             "importance": 4
           },
           {
@@ -47,15 +55,14 @@
             "importance": 3
           }
         ],
-        "q_references": "yes"
+        "q_references": "no"
       },
       "selectedMethodIds": [
         "qags",
         "g-eval",
         "ood-performance",
         "stratified-performance",
-        "word-count",
-        "compression-ratio"
+        "word-count"
       ]
     }
   }

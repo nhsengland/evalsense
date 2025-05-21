@@ -1,7 +1,7 @@
 [
   {
     "id": "hallucination",
-    "name": "Hallucination",
+    "name": "Hallucinations",
     "description": "Generating plausible but factually incorrect information.",
     "type": "risk",
     "related_qualities": ["correctness"]
