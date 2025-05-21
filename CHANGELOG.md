@@ -7,23 +7,29 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+
 - None
 
 ### Enhancements
+
 - None
 
 ### Bug fixes
-- None
+
+- Fix method_filter_fun behaviour in MetricCorrelationAnalyser.
 
 ### Documentation
+
 - None
 
 ### Miscellaneous
-- None
+
+- EvalSense now places the xet cache under EvalSense cache directory instead of the default HuggingFace directory.
 
 ## v0.1.3
 
 ### Breaking changes
+
 - Make local model dependencies optional during package installation. If you are using EvalSense with local models, you should install `evalsense[all]` or `evalsense[local]` instead of `evalsense`.
 
 ## v0.1.2

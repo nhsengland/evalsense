@@ -80,6 +80,11 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
             metric_labels (dict[str, str] | None): A dictionary mapping metric names
                 to their labels in the figure. If None, no aliasing is performed.
                 Defaults to None.
+            method_filter_fun (Callable[[str], bool]): A function to filter the
+                evaluation methods, taking the method name as input and returning
+                True if the method should be included in the analysis. Operates on
+                original method names before label translation. Defaults to
+                a function that always returns True.
             **kwargs (dict): Additional arguments for the analysis.
 
         Returns:
@@ -99,13 +104,13 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
                     continue
 
                 for metric_name, score in sample.scores.items():
-                    if not method_filter_fun(metric_name):
-                        continue
-
-                    if metric_labels is not None and metric_name in metric_labels:
-                        metric_name = metric_labels[metric_name]
-
                     if type(score.value) is float or type(score.value) is int:
+                        if not method_filter_fun(metric_name):
+                            continue
+
+                        if metric_labels is not None and metric_name in metric_labels:
+                            metric_name = metric_labels[metric_name]
+
                         result_data[metric_name].append(score.value)
                     elif type(score.value) is dict:
                         # Extract inner scores from result dictionary
@@ -154,14 +159,14 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
         )
         # Add metric names as a first column
         corr_matrix = corr_matrix.with_columns(
-            pl.Series(name="metric", values=cols)
-        ).select("metric", *cols)
+            pl.Series(name="Metric", values=cols)
+        ).select("Metric", *cols)
 
         # Create a visualization of the correlation matrix if requested
         fig = None
         if return_plot:
             # Convert to pandas for visualization with seaborn
-            corr_matrix_pd = corr_matrix.to_pandas().set_index("metric")
+            corr_matrix_pd = corr_matrix.to_pandas().set_index("Metric")
 
             fig, ax = plt.subplots(figsize=figsize)
             mask = np.triu(np.ones_like(corr_matrix_pd, dtype=bool), k=1)
