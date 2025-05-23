@@ -10,7 +10,13 @@ from evalsense.utils.files import to_safe_filename
 
 
 class TaskPreprocessingFunction(Protocol):
-    """A protocol for a function that preprocesses datasets."""
+    """A protocol for a function that preprocesses datasets.
+
+    You can pass this function to a TaskPreprocessor to perform some
+    task-specific preprocessing on a dataset. This is especially useful
+    in cases in which a single dataset can be used for multiple different
+    tasks, with each requiring different preprocessing steps.
+    """
 
     def __call__(
         self, hf_dataset: datasets.Dataset, dataset_manager: DatasetManager
