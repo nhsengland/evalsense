@@ -27,7 +27,7 @@
 
 ## About
 
-This repository holds a Python package enabling systematic evaluation of large language models (LLMs) on open-ended generation tasks, with a particular focus on healthcare and summarisation. It also includes supplementary documentation and assets related to the NHS England project on LLM evaluation, such as the code for an interactive LLM evaluation guide (located in the `guide/` directory). You can find more information about the project in the [original project proposal](https://nhsx.github.io/nhsx-internship-projects/genai-eval/).
+This repository holds a Python package enabling systematic evaluation of large language models (LLMs) on open-ended generation tasks. It also includes supplementary documentation and assets related to the NHS England project on LLM evaluation, such as the code for an interactive LLM evaluation guide (located in the `guide/` directory). You can find more information about the project in the [original project proposal](https://nhsx.github.io/nhsx-internship-projects/genai-eval/).
 
 _**Note:** Only public or fake data are shared in this repository._
 
@@ -126,6 +126,9 @@ of the [Open Government 3.0][ogl] licence.
 
 ### Contact
 
+This project is currently maintained by [@adamdejl](https://github.com/adamdejl). If you have any questions, suggestions for new features or want to report a bug, please [open an issue](https://github.com/nhsengland/evalsense/issues/new/choose). For security concerns, please file a [private vulenrability report](https://github.com/nhsengland/evalsense/security/advisories/new).
+
 To find out more about the [NHS England Data Science](https://nhsengland.github.io/datascience/) visit our [project website](https://nhsengland.github.io/datascience/our_work/) or get in touch at [datascience@nhs.net](mailto:datascience@nhs.net).
 
-<!-- ### Acknowledgements -->
+### Acknowledgements
+We thank the [Inspect AI development team](https://github.com/UKGovernmentBEIS/inspect_ai/graphs/contributors) for their work on the [Inspect AI library](https://inspect.aisi.org.uk/), which serves as a basis for the EvalSense library.
