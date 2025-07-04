@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import total_ordering
 import json
 from typing import Any
 
@@ -7,6 +8,7 @@ from pydantic import BaseModel
 from inspect_ai.model import GenerateConfigArgs, Model
 
 
+@total_ordering
 class ModelRecord(BaseModel, frozen=True):
     """A record identifying a model.
 
@@ -20,6 +22,48 @@ class ModelRecord(BaseModel, frozen=True):
     name: str
     model_args_json: str = "{}"
     generation_args_json: str = "{}"
+
+    def __eq__(self, other: object) -> bool:
+        """Checks if this record is equal to another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if the records are equal, False otherwise.
+        """
+        if not isinstance(other, ModelRecord) or type(self) is not type(other):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.model_args_json == other.model_args_json
+            and self.generation_args_json == other.generation_args_json
+        )
+
+    def __lt__(self, other: object) -> bool:
+        """Checks if this record is less than another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if this record is less than the other, False otherwise.
+        """
+        if not isinstance(other, ModelRecord) or type(self) is not type(other):
+            return NotImplemented
+        return (self.name, self.model_args_json, self.generation_args_json) < (
+            other.name,
+            other.model_args_json,
+            other.generation_args_json,
+        )
+
+    def __hash__(self) -> int:
+        """Returns a hash of the record.
+
+        Returns:
+            int: The hash of the record.
+        """
+        return hash((self.name, self.model_args_json, self.generation_args_json))
 
 
 @dataclass

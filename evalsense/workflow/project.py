@@ -344,7 +344,8 @@ class Project:
         type: Literal["generation", "evaluation"],
         status: RecordStatus | None = None,
     ) -> dict[GenerationRecord, EvalLog] | dict[EvaluationRecord, EvalLog]:
-        """Returns a dictionary of logs for the given type and status.
+        """Returns a dictionary of logs for the given type and status. The dictionary
+        is automatically sorted by the corresponding record keys.
 
         Args:
             type (Literal["generation", "evaluation"]): The type of logs to retrieve.
@@ -372,7 +373,7 @@ class Project:
                     if eval_log is not None:
                         results[key] = eval_log
 
-        return results
+        return dict(sorted(results.items()))
 
     def get_incomplete_logs(
         self,

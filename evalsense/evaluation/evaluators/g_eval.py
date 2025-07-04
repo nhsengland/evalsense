@@ -142,6 +142,7 @@ class GEvalScoreCalculator(ScoreCalculator):
                             " Further errors will be suppressed "
                             + "(set debug=True to see all errors)."
                         )
+                    error_message += f" Offending output: {output.completion}"
 
                     logger.error(error_message)
 

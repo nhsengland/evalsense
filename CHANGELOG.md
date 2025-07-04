@@ -12,7 +12,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 ### Enhancements
 
-- None
+- Implemented support for meta-evaluation of different evaluation methods using `MetaResultAnalyser`.
 
 ### Bug fixes
 

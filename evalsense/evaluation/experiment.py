@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import total_ordering
 from typing import Literal
 
 from inspect_ai.dataset import FieldSpec, RecordToSample
@@ -13,6 +14,8 @@ type RecordStatus = Literal["started", "success", "cancelled", "error"]
 type ExperimentDefinitions = (
     ExperimentConfig
     | ExperimentBatchConfig
+    | list[ExperimentConfig]
+    | list[ExperimentBatchConfig]
     | list[ExperimentConfig | ExperimentBatchConfig]
 )
 
@@ -31,6 +34,7 @@ class ResultRecord(BaseModel, frozen=True):
     log_location: str | None = None
 
 
+@total_ordering
 class GenerationRecord(BaseModel, frozen=True):
     """A record identifying generations for a specific task.
 
@@ -74,7 +78,68 @@ class GenerationRecord(BaseModel, frozen=True):
             f"{self.generator_name} | {self.model_record.name}"
         )
 
+    def __eq__(self, other: object) -> bool:
+        """Checks equality with another record.
 
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if the records are equal, False otherwise.
+        """
+        if not isinstance(other, GenerationRecord) or type(self) is not type(other):
+            return NotImplemented
+        return (
+            self.dataset_record == other.dataset_record
+            and self.generator_name == other.generator_name
+            and self.task_name == other.task_name
+            and self.model_record == other.model_record
+            and self.experiment_name == other.experiment_name
+        )
+
+    def __lt__(self, other: object) -> bool:
+        """Checks if this record is less than another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if this record is less than the other, False otherwise.
+        """
+        if not isinstance(other, GenerationRecord) or type(self) is not type(other):
+            return NotImplemented
+        return (
+            self.dataset_record,
+            self.generator_name,
+            self.task_name,
+            self.model_record,
+            self.experiment_name or "",
+        ) < (
+            other.dataset_record,
+            other.generator_name,
+            other.task_name,
+            other.model_record,
+            other.experiment_name or "",
+        )
+
+    def __hash__(self) -> int:
+        """Generates a hash for the generation record.
+
+        Returns:
+            int: The hash of the generation record.
+        """
+        return hash(
+            (
+                self.dataset_record,
+                self.generator_name,
+                self.task_name,
+                self.model_record,
+                self.experiment_name,
+            )
+        )
+
+
+@total_ordering
 class EvaluationRecord(GenerationRecord, frozen=True):
     """A record identifying evaluations for a specific task.
 
@@ -100,6 +165,23 @@ class EvaluationRecord(GenerationRecord, frozen=True):
             **self.model_dump(exclude={"evaluator_name"}),
         )
 
+    def get_perturbation_grouped_record(
+        self, metric_name: str
+    ) -> "PerturbationGroupedRecord":
+        """Generates a perturbation grouped record from the evaluation record.
+
+        Args:
+            metric_name (str): The name of the metric being evaluated.
+
+        Returns:
+            PerturbationGroupedRecord: The perturbation grouped record.
+        """
+        return PerturbationGroupedRecord(
+            **self.model_dump(exclude={"generator_name"}),
+            generator_name="",
+            metric_name=metric_name,
+        )
+
     @property
     def label(self) -> str:
         """Generates a label for the evaluation record.
@@ -110,6 +192,131 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         return (
             f"{self.dataset_record.name} | {self.task_name} | {self.generator_name} | "
             f"{self.model_record.name} | {self.evaluator_name}"
+        )
+
+    def __eq__(self, other: object) -> bool:
+        """Checks equality with another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if the records are equal, False otherwise.
+        """
+        if not isinstance(other, EvaluationRecord) or type(self) is not type(other):
+            return NotImplemented
+        generation_equal = super().__eq__(other)
+        if generation_equal is NotImplemented:
+            return generation_equal
+        return generation_equal and self.evaluator_name == other.evaluator_name
+
+    def __lt__(self, other: object) -> bool:
+        """Checks if this record is less than another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if this record is less than the other, False otherwise.
+        """
+        if not isinstance(other, EvaluationRecord) or type(self) is not type(other):
+            return NotImplemented
+        if super().__lt__(other):
+            return True
+        elif super().__eq__(other):
+            return self.evaluator_name < other.evaluator_name
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        """Generates a hash for the evaluation record.
+
+        Returns:
+            int: The hash of the evaluation record.
+        """
+        return hash(
+            (
+                self.dataset_record,
+                self.generator_name,
+                self.task_name,
+                self.model_record,
+                self.experiment_name,
+                self.evaluator_name,
+            )
+        )
+
+
+@total_ordering
+class PerturbationGroupedRecord(EvaluationRecord, frozen=True):
+    """A record grouping evaluation records by generator name
+    (as generator name specifies the perturbation tier).
+
+    Attributes:
+        dataset_record (DatasetRecord): The record of the dataset.
+        generator_name (str): The name of the generator.
+        task_name (str): The name of the task.
+        model_record (ModelRecord): The record of the model.
+        experiment_name (str | None): The name of the experiment, if applicable.
+        evaluator_name (str): The name of the evaluator.
+        metric_name (str): The name of the metric being evaluated.
+    """
+
+    metric_name: str
+
+    def __eq__(self, other: object) -> bool:
+        """Checks equality with another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if the records are equal, False otherwise.
+        """
+        if not isinstance(other, PerturbationGroupedRecord) or type(self) is not type(
+            other
+        ):
+            return NotImplemented
+        generation_equal = super().__eq__(other)
+        if generation_equal is NotImplemented:
+            return generation_equal
+        return generation_equal and self.metric_name == other.metric_name
+
+    def __lt__(self, other: object) -> bool:
+        """Checks if this record is less than another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            bool: True if this record is less than the other, False otherwise.
+        """
+        if not isinstance(other, PerturbationGroupedRecord) or type(self) is not type(
+            other
+        ):
+            return NotImplemented
+        if super().__lt__(other):
+            return True
+        elif super().__eq__(other):
+            return self.metric_name < other.metric_name
+        else:
+            return False
+
+    def __hash__(self) -> int:
+        """Generates a hash for the perturbation grouped record.
+
+        Returns:
+            int: The hash of the perturbation grouped record.
+        """
+        return hash(
+            (
+                self.dataset_record,
+                self.generator_name,
+                self.task_name,
+                self.model_record,
+                self.experiment_name,
+                self.evaluator_name,
+                self.metric_name,
+            )
         )
 
 

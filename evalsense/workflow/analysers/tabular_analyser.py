@@ -12,7 +12,7 @@ OUTPUT_FORMATTERS = {
 
 
 class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
-    """A class for summarising evaluation results in a tabular format.
+    """An analyser summarising evaluation results in a tabular format.
 
     This class is generic in T to provide better type hints when returning
     different output types. It is the responsibility of the client code to

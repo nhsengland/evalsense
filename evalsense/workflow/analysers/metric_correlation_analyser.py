@@ -28,7 +28,7 @@ class CorrelationResults[T: pl.DataFrame | pd.DataFrame | npt.NDArray[np.float_]
 
 
 class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
-    """A class for calculating and visualizing Spearman rank correlations between
+    """An analyser calculating and visualizing correlations between
     different evaluation metrics.
 
     This class analyzes the correlation between scores returned for individual samples
@@ -99,6 +99,9 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
                 continue
 
             # Extract scores from individual samples
+            sample_result_data: dict[str, list[tuple[str | int, float | int]]] = (
+                defaultdict(list)
+            )
             for sample in log.samples:
                 if not hasattr(sample, "scores") or not sample.scores:
                     continue
@@ -111,7 +114,7 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
                         if metric_labels is not None and metric_name in metric_labels:
                             metric_name = metric_labels[metric_name]
 
-                        result_data[metric_name].append(score.value)
+                        sample_result_data[metric_name].append((sample.id, score.value))
                     elif type(score.value) is dict:
                         # Extract inner scores from result dictionary
                         for inner_metric_name, inner_score in score.value.items():
@@ -125,7 +128,15 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
                                 inner_metric_name = metric_labels[inner_metric_name]
 
                             if type(inner_score) is float or type(inner_score) is int:
-                                result_data[inner_metric_name].append(inner_score)
+                                sample_result_data[inner_metric_name].append(
+                                    (sample.id, inner_score)
+                                )
+
+            # Aggregate scores across all samples after sorting by sample ID
+            # to ensure consistent ordering
+            for metric_name, scores in sample_result_data.items():
+                sorted_scores = [s[1] for s in sorted(scores, key=lambda x: x[0])]
+                result_data[metric_name].extend(sorted_scores)
 
         sample_scores_df = pl.DataFrame(result_data)
 

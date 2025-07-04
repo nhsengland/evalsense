@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from functools import total_ordering
 from pathlib import Path
 import shutil
 from typing import Protocol, cast
@@ -11,6 +12,7 @@ from evalsense.datasets.dataset_config import DatasetConfig, OnlineSource
 from evalsense.utils.files import to_safe_filename, download_file
 
 
+@total_ordering
 class DatasetRecord(BaseModel, frozen=True):
     """A record identifying a dataset.
 
@@ -23,6 +25,52 @@ class DatasetRecord(BaseModel, frozen=True):
     name: str
     version: str
     splits: tuple[str, ...]
+
+    def __eq__(self, other: object) -> bool:
+        """Checks if this record is equal to another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            (bool): True if the records are equal, False otherwise.
+        """
+        if not isinstance(other, DatasetRecord) or type(self) is not type(other):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.version == other.version
+            and self.splits == other.splits
+        )
+
+    def __lt__(self, other: object) -> bool:
+        """Checks if this record is less than another record.
+
+        Args:
+            other (object): The other record to compare with.
+
+        Returns:
+            (bool): True if this record is less than the other, False otherwise.
+        """
+        if not isinstance(other, DatasetRecord) or type(self) is not type(other):
+            return NotImplemented
+        return (
+            self.name,
+            self.version,
+            self.splits,
+        ) < (
+            other.name,
+            other.version,
+            other.splits,
+        )
+
+    def __hash__(self) -> int:
+        """Returns a hash of the record.
+
+        Returns:
+            (int): The hash of the record.
+        """
+        return hash((self.name, self.version, self.splits))
 
 
 class DatasetManager(Protocol):
@@ -119,7 +167,7 @@ class DatasetManager(Protocol):
         return DatasetRecord(
             name=self.name,
             version=self.version,
-            splits=tuple(self.splits),
+            splits=tuple(sorted(self.splits)),
         )
 
     def _retrieve_files(self, **kwargs) -> None:
@@ -221,7 +269,12 @@ class DatasetManager(Protocol):
             )
         if isinstance(hf_dataset, DatasetDict):
             if self.splits is not None:
-                hf_dataset = concatenate_datasets([hf_dataset[s] for s in self.splits])
+                hf_dataset = concatenate_datasets(
+                    [
+                        hf_dataset[s].cast(hf_dataset[self.splits[0]].features)
+                        for s in self.splits
+                    ]
+                )
             else:
                 hf_dataset = concatenate_datasets(list(hf_dataset.values()))
         if cache:
