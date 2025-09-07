@@ -165,9 +165,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
             **self.model_dump(exclude={"evaluator_name"}),
         )
 
-    def get_perturbation_grouped_record(
-        self, metric_name: str
-    ) -> "PerturbationGroupedRecord":
+    def get_meta_grouped_record(self, metric_name: str) -> "MetaTierGroupedRecord":
         """Generates a perturbation grouped record from the evaluation record.
 
         Args:
@@ -176,7 +174,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         Returns:
             PerturbationGroupedRecord: The perturbation grouped record.
         """
-        return PerturbationGroupedRecord(
+        return MetaTierGroupedRecord(
             **self.model_dump(exclude={"generator_name"}),
             generator_name="",
             metric_name=metric_name,
@@ -247,9 +245,10 @@ class EvaluationRecord(GenerationRecord, frozen=True):
 
 
 @total_ordering
-class PerturbationGroupedRecord(EvaluationRecord, frozen=True):
+class MetaTierGroupedRecord(EvaluationRecord, frozen=True):
     """A record grouping evaluation records by generator name
-    (as generator name specifies the perturbation tier).
+    (as generator name specifies the meta tier, which defines
+    the expected score ranking).
 
     Attributes:
         dataset_record (DatasetRecord): The record of the dataset.
@@ -272,7 +271,7 @@ class PerturbationGroupedRecord(EvaluationRecord, frozen=True):
         Returns:
             bool: True if the records are equal, False otherwise.
         """
-        if not isinstance(other, PerturbationGroupedRecord) or type(self) is not type(
+        if not isinstance(other, MetaTierGroupedRecord) or type(self) is not type(
             other
         ):
             return NotImplemented
@@ -290,7 +289,7 @@ class PerturbationGroupedRecord(EvaluationRecord, frozen=True):
         Returns:
             bool: True if this record is less than the other, False otherwise.
         """
-        if not isinstance(other, PerturbationGroupedRecord) or type(self) is not type(
+        if not isinstance(other, MetaTierGroupedRecord) or type(self) is not type(
             other
         ):
             return NotImplemented

@@ -6,7 +6,7 @@ import pandas as pd
 import polars as pl
 from scipy.stats import spearmanr
 
-from evalsense.evaluation import PerturbationGroupedRecord
+from evalsense.evaluation import MetaTierGroupedRecord
 from evalsense.workflow import Project, ResultAnalyser
 
 OUTPUT_FORMATTERS = {
@@ -68,7 +68,7 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
         # Data structure for tracking the intermediate results
         # The nested dictionary is indexed by perturbation record → sample ID → perturbation tier
         result_data: dict[
-            PerturbationGroupedRecord, dict[str | int, dict[int, float | int]]
+            MetaTierGroupedRecord, dict[str | int, dict[int, float | int]]
         ] = defaultdict(lambda: defaultdict(dict))
 
         for eval_record, log in eval_logs.items():
@@ -82,9 +82,9 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
 
                 if meta_tier_field not in sample.metadata:
                     raise ValueError(
-                        f"Perturbation tier field '{meta_tier_field}' not found in sample metadata."
+                        f"Meta tier field '{meta_tier_field}' not found in sample metadata."
                     )
-                perturbation_tier = int(cast(int, sample.metadata.get(meta_tier_field)))
+                meta_tier = int(cast(int, sample.metadata.get(meta_tier_field)))
                 sample_id = sample.id
 
                 for metric_name, score in sample.scores.items():
@@ -92,9 +92,9 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
                         if metric_labels is not None and metric_name in metric_labels:
                             metric_name = metric_labels[metric_name]
 
-                        result_data[
-                            eval_record.get_perturbation_grouped_record(metric_name)
-                        ][sample_id][perturbation_tier] = score.value
+                        result_data[eval_record.get_meta_grouped_record(metric_name)][
+                            sample_id
+                        ][meta_tier] = score.value
                     elif type(score.value) is dict:
                         # Extract inner scores from result dictionary
                         for inner_metric_name, inner_score in score.value.items():
@@ -106,10 +106,10 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
 
                             if type(inner_score) is float or type(inner_score) is int:
                                 result_data[
-                                    eval_record.get_perturbation_grouped_record(
+                                    eval_record.get_meta_grouped_record(
                                         inner_metric_name
                                     )
-                                ][sample_id][perturbation_tier] = inner_score
+                                ][sample_id][meta_tier] = inner_score
             del log
 
         # For each metric, compute average spearman rank correlation between the

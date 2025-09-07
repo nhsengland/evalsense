@@ -39,6 +39,7 @@ dependencies = [
     "pydantic>=2.10.6",
     "pyyaml>=6.0.2",
     "rouge-score>=0.1.2",
+    "scipy>=1.15.3",
     "seaborn>=0.13.2",
     "tenacity>=9.0.0",
     "tqdm>=4.67.1",
@@ -61,7 +62,6 @@ transformers = [
 ]
 vllm = [
     "vllm>=0.8.2",
-    "flashinfer-python<0.2.3",
 ]
 local = ["evalsense[transformers,vllm]"]
 all = ["evalsense[interactive,transformers,vllm]"]
@@ -97,6 +97,11 @@ only-include = [
 
 [tool.ruff]
 line-length = 88
+
+[tool.uv]
+# Needed for vLLM
+override-dependencies = ["nvidia-nccl-cu12==2.26.5"]
+no-build-isolation-package = ["flash-attn"]
 
 [[tool.uv.index]]
 name = "testpypi"
