@@ -3,18 +3,25 @@ from typing_extensions import override
 from datasets import Dataset, DatasetDict
 import polars as pl
 
-from evalsense.datasets import DatasetManager
+from evalsense.datasets.dataset_manager import (
+    FileBasedDatasetManager,
+    dataset_manager,
+)
 from evalsense.utils.huggingface import disable_dataset_progress_bars
 
+_DEFAULT_VERSION = "5d3cd4d8a25b4ebb5b2b87c3923a7b2b7150e33d"
 
-class AciBenchDatasetManager(DatasetManager):
+
+@dataset_manager
+class AciBenchDatasetManager(FileBasedDatasetManager):
     """A dataset manager for the ACI Bench dataset."""
 
     _DATASET_NAME = "ACI-BENCH"
+    priority = 7
 
     def __init__(
         self,
-        version: str = "5d3cd4d8a25b4ebb5b2b87c3923a7b2b7150e33d",
+        version: str | None = _DEFAULT_VERSION,
         splits: list[str] | None = None,
         data_dir: str | None = None,
         **kwargs,
@@ -28,11 +35,13 @@ class AciBenchDatasetManager(DatasetManager):
                 datasets. Defaults to "datasets" in the user cache directory.
             **kwargs (dict): Additional keyword arguments.
         """
+        kwargs.pop("name", None)
+        if version is None:
+            version = _DEFAULT_VERSION
         super().__init__(
-            self._DATASET_NAME,
+            name=self._DATASET_NAME,
             version=version,
             splits=splits,
-            priority=7,
             data_dir=data_dir,
             **kwargs,
         )
@@ -48,7 +57,7 @@ class AciBenchDatasetManager(DatasetManager):
             **kwargs (dict): Additional keyword arguments.
         """
         dataset_dict = {}
-        for split in self.splits:
+        for split in self.all_splits:
             # Join all data files into a single DataFrame
             data_df = None
             for file in self.config.get_files(self.version, [split]).values():
@@ -80,4 +89,4 @@ class AciBenchDatasetManager(DatasetManager):
         Returns:
             (bool): True if the manager can handle the dataset, False otherwise.
         """
-        return name == cls._DATASET_NAME
+        return name.lower() == cls._DATASET_NAME.lower()

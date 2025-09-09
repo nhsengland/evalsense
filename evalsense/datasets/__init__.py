@@ -7,13 +7,21 @@ from evalsense.datasets.dataset_config import (
     DatasetMetadata,
     DatasetConfig,
 )
-from evalsense.datasets.dataset_manager import DatasetManager, DatasetRecord
+from evalsense.datasets.dataset_manager import (
+    DatasetManager,
+    DatasetManagerRegistry,
+    DatasetRecord,
+    FileBasedDatasetManager,
+)
+import evalsense.datasets.managers  # noqa
 
 
 __all__ = [
     "DatasetManager",
+    "DatasetManagerRegistry",
     "DatasetRecord",
     "DatasetConfig",
+    "FileBasedDatasetManager",
     "OnlineSource",
     "LocalSource",
     "FileMetadata",

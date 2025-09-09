@@ -1,6 +1,5 @@
 from pathlib import Path
-from typing import Literal, Optional
-from typing_extensions import override
+from typing import Literal, Optional, override
 import warnings
 
 from pydantic import BaseModel, field_validator
