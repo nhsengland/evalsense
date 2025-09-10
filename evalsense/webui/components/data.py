@@ -1,16 +1,14 @@
-from dataclasses import replace
 import gradio as gr
 from pandas import DataFrame
 import traceback
-from typing import TypedDict
 
 from evalsense.datasets import DatasetManager
+from evalsense.webui.components.utils import (
+    TextboxListenerConfig,
+    setup_textbox_listeners,
+    tuple_parser,
+)
 from evalsense.webui.state import AppState
-
-
-class TextFieldListenerConfig(TypedDict):
-    state_field: str
-    parse_as_tuple: bool
 
 
 def data_tab(state: gr.State):
@@ -42,7 +40,7 @@ def data_tab(state: gr.State):
                 label="Sample Limit",
                 info="The number of samples to display below when loading the dataset.",
             )
-            dataset_load_button = gr.Button("Load Dataset")
+            dataset_load_button = gr.Button("Load Dataset", variant="primary")
         with gr.Column():
             gr.Markdown("### Field Configuration")
             gr.Markdown(
@@ -82,53 +80,39 @@ def data_tab(state: gr.State):
                 col_count=1,
             )
 
-    # Configure text field listeners
-    LISTENER_CONFIG: dict[gr.Textbox, TextFieldListenerConfig] = {
+    # Text field listeners
+    LISTENER_CONFIG: dict[gr.Textbox, TextboxListenerConfig] = {
         dataset_name_input: {
             "state_field": "dataset_name",
-            "parse_as_tuple": False,
+            "parser": None,
         },
         data_splits_input: {
             "state_field": "dataset_splits",
-            "parse_as_tuple": True,
+            "parser": tuple_parser,
         },
         dataset_version_input: {
             "state_field": "dataset_version",
-            "parse_as_tuple": False,
+            "parser": None,
         },
         input_field_name_input: {
             "state_field": "input_field_name",
-            "parse_as_tuple": False,
+            "parser": None,
         },
         target_field_name_input: {
             "state_field": "target_field_name",
-            "parse_as_tuple": False,
+            "parser": None,
         },
         choices_field_name_input: {
             "state_field": "choices_field_name",
-            "parse_as_tuple": False,
+            "parser": None,
         },
-        id_field_name_input: {"state_field": "id_field_name", "parse_as_tuple": False},
+        id_field_name_input: {"state_field": "id_field_name", "parser": None},
         metadata_fields_input: {
             "state_field": "metadata_fields",
-            "parse_as_tuple": True,
+            "parser": tuple_parser,
         },
     }
-
-    for input_element, config in LISTENER_CONFIG.items():
-
-        def create_listener(field: gr.Textbox, config: TextFieldListenerConfig):
-            @field.change(inputs=[field, state], outputs=[state])
-            def update_field(entered_value: str, state: AppState):
-                if config["parse_as_tuple"]:
-                    value = tuple(entered_value.replace(" ", "").split(","))
-                else:
-                    value = entered_value
-                return replace(state, **{config["state_field"]: value})
-
-            return update_field
-
-        create_listener(input_element, config)
+    setup_textbox_listeners(LISTENER_CONFIG, state)
 
     @dataset_load_button.click(
         inputs=[state, sample_limit_input],
