@@ -1,4 +1,4 @@
-from dataclasses import replace
+import ast
 from typing import Any, Callable, TypedDict
 
 import gradio as gr
@@ -15,23 +15,29 @@ def tuple_parser(input_string: str) -> tuple[str, ...]:
     return tuple(input_string.replace(" ", "").split(","))
 
 
+def dict_parser(input_string: str) -> dict[str, Any]:
+    if not input_string:
+        return {}
+    try:
+        return ast.literal_eval(input_string)
+    except Exception:
+        raise gr.Error(f"Invalid dictionary format: {input_string}")
+
+
 def setup_textbox_listeners(
     listener_config: dict[gr.Textbox, TextboxListenerConfig],
     state: gr.State,
 ):
     for input_element, element_config in listener_config.items():
 
-        def create_listener(
-            input_element: gr.Textbox,
-            element_config: TextboxListenerConfig,
+        @input_element.change(inputs=[input_element, state], outputs=[state])
+        def update_field(
+            entered_value: str,
+            state: AppState,
+            config: TextboxListenerConfig = element_config,
         ):
-            @input_element.change(inputs=[input_element, state], outputs=[state])
-            def update_field(entered_value: str, state: AppState):
-                value = entered_value
-                if element_config["parser"] is not None:
-                    value = element_config["parser"](entered_value)
-                return replace(state, **{element_config["state_field"]: value})
-
-            return update_field
-
-        create_listener(input_element, element_config)
+            value = entered_value
+            if config["parser"] is not None:
+                value = config["parser"](entered_value)
+            state[config["state_field"]] = value
+            return state
