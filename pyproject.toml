@@ -54,6 +54,7 @@ Issues = "https://github.com/nhsengland/evalsense/issues"
 interactive = [
     "ipywidgets>=8.1.5",
     "jupyterlab>=4.3.5",
+    "gradio>=5.44.1",
 ]
 transformers = [
     "bert-score>=0.3.13",
