@@ -5,6 +5,7 @@ from gradio.themes import Default
 
 from evalsense.webui.components.data import data_tab
 from evalsense.webui.components.execution import execution_tab
+from evalsense.webui.components.generation import generation_tab
 from evalsense.webui.state import AppState
 
 theme = Default(primary_hue="blue")
@@ -18,7 +19,7 @@ with gr.Blocks(theme=theme) as demo:
     with gr.Tab("Data"):
         data_tab(state)
     with gr.Tab("Generation"):
-        pass
+        generation_tab(state)
     with gr.Tab("Models"):
         pass
     with gr.Tab("Evaluators"):

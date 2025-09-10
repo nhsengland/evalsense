@@ -11,3 +11,5 @@ class AppState:
     choices_field_name: str = "choices"
     id_field_name: str = "id"
     metadata_fields: tuple[str] = field(default_factory=tuple)
+    system_prompt: str = ""
+    user_prompt: str = ""
