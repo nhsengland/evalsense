@@ -6,12 +6,13 @@ from gradio.themes import Default
 from evalsense.webui.components.data import data_tab
 from evalsense.webui.components.execution import execution_tab
 from evalsense.webui.components.generation import generation_tab
-from evalsense.webui.state import AppState
+from evalsense.webui.components.models import models_tab
+from evalsense.webui.state import get_initial_state
 
 theme = Default(primary_hue="blue")
 
 with gr.Blocks(theme=theme) as demo:
-    state = gr.State(AppState())
+    state = gr.State(get_initial_state())
     gr.Markdown("# 🔎 EvalSense")
     gr.Markdown(
         "To run an evaluation, configure the settings on the individual tabs and start it from the **Execution** tab. For EvalSense documentation and guidance regarding the available evaluation metrics, please visit the [EvalSense homepage](https://nhsengland.github.io/evalsense/)."
@@ -21,7 +22,7 @@ with gr.Blocks(theme=theme) as demo:
     with gr.Tab("Generation"):
         generation_tab(state)
     with gr.Tab("Models"):
-        pass
+        models_tab(state)
     with gr.Tab("Evaluators"):
         pass
     with gr.Tab("Execution"):

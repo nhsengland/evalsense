@@ -19,7 +19,7 @@ def data_tab(state: gr.State):
     )
     with gr.Row():
         with gr.Column():
-            gr.Markdown("### Dataset Configuration")
+            gr.Markdown("## Dataset Configuration")
             gr.Markdown(
                 "You can use a dedicated EvalSense dataset or load one from Hugging Face Hub."
             )
@@ -42,35 +42,34 @@ def data_tab(state: gr.State):
             )
             dataset_load_button = gr.Button("Load Dataset", variant="primary")
         with gr.Column():
-            gr.Markdown("### Field Configuration")
+            gr.Markdown("## Field Configuration")
             gr.Markdown(
                 "If you are not using some of these fields in your evaluation, you can safely leave them set to their default values."
             )
             input_field_name_input = gr.Textbox(
                 label="Input Field Name",
-                value=state.value.input_field_name,
+                value=state.value["input_field_name"],
                 info="The name of the field containing the main input",
             )
             target_field_name_input = gr.Textbox(
                 label="Target Field Name",
-                value=state.value.target_field_name,
+                value=state.value["target_field_name"],
                 info="The name of the field containing the target output",
             )
             choices_field_name_input = gr.Textbox(
                 label="Choices Field Name",
-                value=state.value.choices_field_name,
+                value=state.value["choices_field_name"],
                 info="The name of the field containing the list of answer choices (for multiple-choice questions)",
             )
             id_field_name_input = gr.Textbox(
                 label="ID Field Name",
-                value=state.value.id_field_name,
+                value=state.value["id_field_name"],
                 info="The name of the field containing the unique ID for each sample",
             )
             metadata_fields_input = gr.Textbox(
                 label="Metadata Fields (comma-separated)",
                 info="List of additional field names that should be used as metadata",
             )
-
     with gr.Row():
         with gr.Column():
             total_samples_indicator = gr.Markdown("Total samples: **?**")
@@ -80,7 +79,7 @@ def data_tab(state: gr.State):
                 col_count=1,
             )
 
-    # Text field listeners
+    # Textbox listeners
     LISTENER_CONFIG: dict[gr.Textbox, TextboxListenerConfig] = {
         dataset_name_input: {
             "state_field": "dataset_name",
@@ -127,9 +126,11 @@ def data_tab(state: gr.State):
         gr.Info("Loading dataset — this may take a while...")
         try:
             dataset_manager = DatasetManager.create(
-                state.dataset_name,
-                splits=list(state.dataset_splits),
-                version=None if not state.dataset_version else state.dataset_version,
+                state["dataset_name"],
+                splits=list(state["dataset_splits"]),
+                version=None
+                if not state["dataset_version"]
+                else state["dataset_version"],
             )
             dataset = dataset_manager.load()
             sample_df = dataset.select(
