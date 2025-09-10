@@ -6,7 +6,7 @@ from platformdirs import user_cache_dir
 # Application metadata
 APP_NAME = "evalsense"
 APP_AUTHOR = "NHS"
-USER_AGENT = "EvalSense/0.1.0"
+USER_AGENT = "EvalSense/0"
 
 # Datasets
 DEFAULT_VERSION_NAME = "default"
