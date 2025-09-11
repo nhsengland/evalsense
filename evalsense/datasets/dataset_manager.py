@@ -104,7 +104,7 @@ class DatasetManagerRegistry:
 
 
 def dataset_manager(manager: Type["DatasetManager"]) -> Type["DatasetManager"]:
-    """Registers a dataset manager.
+    """Decorator to register a dataset manager.
 
     Args:
         manager (Type["DatasetManager"]): The dataset manager to register.

@@ -3,7 +3,7 @@ from pandas import DataFrame
 import traceback
 
 from evalsense.datasets import DatasetManager
-from evalsense.webui.components.utils import (
+from evalsense.webui.utils import (
     TextboxListenerConfig,
     setup_textbox_listeners,
     tuple_parser,
@@ -12,6 +12,12 @@ from evalsense.webui.state import AppState
 
 
 def data_tab(state: gr.State):
+    """Renders the data tab user interface.
+
+    Arguments:
+        state (gr.State): The current state of the Gradio application.
+    """
+
     # Data tab user interface
     gr.Markdown("Use this tab to configure the dataset for evaluation.")
     gr.Markdown(
