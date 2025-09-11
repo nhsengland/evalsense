@@ -1,12 +1,17 @@
 import gradio as gr
 
-from evalsense.webui.components.utils import (
+from evalsense.webui.utils import (
     TextboxListenerConfig,
     setup_textbox_listeners,
 )
 
 
 def generation_tab(state: gr.State):
+    """Renders the generation tab user interface.
+
+    Arguments:
+        state (gr.State): The current state of the Gradio application.
+    """
     # Generation tab user interface
     gr.Markdown("Use this tab to configure the prompt to use during the generation.")
     gr.Markdown("## Prompt Configuration")

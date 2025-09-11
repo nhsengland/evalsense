@@ -1,10 +1,15 @@
 import gradio as gr
 
 from evalsense.webui.state import AppModelConfig, AppState
-from evalsense.webui.components.utils import dict_parser
+from evalsense.webui.utils import dict_parser
 
 
 def models_tab(state: gr.State):
+    """Renders the models tab user interface.
+
+    Arguments:
+        state (gr.State): The current state of the Gradio application.
+    """
     # Models tab user interface
     gr.Markdown("Use this tab to configure the models to evaluate.")
     gr.Markdown("## New Model Configuration")

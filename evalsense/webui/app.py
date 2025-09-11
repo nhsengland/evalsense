@@ -4,6 +4,7 @@ import gradio as gr
 from gradio.themes import Default
 
 from evalsense.webui.components.data import data_tab
+from evalsense.webui.components.evaluators import evaluators_tab
 from evalsense.webui.components.execution import execution_tab
 from evalsense.webui.components.generation import generation_tab
 from evalsense.webui.components.models import models_tab
@@ -24,7 +25,7 @@ with gr.Blocks(theme=theme) as demo:
     with gr.Tab("Models"):
         models_tab(state)
     with gr.Tab("Evaluators"):
-        pass
+        evaluators_tab(state)
     with gr.Tab("Execution"):
         execution_tab(state)
 
