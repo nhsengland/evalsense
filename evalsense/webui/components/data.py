@@ -5,8 +5,9 @@ import traceback
 from evalsense.datasets import DatasetManager
 from evalsense.webui.utils import (
     TextboxListenerConfig,
+    empty_is_none_parser_for,
     setup_textbox_listeners,
-    tuple_parser,
+    list_parser,
 )
 from evalsense.webui.state import AppState
 
@@ -83,6 +84,7 @@ def data_tab(state: gr.State):
                 label="Sample Data",
                 headers=["Load a dataset to see sample data"],
                 col_count=1,
+                interactive=False,
             )
 
     # Textbox listeners
@@ -93,11 +95,11 @@ def data_tab(state: gr.State):
         },
         data_splits_input: {
             "state_field": "dataset_splits",
-            "parser": tuple_parser,
+            "parser": list_parser,
         },
         dataset_version_input: {
             "state_field": "dataset_version",
-            "parser": None,
+            "parser": empty_is_none_parser_for(str),
         },
         input_field_name_input: {
             "state_field": "input_field_name",
@@ -114,7 +116,7 @@ def data_tab(state: gr.State):
         id_field_name_input: {"state_field": "id_field_name", "parser": None},
         metadata_fields_input: {
             "state_field": "metadata_fields",
-            "parser": tuple_parser,
+            "parser": list_parser,
         },
     }
     setup_textbox_listeners(LISTENER_CONFIG, state)
@@ -134,9 +136,7 @@ def data_tab(state: gr.State):
             dataset_manager = DatasetManager.create(
                 state["dataset_name"],
                 splits=list(state["dataset_splits"]),
-                version=None
-                if not state["dataset_version"]
-                else state["dataset_version"],
+                version=state["dataset_version"],
             )
             dataset = dataset_manager.load()
             sample_df = dataset.select(

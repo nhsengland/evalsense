@@ -8,11 +8,13 @@ from evalsense.webui.components.evaluators import evaluators_tab
 from evalsense.webui.components.execution import execution_tab
 from evalsense.webui.components.generation import generation_tab
 from evalsense.webui.components.models import models_tab
+from evalsense.webui.components.results import results_tab
 from evalsense.webui.state import get_initial_state
+from evalsense.webui.utils import discover_projects
 
 theme = Default(primary_hue="blue")
 
-with gr.Blocks(theme=theme) as demo:
+with gr.Blocks(theme=theme, title="EvalSense") as demo:
     state = gr.State(get_initial_state())
     gr.Markdown("# 🔎 EvalSense")
     gr.Markdown(
@@ -28,6 +30,13 @@ with gr.Blocks(theme=theme) as demo:
         evaluators_tab(state)
     with gr.Tab("Execution"):
         execution_tab(state)
+    with gr.Tab("Results"):
+        results_tab(state)
+
+    # Regularly discover projects and update the state
+    timer = gr.Timer(3, active=True)
+    timer.tick(fn=discover_projects, inputs=[state], outputs=[state])
+
 
 if __name__ == "__main__":
     print("* Server username: user")
