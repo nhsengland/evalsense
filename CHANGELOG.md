@@ -9,6 +9,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ### Breaking changes
 
 - The API and the internal logic of dataset managers have been updated. The `priority` argument to the constructor is no longer used. Instead, all classes inheriting from `DatasetManager` should define a class-level `priority` attribute. Additionally, the file-based dataset managers, such as the built-in `AciBenchDatasetManager`, now preprocess all splits when retrieving the dataset. This is more expensive, but prevents issues with loading different splits.
+- EvalSense no longer overrides `HF_HUB_CACHE` and `HF_XET_CACHE` according to `EVALSENSE_STORAGE_DIR` and does not expose `MODELS_PATH` as a constant. Instead, the standard HuggingFace directory is used for storing models. If you wish to change this directory, you can do so by setting the appropriate [environment variables](https://huggingface.co/docs/huggingface_hub/package_reference/environment_variables) directly.
 
 ### Enhancements
 
