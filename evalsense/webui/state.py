@@ -39,26 +39,32 @@ class AppState(TypedDict):
         choices_field_name (str): The name of the answer choices field in the dataset.
         id_field_name (str): The name of the ID field in the dataset.
         metadata_fields (tuple[str]): The names of the metadata fields in the dataset.
+        generation_steps_name (str): The name of the used generation strategy.
         system_prompt (str): The system prompt to use for generation.
         user_prompt (str): The user prompt to use for generation.
         model_configs (list[AppModelConfig]): The model configurations to use for
             generation.
         evaluator_configs (list[AppEvaluatorConfig]): The evaluator configurations
             to use for evaluation.
+        project_name (str): The name of the evaluation project.
+        existing_projects (list[str]): The list of existing evaluation projects.
     """
 
     dataset_name: str
-    dataset_splits: tuple[str]
-    dataset_version: str
+    dataset_splits: list[str]
+    dataset_version: str | None
     input_field_name: str
     target_field_name: str
     choices_field_name: str
     id_field_name: str
-    metadata_fields: tuple[str]
+    metadata_fields: list[str]
+    generation_steps_name: str
     system_prompt: str
     user_prompt: str
     model_configs: list[AppModelConfig]
     evaluator_configs: list[AppEvaluatorConfig]
+    project_name: str
+    existing_projects: list[str]
 
 
 def get_initial_state() -> AppState:
@@ -69,15 +75,18 @@ def get_initial_state() -> AppState:
     """
     return {
         "dataset_name": "",
-        "dataset_splits": tuple(),
-        "dataset_version": "",
+        "dataset_splits": list(),
+        "dataset_version": None,
         "input_field_name": "input",
         "target_field_name": "target",
         "choices_field_name": "choices",
         "id_field_name": "id",
-        "metadata_fields": tuple(),
+        "metadata_fields": list(),
+        "generation_steps_name": "Default",
         "system_prompt": "",
         "user_prompt": "",
         "model_configs": list(),
         "evaluator_configs": list(),
+        "project_name": "Default",
+        "existing_projects": list(),
     }

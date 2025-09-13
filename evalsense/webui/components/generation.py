@@ -15,6 +15,11 @@ def generation_tab(state: gr.State):
     # Generation tab user interface
     gr.Markdown("Use this tab to configure the prompt to use during the generation.")
     gr.Markdown("## Prompt Configuration")
+    generation_steps_name_input = gr.Textbox(
+        label="Generation Steps Name",
+        value=state.value["generation_steps_name"],
+        info="The name of the used generation strategy.",
+    )
     system_prompt_input = gr.TextArea(
         label="System Prompt",
         info="The prompt to use for the system message. You can use Python f-string format to substitute the main input into a `{prompt}` placeholder, as well as for definiting placeholders for any additional metadata fields specified on the data tab.",
@@ -28,6 +33,10 @@ def generation_tab(state: gr.State):
 
     # Textbox listeners
     LISTENER_CONFIG: dict[gr.Textbox, TextboxListenerConfig] = {
+        generation_steps_name_input: {
+            "state_field": "generation_steps_name",
+            "parser": None,
+        },
         system_prompt_input: {"state_field": "system_prompt", "parser": None},
         user_prompt_input: {"state_field": "user_prompt", "parser": None},
     }

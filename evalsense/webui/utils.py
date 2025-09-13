@@ -3,6 +3,7 @@ from typing import Any, Callable, TypedDict
 
 import gradio as gr
 
+from evalsense.constants import PROJECTS_PATH
 from evalsense.webui.state import AppState
 
 
@@ -40,16 +41,16 @@ def empty_is_none_parser_for(type: type) -> Callable[[str], Any | None]:
     return parser
 
 
-def tuple_parser(input_string: str) -> tuple[str, ...]:
-    """Parses a comma-separated string into a tuple of strings.
+def list_parser(input_string: str) -> list[str]:
+    """Parses a comma-separated string into a list of strings.
 
     Arguments:
         input_string (str): The input string to parse.
 
     Returns:
-        tuple[str, ...]: A tuple containing the parsed strings.
+        list[str]: A list containing the parsed strings.
     """
-    return tuple(input_string.replace(" ", "").split(","))
+    return input_string.replace(" ", "").split(",")
 
 
 def dict_parser(input_string: str) -> dict[str, Any]:
@@ -93,3 +94,17 @@ def setup_textbox_listeners(
                 value = config["parser"](entered_value)
             state[config["state_field"]] = value
             return state
+
+
+def discover_projects(state: AppState) -> AppState:
+    """Discovers existing evaluation projects in the projects directory.
+
+    Returns:
+        AppState: The updated application state with the list of existing projects.
+    """
+    try:
+        projects = [entry.name for entry in PROJECTS_PATH.iterdir() if entry.is_dir()]
+    except FileNotFoundError:
+        projects = []
+    state["existing_projects"] = projects
+    return state
