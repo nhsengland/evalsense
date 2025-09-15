@@ -13,6 +13,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 ### Enhancements
 
+- EvalSense now provides a web-based graphical user interface for running simpler evaluation workflows.
 - Implemented support for meta-evaluation of different evaluation methods using `MetaResultAnalyser`.
 - It is now possible to construct dataset managers using the `DatasetManager.create(...)` class method, which automatically instantiates the dataset manager associated with the passed dataset name. This is facilitated by an internal registry of dataset managers.
 - A new `HuggingFaceDatasetManager` enables loading arbitrary datasets from Hugging Face Hub.
@@ -27,7 +28,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 ### Miscellaneous
 
-- EvalSense now places the xet cache under EvalSense cache directory instead of the default HuggingFace directory.
+- None
 
 ## v0.1.3
 
