@@ -3,16 +3,16 @@ import gradio as gr
 
 from evalsense.webui.execution import execute_evaluation
 from evalsense.webui.state import AppState
-from evalsense.webui.utils import setup_textbox_listeners
+from evalsense.webui.utils import setup_listeners
 
 
 def run_evaluation(state: AppState):
     try:
         execute_evaluation(state)
     except Exception as e:
-        gr.Warning(f"Error during evaluation: {e}")
+        gr.Warning(f"Error during evaluation: {type(e).__name__}: {e}")
         traceback.print_exc()
-        return f"❌ Evaluation failed with an error:\n{e}"
+        return f"❌ Evaluation failed with an error:\n{type(e).__name__}: {e}"
     return "✅ Evaluation completed successfully."
 
 
@@ -31,7 +31,7 @@ def execution_tab(state: gr.State):
         value=state.value["project_name"],
         info="The name of the evaluation project.",
     )
-    setup_textbox_listeners(
+    setup_listeners(
         {project_name_input: {"state_field": "project_name", "parser": None}}, state
     )
 
