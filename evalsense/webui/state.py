@@ -39,6 +39,11 @@ class AppState(TypedDict):
         choices_field_name (str): The name of the answer choices field in the dataset.
         id_field_name (str): The name of the ID field in the dataset.
         metadata_fields (tuple[str]): The names of the metadata fields in the dataset.
+        is_meta_eval (bool): Whether the evaluation to be performed is a meta-evaluation.
+        perturbation_tiers (int): The number of perturbation tiers to use for
+            meta-evaluation.
+        perturbation_tier_subprompts (list[str]): The subprompts to use for each
+            perturbation tier.
         generation_steps_name (str): The name of the used generation strategy.
         system_prompt (str): The system prompt to use for generation.
         user_prompt (str): The user prompt to use for generation.
@@ -58,6 +63,9 @@ class AppState(TypedDict):
     choices_field_name: str
     id_field_name: str
     metadata_fields: list[str]
+    is_meta_eval: bool
+    perturbation_tiers: int
+    perturbation_tier_subprompts: list[str]
     generation_steps_name: str
     system_prompt: str
     user_prompt: str
@@ -82,6 +90,9 @@ def get_initial_state() -> AppState:
         "choices_field_name": "choices",
         "id_field_name": "id",
         "metadata_fields": list(),
+        "is_meta_eval": False,
+        "perturbation_tiers": 2,
+        "perturbation_tier_subprompts": list(),
         "generation_steps_name": "Default",
         "system_prompt": "",
         "user_prompt": "",

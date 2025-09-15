@@ -6,8 +6,10 @@ import gradio as gr
 from evalsense.constants import PROJECTS_PATH
 from evalsense.webui.state import AppState
 
+type GradioInput = gr.Checkbox | gr.Dropdown | gr.Radio | gr.Textbox
 
-class TextboxListenerConfig(TypedDict):
+
+class ListenerConfig(TypedDict):
     """Configuration for a textbox listener.
 
     Attributes:
@@ -70,15 +72,16 @@ def dict_parser(input_string: str) -> dict[str, Any]:
         raise gr.Error(f"Invalid dictionary format: {input_string}")
 
 
-def setup_textbox_listeners(
-    listener_config: dict[gr.Textbox, TextboxListenerConfig],
+def setup_listeners(
+    listener_config: dict[GradioInput, ListenerConfig],
     state: gr.State,
 ):
-    """Sets up listeners updating the application state for the supplied textboxes.
+    """Sets up listeners updating the application state based on user inputs.
 
     Arguments:
-        listener_config (dict[gr.Textbox, TextboxListenerConfig]): The configuration
-            for the textboxes.
+        listener_config (dict[GradioInput, TextboxListenerConfig]): The configuration
+            specifying the parsers for processing user inputs and the corresponding
+            state fields to update.
         state (gr.State): The current state of the Gradio application.
     """
     for input_element, element_config in listener_config.items():
@@ -87,7 +90,7 @@ def setup_textbox_listeners(
         def update_field(
             entered_value: str,
             state: AppState,
-            config: TextboxListenerConfig = element_config,
+            config: ListenerConfig = element_config,
         ):
             value = entered_value
             if config["parser"] is not None:

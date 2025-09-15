@@ -4,9 +4,10 @@ import traceback
 
 from evalsense.datasets import DatasetManager
 from evalsense.webui.utils import (
-    TextboxListenerConfig,
+    GradioInput,
+    ListenerConfig,
     empty_is_none_parser_for,
-    setup_textbox_listeners,
+    setup_listeners,
     list_parser,
 )
 from evalsense.webui.state import AppState
@@ -88,7 +89,7 @@ def data_tab(state: gr.State):
             )
 
     # Textbox listeners
-    LISTENER_CONFIG: dict[gr.Textbox, TextboxListenerConfig] = {
+    LISTENER_CONFIG: dict[GradioInput, ListenerConfig] = {
         dataset_name_input: {
             "state_field": "dataset_name",
             "parser": None,
@@ -119,7 +120,7 @@ def data_tab(state: gr.State):
             "parser": list_parser,
         },
     }
-    setup_textbox_listeners(LISTENER_CONFIG, state)
+    setup_listeners(LISTENER_CONFIG, state)
 
     @dataset_load_button.click(
         inputs=[state, sample_limit_input],
