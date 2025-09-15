@@ -18,7 +18,7 @@ with gr.Blocks(theme=theme, title="EvalSense") as demo:
     state = gr.State(get_initial_state())
     gr.Markdown("# 🔎 EvalSense")
     gr.Markdown(
-        "To run an evaluation, configure the settings on the individual tabs and start it from the **Execution** tab. For EvalSense documentation and guidance regarding the available evaluation metrics, please visit the [EvalSense homepage](https://nhsengland.github.io/evalsense/)."
+        "To run an evaluation, configure its settings on the individual tabs and start it from the **Execution** tab. For EvalSense documentation and guidance regarding the available evaluation metrics, please visit the [EvalSense homepage](https://nhsengland.github.io/evalsense/)."
     )
     with gr.Tab("Data"):
         data_tab(state)
