@@ -11,6 +11,46 @@ from evalsense.workflow.analysers import (
 from evalsense.workflow.analysers.meta_result_analyser import MetaResultAnalyser
 
 
+def load_project(project_name: str, is_meta_eval: bool):
+    """Loads the project and returns the summary results and correlation plot."""
+    try:
+        project = Project(project_name)
+
+        if is_meta_eval:
+            tabular_analyser = MetaResultAnalyser[pd.DataFrame](output_format="pandas")
+            summary_results = tabular_analyser(
+                project,
+                meta_tier_field="perturbation_tier",
+                lower_tier_is_better=True,
+            )
+            summary_results.sort_values(
+                by=["avg_correlation"], inplace=True, ascending=False
+            )
+            plot = None
+        else:
+            tabular_analyser = TabularResultAnalyser[pd.DataFrame](
+                output_format="pandas"
+            )
+            summary_results = tabular_analyser(project)
+            summary_results.sort_values(
+                by="model", inplace=True, key=lambda col: col.str.lower()
+            )
+            summary_results = summary_results.round(2)
+
+            correlation_analyser = MetricCorrelationAnalyser[
+                CorrelationResults[pd.DataFrame]
+            ](output_format="pandas")
+            correlation_results = correlation_analyser(
+                project, return_plot=True, figsize=(9, 7)
+            )
+            plot = correlation_results.figure
+            assert plot, "Correlation plot cannot be None"
+    except Exception as e:
+        raise gr.Error(f"Error loading results: {type(e).__name__}: {e}")
+
+    return summary_results, plot if plot is not None else gr.update(visible=False)
+
+
 def results_tab(state: gr.State):
     """Renders the results tab user interface."""
     gr.Markdown("Use this tab to preview the results of the evaluation.")
@@ -42,46 +82,12 @@ def results_tab(state: gr.State):
         )
         metric_correlation = gr.Plot(label="Metric Correlation", format="png")
 
-        @load_button.click(
+        load_button.click(
+            inputs=[is_meta_eval_input],
+            outputs=[metric_correlation],
+            fn=lambda is_meta: gr.update(visible=not is_meta),
+        ).then(
+            fn=load_project,
             inputs=[project_name_input, is_meta_eval_input],
             outputs=[results_df, metric_correlation],
         )
-        def load_project(project_name: str, is_meta_eval: bool):
-            try:
-                project = Project(project_name)
-
-                if is_meta_eval:
-                    tabular_analyser = MetaResultAnalyser[pd.DataFrame](
-                        output_format="pandas"
-                    )
-                    summary_results = tabular_analyser(
-                        project, meta_tier_field="perturbation_tier"
-                    )
-                    summary_results.sort_values(
-                        by=["avg_correlation"], inplace=True, ascending=False
-                    )
-                    plot = None
-                else:
-                    tabular_analyser = TabularResultAnalyser[pd.DataFrame](
-                        output_format="pandas"
-                    )
-                    summary_results = tabular_analyser(project)
-                    summary_results.sort_values(
-                        by="model", inplace=True, key=lambda col: col.str.lower()
-                    )
-                    summary_results = summary_results.round(2)
-
-                    correlation_analyser = MetricCorrelationAnalyser[
-                        CorrelationResults[pd.DataFrame]
-                    ](output_format="pandas")
-                    correlation_results = correlation_analyser(
-                        project, return_plot=True, figsize=(9, 7)
-                    )
-                    plot = correlation_results.figure
-                    assert plot, "Correlation plot cannot be None"
-            except Exception as e:
-                raise gr.Error(f"Error loading results: {type(e).__name__}: {e}")
-
-            return summary_results, plot if plot is not None else gr.update(
-                visible=False
-            )
