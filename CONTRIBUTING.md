@@ -1,5 +1,5 @@
 # Contributing
-We love contributions! We've compiled these docs to help you understand our contribution guidelines. If you still have questions, please [contact us](mailto:analytics-unit@nhsx.nhs.uk), we'd be super happy to help.
+We love contributions! We've compiled these docs to help you understand our contribution guidelines. If you still have questions, please [contact us](mailto:datascience@nhs.net), we'd be super happy to help.
 
 ## Contents of this file
 
@@ -17,19 +17,21 @@ Please see the [GDS guidelines](https://gds-way.digital.cabinet-office.gov.uk/st
 
 ## Updating the Changelog
 
-If you open a GitHub pull request on this repo, please update `CHANGELOG` to reflect your contribution.
+If you open a GitHub pull request on this repo, please update `CHANGELOG.md` to reflect your contribution.
 
 Add your entry under `Unreleased` as:
 - `Breaking changes`
-- `New features`
-- `Fixes`
+- `Enhancements`
+- `Bug fixes`
+- `Documentation`
+- `Miscellaneous`
 
 Internal changes to the project that are not part of the public API do not need changelog entries, for example fixing the CI build server.
 
 These sections follow [semantic versioning](https://semver.org/spec/v2.0.0.html), where:
 
 - `Breaking changes` corresponds to a `major` (1.X.X) change.
-- `New features` corresponds to a `minor` (X.1.X) change.
-- `Fixes` corresponds to a `patch` (X.X.1) change.
+- `Enhancements` corresponds to a `minor` (X.1.X) change.
+- `Bug fixes` corresponds to a `patch` (X.X.1) change.
 
-See the [`CHANGELOG.md`](./CHANGELOG.md) for an example for how this looks.
+See the [`CHANGELOG.md`](./CHANGELOG.md) for an example for how this looks. However, note that the project is currently using major version zero, which means that the public API is not yet fully stable, and that the standard semantic versioning conventions do not apply.

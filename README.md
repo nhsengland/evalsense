@@ -1,5 +1,5 @@
-> [!WARNING]
-> This project is a work in progress. Critical components may be missing, inoperative or incomplete, and the API can undergo major changes without any notice. Please check back later for a more stable version.
+> [!NOTE]
+> This project is under development. The API may undergo major changes between versions, so we recommend checking the [CHANGELOG](https://github.com/nhsengland/evalsense/blob/main/CHANGELOG.md) for any breaking changes before upgrading.
 
 # EvalSense: LLM Evaluation
 
@@ -40,7 +40,8 @@ _**Note:** Only public or fake data are shared in this repository._
 
 ## Getting Started
 
-## Installation
+### Installation
+
 You can install the project using [pip](https://pip.pypa.io/en/stable/) by running the following command:
 
 ```bash
@@ -50,11 +51,12 @@ pip install evalsense
 This will install the latest released version of the package from [PyPI](https://pypi.org/project/evalsense/).
 
 Depending on your use-case, you may want to install additional optional dependencies from the following groups:
-* `interactive`: For running experiments interactively in Jupyter notebooks (only needed if you don't already have the necessary libraries installed).
-* `transformers`: For using models and metrics requiring the [Hugging Face Transformers](https://huggingface.co/docs/transformers/index) library.
-* `vllm`: For using models and metrics requiring [vLLM](https://docs.vllm.ai/en/stable/).
-* `local`: For installing all local model dependencies (currently includes `transformers` and `vllm`).
-* `all`: For installing all optional dependencies.
+
+- `interactive`: For running experiments interactively in Jupyter notebooks (only needed if you don't already have the necessary libraries installed).
+- `transformers`: For using models and metrics requiring the [Hugging Face Transformers](https://huggingface.co/docs/transformers/index) library.
+- `vllm`: For using models and metrics requiring [vLLM](https://docs.vllm.ai/en/stable/).
+- `local`: For installing all local model dependencies (currently includes `transformers` and `vllm`).
+- `all`: For installing all optional dependencies.
 
 For example, if you want to install EvalSense with all optional dependencies, you can run:
 
@@ -85,6 +87,8 @@ To setup the Python environment for the project:
 - `source .venv/bin/activate`
 - `pre-commit install`
 
+Note that the code is formatted with [ruff](https://github.com/astral-sh/ruff) and type-checked by [pyright](https://github.com/microsoft/pyright) in `standard` type checking mode. For the best development experience, we recommend enabling the corresponding extensions in your preferred code editor.
+
 To setup the Node environment for the LLM evaluation guide (located under [`guide/`](https://github.com/nhsengland/evalsense/tree/main/guide)):
 
 - Install [node](https://nodejs.org/en/download) if it's not installed already
@@ -96,16 +100,20 @@ See also the separate [README.md](https://github.com/nhsengland/evalsense/tree/m
 
 ## Usage
 
-For an example illustrating the usage of EvalSense, please check the [Demo notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Demo.ipynb) under the `notebooks/` folder.
+For examples illustrating the usage of EvalSense, please check the notebooks under the `notebooks/` folder:
+
+- The [Demo notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Demo.ipynb) illustrates a basic application of EvalSense to the ACI-Bench dataset.
+- The [Experiments notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Experiments.ipynb) illustrates more thorough experiments on the same dataset, involving a larger number of evaluators and models.
+- The [Meta-Evaluation notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Meta-Evaluation.ipynb) focuses on meta-evaluation on synthetically perturbed data, where the goal is to identify the most reliable evaluation methods rather than the best-performing models.
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/amazing-feature`)
+2. Create your Feature Branch (`git checkout -b amazing-feature`)
 3. Commit your Changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the Branch (`git push origin feature/amazing-feature`)
+4. Push to the Branch (`git push origin amazing-feature`)
 5. Open a Pull Request
 
 _See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidance._
@@ -126,9 +134,10 @@ of the [Open Government 3.0][ogl] licence.
 
 ### Contact
 
-This project is currently maintained by [@adamdejl](https://github.com/adamdejl). If you have any questions, suggestions for new features or want to report a bug, please [open an issue](https://github.com/nhsengland/evalsense/issues/new/choose). For security concerns, please file a [private vulenrability report](https://github.com/nhsengland/evalsense/security/advisories/new).
+This project is currently maintained by [@adamdejl](https://github.com/adamdejl). If you have any questions, suggestions for new features or want to report a bug, please [open an issue](https://github.com/nhsengland/evalsense/issues/new/choose). For security concerns, please file a [private vulnerability report](https://github.com/nhsengland/evalsense/security/advisories/new).
 
 To find out more about the [NHS England Data Science](https://nhsengland.github.io/datascience/) visit our [project website](https://nhsengland.github.io/datascience/our_work/) or get in touch at [datascience@nhs.net](mailto:datascience@nhs.net).
 
 ### Acknowledgements
-We thank the [Inspect AI development team](https://github.com/UKGovernmentBEIS/inspect_ai/graphs/contributors) for their work on the [Inspect AI library](https://inspect.aisi.org.uk/), which serves as a basis for the EvalSense library.
+
+We thank the [Inspect AI development team](https://github.com/UKGovernmentBEIS/inspect_ai/graphs/contributors) for their work on the [Inspect AI library](https://inspect.aisi.org.uk/), which serves as a basis for EvalSense.
