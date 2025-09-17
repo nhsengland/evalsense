@@ -13,14 +13,14 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 ### Enhancements
 
-- EvalSense now provides a web-based graphical user interface for running simpler evaluation workflows.
-- Implemented support for meta-evaluation of different evaluation methods using `MetaResultAnalyser`.
+- EvalSense now provides a web-based graphical user interface for experimenting with evaluation workflows. This can be accessed by running `evalsense webui`.
+- EvalSense now supports meta-evaluation of different evaluation methods using `MetaResultAnalyser`.
 - It is now possible to construct dataset managers using the `DatasetManager.create(...)` class method, which automatically instantiates the dataset manager associated with the passed dataset name. This is facilitated by an internal registry of dataset managers.
 - A new `HuggingFaceDatasetManager` enables loading arbitrary datasets from Hugging Face Hub.
 
 ### Bug fixes
 
-- Fix method_filter_fun behaviour in MetricCorrelationAnalyser.
+- Fix `method_filter_fun` behaviour in `MetricCorrelationAnalyser`.
 
 ### Documentation
 
