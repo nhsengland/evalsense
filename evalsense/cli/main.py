@@ -30,9 +30,12 @@ def webui(
             help="If True, enables Gradio public sharing. This will make the app publicly accessible over the internet. Use with caution.",
         ),
     ] = False,
+    port: Annotated[
+        int, typer.Option("--port", help="Port to run the web UI on.")
+    ] = 7860,
 ):
     """Launches the EvalSense Gradio web UI."""
-    launch_webui(password=password, no_auth=no_auth, share=share)
+    launch_webui(password=password, no_auth=no_auth, share=share, port=port)
 
 
 @app.callback()

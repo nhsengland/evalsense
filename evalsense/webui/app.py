@@ -14,7 +14,10 @@ from evalsense.webui.utils import discover_projects
 
 
 def launch_webui(
-    password: str | None = None, no_auth: bool = False, share: bool = False
+    password: str | None = None,
+    no_auth: bool = False,
+    share: bool = False,
+    port: int = 7860,
 ):
     """Launches the EvalSense Gradio web UI.
 
@@ -23,6 +26,7 @@ def launch_webui(
         no_auth: If True, disables authentication.
         share: If True, enables Gradio public sharing. This will make the app publicly
             accessible over the internet. Use with caution.
+        port: Port to run the Gradio server on.
     """
     theme = Default(primary_hue="blue")
     with gr.Blocks(theme=theme, title="EvalSense") as demo:
@@ -59,7 +63,11 @@ def launch_webui(
             password = secrets.token_urlsafe(20)
         print("* Server username: user")
         print(f"* Server password: {password}")
-        demo.launch(share=share, auth=("user", password) if not no_auth else None)
+        demo.launch(
+            share=share,
+            auth=("user", password) if not no_auth else None,
+            server_port=port,
+        )
 
 
 if __name__ == "__main__":
