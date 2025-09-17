@@ -19,6 +19,11 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - None
 
 ### Miscellaneous
+- None
+
+## v0.1.5
+
+### Miscellaneous
 -  Move web UI dependencies to a separate `webui` extra.
 
 ## v0.1.4
