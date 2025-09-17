@@ -71,18 +71,21 @@ nav:
   - Home: index.md
   - API Reference:
       - Datasets:
-        - datasets: api-reference/datasets/base.md
-        - datasets.managers: api-reference/datasets/managers.md
+          - datasets: api-reference/datasets/base.md
+          - datasets.managers: api-reference/datasets/managers.md
       - Evaluation:
-        - evaluation: api-reference/evaluation/base.md
-        - evaluation.evaluators: api-reference/evaluation/evaluators.md
+          - evaluation: api-reference/evaluation/base.md
+          - evaluation.evaluators: api-reference/evaluation/evaluators.md
       - Generation:
-        - generation: api-reference/generation/base.md
+          - generation: api-reference/generation/base.md
       - Tasks:
-        - tasks: api-reference/tasks/base.md
+          - tasks: api-reference/tasks/base.md
       - Utils:
-        - utils: api-reference/utils/base.md
+          - utils: api-reference/utils/base.md
+      - Web UI:
+          - webui: api-reference/webui/base.md
+          - webui.configurators: api-reference/webui/configurators.md
       - Workflow:
-        - workflow: api-reference/workflow/base.md
-        - workflow.analysers: api-reference/workflow/analysers.md
+          - workflow: api-reference/workflow/base.md
+          - workflow.analysers: api-reference/workflow/analysers.md
   - "EvalSense Homepage": https://nhsengland.github.io/evalsense/

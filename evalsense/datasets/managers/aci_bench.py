@@ -5,14 +5,14 @@ import polars as pl
 
 from evalsense.datasets.dataset_manager import (
     FileBasedDatasetManager,
-    dataset_manager,
+    manager,
 )
 from evalsense.utils.huggingface import disable_dataset_progress_bars
 
 _DEFAULT_VERSION = "5d3cd4d8a25b4ebb5b2b87c3923a7b2b7150e33d"
 
 
-@dataset_manager
+@manager
 class AciBenchDatasetManager(FileBasedDatasetManager):
     """A dataset manager for the ACI Bench dataset."""
 

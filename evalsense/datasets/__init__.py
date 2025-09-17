@@ -12,6 +12,7 @@ from evalsense.datasets.dataset_manager import (
     DatasetManagerRegistry,
     DatasetRecord,
     FileBasedDatasetManager,
+    manager,
 )
 import evalsense.datasets.managers  # noqa
 
@@ -28,4 +29,5 @@ __all__ = [
     "SplitMetadata",
     "VersionMetadata",
     "DatasetMetadata",
+    "manager",
 ]

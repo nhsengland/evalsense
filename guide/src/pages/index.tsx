@@ -18,8 +18,18 @@ function HomepageHeader() {
         </Heading>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className={styles.buttons}>
-          <Link className="button button--secondary button--lg" to="/guide">
+          <Link
+            className="button button--secondary button--lg"
+            to="/guide"
+            style={{ marginRight: "2rem" }}
+          >
             📖 Interactive Evaluation Guide
+          </Link>
+          <Link
+            className="button button--secondary button--lg"
+            to="https://nhsengland.github.io/evalsense/docs/"
+          >
+            🛠️ Library Documentation
           </Link>
         </div>
       </div>

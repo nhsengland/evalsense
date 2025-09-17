@@ -7,11 +7,11 @@ from evalsense.evaluation.evaluators import get_rouge_evaluator
 from evalsense.webui.configurators.evaluator_configurator import (
     ConfiguratorInput,
     EvaluatorConfigurator,
-    evaluator_configurator,
+    configurator,
 )
 
 
-@evaluator_configurator
+@configurator
 class RougeConfigurator(EvaluatorConfigurator):
     """Configurator for the ROUGE evaluator."""
 
@@ -42,7 +42,7 @@ class RougeConfigurator(EvaluatorConfigurator):
         Instantiates the ROUGE evaluator according to the specified configuration.
 
         Args:
-            **kwargs: The keyword arguments specifying evaluator configuration.
+            **kwargs (dict): The keyword arguments specifying evaluator configuration.
 
         Returns:
             Evaluator: The instantiated evaluator.

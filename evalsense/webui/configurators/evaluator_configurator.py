@@ -35,7 +35,7 @@ class EvaluatorConfiguratorRegistry:
         return cls.registry[name]
 
 
-def evaluator_configurator(
+def configurator(
     configurator: Type["EvaluatorConfigurator"],
 ) -> Type["EvaluatorConfigurator"]:
     """Decorator to register an evaluator configurator.
@@ -102,7 +102,7 @@ class EvaluatorConfigurator(Protocol):
         Instantiates the evaluator according to the specified configuration.
 
         Args:
-            **kwargs: The keyword arguments specifying evaluator configuration.
+            **kwargs (dict): The keyword arguments specifying evaluator configuration.
 
         Returns:
             Evaluator: The instantiated evaluator.

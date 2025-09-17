@@ -3,11 +3,11 @@ from typing import cast, override
 from datasets import DatasetDict, get_dataset_split_names, load_dataset
 from huggingface_hub import repo_exists
 
-from evalsense.datasets.dataset_manager import DatasetManager, dataset_manager
+from evalsense.datasets.dataset_manager import DatasetManager, manager
 from evalsense.utils.huggingface import disable_dataset_progress_bars
 
 
-@dataset_manager
+@manager
 class HuggingFaceDatasetManager(DatasetManager):
     """A dataset manager for Hugging Face datasets."""
 

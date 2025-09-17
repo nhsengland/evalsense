@@ -7,12 +7,12 @@ from evalsense.evaluation.evaluators import get_bertscore_evaluator
 from evalsense.webui.configurators.evaluator_configurator import (
     ConfiguratorInput,
     EvaluatorConfigurator,
-    evaluator_configurator,
+    configurator,
 )
 from evalsense.webui.utils import empty_is_none_parser_for
 
 
-@evaluator_configurator
+@configurator
 class BertScoreConfigurator(EvaluatorConfigurator):
     """Configurator for the BERTScore evaluator."""
 
@@ -79,7 +79,7 @@ class BertScoreConfigurator(EvaluatorConfigurator):
         Instantiates the BERTScore evaluator according to the specified configuration.
 
         Args:
-            **kwargs: The keyword arguments specifying evaluator configuration.
+            **kwargs (dict): The keyword arguments specifying evaluator configuration.
 
         Returns:
             Evaluator: The instantiated evaluator.

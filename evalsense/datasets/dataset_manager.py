@@ -79,7 +79,7 @@ class DatasetManagerRegistry:
     registry: list[Type["DatasetManager"]] = []
 
     @classmethod
-    def register_manager(cls, manager: Type["DatasetManager"]):
+    def register(cls, manager: Type["DatasetManager"]):
         """Registers a new dataset manager.
 
         Args:
@@ -88,7 +88,7 @@ class DatasetManagerRegistry:
         cls.registry.append(manager)
 
     @classmethod
-    def get_manager_for_dataset(cls, name: str) -> Type["DatasetManager"] | None:
+    def get(cls, name: str) -> Type["DatasetManager"] | None:
         """Gets the dataset manager for a specific dataset.
 
         Args:
@@ -103,7 +103,7 @@ class DatasetManagerRegistry:
         return None
 
 
-def dataset_manager(manager: Type["DatasetManager"]) -> Type["DatasetManager"]:
+def manager(manager: Type["DatasetManager"]) -> Type["DatasetManager"]:
     """Decorator to register a dataset manager.
 
     Args:
@@ -112,7 +112,7 @@ def dataset_manager(manager: Type["DatasetManager"]) -> Type["DatasetManager"]:
     Returns:
         Type["DatasetManager"]: The registered dataset manager.
     """
-    DatasetManagerRegistry.register_manager(manager)
+    DatasetManagerRegistry.register(manager)
     return manager
 
 
@@ -161,7 +161,7 @@ class DatasetManager(Protocol):
         Returns:
             (DatasetManager): The created dataset manager.
         """
-        manager = DatasetManagerRegistry.get_manager_for_dataset(name)
+        manager = DatasetManagerRegistry.get(name)
         if manager is not None:
             return manager(
                 name=name,
@@ -188,7 +188,7 @@ class DatasetManager(Protocol):
             version (str, optional): The dataset version to retrieve.
             data_dir (str, optional): The top-level directory for storing all
                 datasets. Defaults to "datasets" in the user cache directory.
-            **kwargs (dict, optional): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
         """
         self.name = name
         self.splits = list(sorted(splits))

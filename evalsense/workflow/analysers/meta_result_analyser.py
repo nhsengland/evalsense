@@ -1,6 +1,6 @@
 from collections import defaultdict
 import math
-from typing import Any, Literal, cast, override
+from typing import Literal, cast, override
 
 import pandas as pd
 import polars as pl
@@ -44,7 +44,7 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
         meta_tier_field: str = "perturbation_type_tier",
         lower_tier_is_better: bool = False,
         metric_labels: dict[str, str] | None = None,
-        **kwargs: dict[str, Any],
+        **kwargs: dict,
     ) -> T:
         """
         Analyses the results from perturbation-based meta-evaluation experiments.
@@ -58,7 +58,7 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
             metric_labels (dict[str, str] | None): A dictionary mapping metric names
                 to their labels in the output table. If None, no aliasing is performed.
                 Defaults to None.
-            **kwargs (dict[str, Any]): Additional keyword arguments.
+            **kwargs (dict): Additional keyword arguments.
 
         Returns:
             T: The analysed results in the specified output format.

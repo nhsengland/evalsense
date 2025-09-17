@@ -350,7 +350,7 @@ class Project:
         Args:
             type (Literal["generation", "evaluation"]): The type of logs to retrieve.
             status (RecordStatus | None): The status of the logs to retrieve.
-                Defaults to None.
+                Defaults to None (i.e., retrieving all logs regardless of status).
 
         Returns:
             dict[GenerationRecord | EvaluationRecord, EvalLog]: A dictionary of logs.

@@ -9,12 +9,12 @@ from evalsense.generation.model_config import ModelConfig
 from evalsense.webui.configurators.evaluator_configurator import (
     ConfiguratorInput,
     EvaluatorConfigurator,
-    evaluator_configurator,
+    configurator,
 )
 from evalsense.webui.utils import dict_parser
 
 
-@evaluator_configurator
+@configurator
 class GEvalConfigurator(EvaluatorConfigurator):
     """Configurator for the G-Eval evaluator."""
 
@@ -132,7 +132,7 @@ class GEvalConfigurator(EvaluatorConfigurator):
         Instantiates the BERTScore evaluator according to the specified configuration.
 
         Args:
-            **kwargs: The keyword arguments specifying evaluator configuration.
+            **kwargs (dict): The keyword arguments specifying evaluator configuration.
 
         Returns:
             Evaluator: The instantiated evaluator.
