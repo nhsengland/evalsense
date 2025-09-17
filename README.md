@@ -33,7 +33,7 @@ EvalSense is a framework for systematic evaluation of large language models (LLM
 - **Evaluation guidance.** An [interactive evaluation guide](https://nhsengland.github.io/evalsense/guide) and automated meta-evaluation tools assist in selecting the most appropriate evaluation methods for a specific use-case, including the use of perturbed data to assess method effectiveness.
 - **Interactive UI.** A [web-based interface](https://nhsengland.github.io/evalsense/docs/#web-based-ui) enables rapid experimentation with different evaluation workflows without requiring any code.
 - **Advanced evaluation methods.** EvalSense incorporates recent LLM-as-a-Judge and hybrid [evaluation approaches](https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/), such as [G-Eval](https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.GEvalScoreCalculator) and [QAGS](https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.QagsConfig), while also supporting more traditional metrics like [BERTScore](https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.BertScoreCalculator) and [ROUGE](https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.RougeScoreCalculator).
-- **Efficient execution.** Intelligent experiment scheduling and resource management minimise computational overhead for local models. For remote APIs, EvalSense uses asynchrnous parallel calls to maximise throughput.
+- **Efficient execution.** Intelligent experiment scheduling and resource management minimise computational overhead for local models. For remote APIs, EvalSense uses asynchronous parallel calls to maximise throughput.
 - **Modularity and extensibility.** Key components and evaluation methods can be used independently or replaced with user-defined implementations.
 - **Comprehensive logging.** All key aspects of evaluation are recorded in machine-readable logs, including model parameters, prompts, model outputs, evaluation results, and other metadata.
 
@@ -152,12 +152,12 @@ of the [Open Government 3.0][ogl] licence.
 [copyright]: http://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/
 [ogl]: http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
 
-### Contact
+## Contact
 
 This project is currently maintained by [@adamdejl](https://github.com/adamdejl). If you have any questions, suggestions for new features or want to report a bug, please [open an issue](https://github.com/nhsengland/evalsense/issues/new/choose). For security concerns, please file a [private vulnerability report](https://github.com/nhsengland/evalsense/security/advisories/new).
 
 To find out more about the [NHS England Data Science](https://nhsengland.github.io/datascience/) visit our [project website](https://nhsengland.github.io/datascience/our_work/) or get in touch at [datascience@nhs.net](mailto:datascience@nhs.net).
 
-### Acknowledgements
+## Acknowledgements
 
 We thank the [Inspect AI development team](https://github.com/UKGovernmentBEIS/inspect_ai/graphs/contributors) for their work on the [Inspect AI library](https://inspect.aisi.org.uk/), which serves as a basis for EvalSense.
