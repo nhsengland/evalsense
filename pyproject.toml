@@ -1,6 +1,6 @@
 [project]
 name = "evalsense"
-version = "0.1.4"
+version = "0.1.5"
 description = "Tools for evaluating large language models."
 readme = "README.md"
 authors = [
@@ -51,10 +51,12 @@ Homepage = "https://github.com/nhsengland/evalsense"
 Issues = "https://github.com/nhsengland/evalsense/issues"
 
 [project.optional-dependencies]
-interactive = [
+webui = [
+    "gradio>=5.44.1",
+]
+jupyter = [
     "ipywidgets>=8.1.5",
     "jupyterlab>=4.3.5",
-    "gradio>=5.44.1",
 ]
 transformers = [
     "bert-score>=0.3.13",
@@ -64,8 +66,9 @@ transformers = [
 vllm = [
     "vllm>=0.8.2",
 ]
+interactive = ["evalsense[webui,jupyter]"]
 local = ["evalsense[transformers,vllm]"]
-all = ["evalsense[interactive,transformers,vllm]"]
+all = ["evalsense[webui,jupyter,transformers,vllm]"]
 
 [project.scripts]
 evalsense = "evalsense.cli.main:app"

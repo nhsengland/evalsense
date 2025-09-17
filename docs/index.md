@@ -20,13 +20,15 @@ You can install the project using [pip](https://pip.pypa.io/en/stable/) by runni
 pip install evalsense
 ```
 
-This will install the latest released version of the package from [PyPI](https://pypi.org/project/evalsense/).
+This will install the latest released version of the package from [PyPI](https://pypi.org/project/evalsense/) *without any optional dependencies*.
 
-Depending on your use-case, you may want to install additional optional dependencies from the following groups:
+Depending on your use-case, you may want to install *additional dependencies* from the following groups:
 
-- `interactive`: For running experiments interactively in Jupyter notebooks (only needed if you don't already have the necessary libraries installed).
+- `webui`: For using the interactive web UI.
+- `jupyter`: For running experiments in Jupyter notebooks (only needed if you don't already have the necessary libraries installed).
 - `transformers`: For using models and metrics requiring the [Hugging Face Transformers](https://huggingface.co/docs/transformers/index) library.
 - `vllm`: For using models and metrics requiring [vLLM](https://docs.vllm.ai/en/stable/).
+- `interactive`: For using EvalSense with interactive UI features (currently includes `webui` and `jupyter`).
 - `local`: For installing all local model dependencies (currently includes `transformers` and `vllm`).
 - `all`: For installing all optional dependencies.
 
@@ -36,7 +38,7 @@ For example, if you want to install EvalSense with all optional dependencies, yo
 pip install "evalsense[all]"
 ```
 
-If you want to use EvalSense with Jupyter notebooks (`interactive`) and Hugging Face Transformers (`transformers`), you can run:
+If you want to use EvalSense with interactive features (`interactive`) and Hugging Face Transformers (`transformers`), you can run:
 
 ```bash
 pip install "evalsense[interactive,transformers]"
@@ -60,7 +62,7 @@ To use the interactive web-based UI implemented in EvalSense, simply run
 evalsense webui
 ```
 
-after installing the package and its dependencies.
+after installing the package and its dependencies. Note that you need to install EvalSense with the `webui` extra (`pip install "evalsense[webui]"`) or an extra that includes it before running this command.
 
 ## Acknowledgements
 
