@@ -17,7 +17,7 @@ export default function PresetsPage() {
   const handleLoadPreset = (preset) => {
     if (preset.guideState) {
       setPresetToLoad(preset.guideState); // Store the preset's state
-      window.location.href = guideUrl; // Navigate to the guide page
+      window.location.assign(guideUrl); // Navigate to the guide page
     } else {
       console.error("Preset is missing guideState:", preset.id);
     }

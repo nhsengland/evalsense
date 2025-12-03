@@ -4,11 +4,12 @@ import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import reactHooks from "eslint-plugin-react-hooks";
+import { defineConfig } from "eslint/config";
 
-export default tseslint.config(
+export default defineConfig([
   eslint.configs.recommended,
   tseslint.configs.recommended,
-  reactHooks.configs["recommended-latest"],
+  reactHooks.configs.flat.recommended,
   pluginReact.configs.flat.recommended,
   pluginReact.configs.flat["jsx-runtime"],
   {
@@ -18,4 +19,4 @@ export default tseslint.config(
       },
     },
   },
-);
+])

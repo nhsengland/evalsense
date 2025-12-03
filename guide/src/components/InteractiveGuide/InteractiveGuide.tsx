@@ -50,9 +50,30 @@ const initialState = {
   },
 };
 
+// Lazy initialization function for state
+const initializeGuideState = () => {
+  // Check if we're in a browser environment
+  if (typeof window === "undefined") {
+    return initialState;
+  }
+
+  const presetState = loadAndClearPreset();
+
+  if (presetState) {
+    if (presetState.activeStepId === "suggestions") {
+      const results = filterAndRankMethods(presetState.answers);
+      presetState.suggestionsData = results;
+    }
+
+    return { ...initialState, ...presetState };
+  }
+
+  const loadedState = loadGuideState();
+  return loadedState || initialState;
+};
+
 export default function InteractiveGuide() {
-  const [guideInitialized, setGuideInitialized] = useState(false);
-  const [guideState, setGuideState] = useState(initialState);
+  const [guideState, setGuideState] = useState(initializeGuideState);
 
   const { activeStepId, answers, selectedMethodIds, suggestionsData } =
     guideState;
@@ -63,22 +84,9 @@ export default function InteractiveGuide() {
   const activeStepIndex = steps.findIndex((step) => step.id === activeStepId);
   const currentQuestionConfig = getQuestionConfig(activeStepId);
 
-  useEffect(() => {
-    if (!guideInitialized) {
-      const presetState = loadAndClearPreset();
-      if (presetState) {
-        if (presetState.activeStepId === "suggestions") {
-          const results = filterAndRankMethods(presetState.answers);
-          presetState.suggestionsData = results;
-        }
-        setGuideState({ ...initialState, ...presetState });
-      } else {
-        const loadedState = loadGuideState();
-        setGuideState(loadedState || initialState);
-      }
-    }
-    setGuideInitialized(true);
-  }, [guideInitialized]);
+  const updateState = (newState) => {
+    setGuideState((prevState) => ({ ...prevState, ...newState }));
+  };
 
   useEffect(() => {
     saveGuideState({
@@ -88,28 +96,6 @@ export default function InteractiveGuide() {
       suggestionsData,
     });
   }, [activeStepId, answers, selectedMethodIds, suggestionsData]);
-
-  useEffect(() => {
-    if (
-      guideState.activeStepId === "suggestions" &&
-      guideState.suggestionsData.filteredMethods.length === 0 &&
-      !isLoadingSuggestions
-    ) {
-      setIsLoadingSuggestions(true);
-      const results = filterAndRankMethods(guideState.answers);
-      updateState({ suggestionsData: results });
-      setIsLoadingSuggestions(false);
-    }
-  }, [
-    guideState.activeStepId,
-    guideState.suggestionsData,
-    guideState.answers,
-    isLoadingSuggestions,
-  ]);
-
-  const updateState = (newState) => {
-    setGuideState((prevState) => ({ ...prevState, ...newState }));
-  };
 
   const handleAnswerChange = (
     questionId: string,
@@ -150,13 +136,16 @@ export default function InteractiveGuide() {
     if (nextStepId) {
       if (nextStepId === "suggestions") {
         setIsLoadingSuggestions(true);
-        // Need to pass current answers to the logic function
+        // Calculate suggestions before moving to the step
         const results = filterAndRankMethods(answers);
-        // Update suggestionsData within the main state object
-        updateState({ suggestionsData: results });
+        updateState({
+          suggestionsData: results,
+          activeStepId: nextStepId,
+        });
         setIsLoadingSuggestions(false);
+      } else {
+        setActiveStepId(nextStepId);
       }
-      setActiveStepId(nextStepId);
     }
   };
 
@@ -179,6 +168,14 @@ export default function InteractiveGuide() {
       case "welcome":
         return <WelcomeStep />;
       case "suggestions":
+        // If we somehow reach suggestions without data, show loading
+        if (suggestionsData.filteredMethods.length === 0) {
+          return (
+            <Box sx={{ display: "flex", justifyContent: "center", p: 3 }}>
+              <CircularProgress />
+            </Box>
+          );
+        }
         return (
           <SuggestionStep
             suggestedMethods={suggestionsData.filteredMethods}

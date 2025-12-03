@@ -44,6 +44,13 @@ const coverageColors: Record<CoverageLevel, string> = {
   Poor: "#ff9800", // orange
 };
 
+// @ts-expect-error: require.context is a webpack-specific feature
+const descriptionsContext = require.context(
+  "../../data/descriptions",
+  false,
+  /\.mdx$/,
+);
+
 export default function MethodDetailsModal({
   method,
   open,
@@ -59,15 +66,18 @@ export default function MethodDetailsModal({
       return;
     }
 
-    setIsLoading(true);
-
     async function loadLongDescription(fileName: string) {
+      setIsLoading(true);
       try {
-        const { default: Description } = await import(
-          `@site/src/data/descriptions/${fileName}`
-        );
-        setLongDescription(() => Description);
-        setHasLongDescription(true);
+        const key = `./${fileName}`;
+
+        if (descriptionsContext.keys().includes(key)) {
+          const Description = descriptionsContext(key).default;
+          setLongDescription(() => Description);
+          setHasLongDescription(true);
+        } else {
+          console.warn(`Description file not found in context: ${fileName}`);
+        }
       } catch (error) {
         console.error(`Failed to load description file: ${fileName}`, error);
       }
@@ -76,8 +86,6 @@ export default function MethodDetailsModal({
 
     if (method.description_long_file) {
       loadLongDescription(method.description_long_file);
-    } else {
-      setIsLoading(false);
     }
   }, [method]);
 
