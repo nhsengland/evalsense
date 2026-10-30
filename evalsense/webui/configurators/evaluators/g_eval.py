@@ -50,7 +50,7 @@ class GEvalConfigurator(EvaluatorConfigurator):
                 "input_name": "prompt_template",
                 "component": gr.TextArea(
                     label="Prompt Template",
-                    info="The prompt template to use for evaluation. The supplied template should be a Python f-string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. The template should instruct the judge model to respond with a numerical score between the specified `min_score` and `max_score`.",
+                    info="The prompt template to use for evaluation. The trusted template should be a format string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. Sample values are sent separately as JSON evidence. The judge must return one integer between the specified `min_score` and `max_score`.",
                     max_lines=15,
                 ),
                 "parser": None,
@@ -78,6 +78,16 @@ class GEvalConfigurator(EvaluatorConfigurator):
                     info="The arguments to pass to the model during generation, formatted as a Python dictionary. See [`GenerateConfigArgs`](https://inspect.aisi.org.uk/reference/inspect_ai.model.html#generateconfigargs) Inspect AI documentation for valid values.",
                 ),
                 "parser": dict_parser,
+            },
+            {
+                "input_name": "input_policy",
+                "component": gr.Dropdown(
+                    label="Judge Input Policy",
+                    choices=["isolate", "reject"],
+                    value="isolate",
+                    info="Separate evidence from instructions. Reject also screens known instruction phrases; it can flag quotations and miss other attacks.",
+                ),
+                "parser": None,
             },
             {
                 "input_name": "min_score",

@@ -28,6 +28,14 @@ answering models. It operates in two main stages:
   background/reference text that is missing from the evaluated text).
 </Typography>
 
+<Typography variant="body2" gutterBottom>
+  Evaluated text can contain requests aimed at the judge. EvalSense separates
+  evaluation instructions from the supplied evidence and checks the response
+  format. Optional screening can reject common instruction phrases, but can also
+  flag quotations and miss other attacks. A well-formed score is not proof that
+  the judge resisted manipulation; review adversarial cases separately.
+</Typography>
+
 <Typography variant="subtitle1" gutterBottom>
   Evaluation Modes
 </Typography>

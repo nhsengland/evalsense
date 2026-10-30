@@ -1,0 +1,31 @@
+name: Correctness tests
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+        dependencies: [locked]
+        include:
+          - python-version: "3.12"
+            dependencies: minimum
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.7.3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install base dependencies
+        run: uv sync --frozen --no-dev --python "${{ matrix.python-version }}"
+      - name: Check minimum supported Inspect and Polars
+        if: matrix.dependencies == 'minimum'
+        run: uv pip install 'inspect-ai==0.3.87' 'polars==1.22.0'
+      - name: Run regression tests
+        run: uv run --no-sync python -m unittest discover -s tests -v

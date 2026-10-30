@@ -7,16 +7,16 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
-- None
+- LLM judges now receive separate instruction and JSON evidence messages. QAGS prompt hooks must return `JudgePrompt`; mixed string prompts are rejected. G-Eval requires one complete integer response and QAGS validates answer labels before scoring.
 
 ### Enhancements
-- None
+- Record judge-input protocol and policy. Optional `input_policy="reject"` screens known instruction phrases without changing or dropping evidence; it is not a complete injection detector.
 
 ### Bug fixes
 - None
 
 ### Documentation
-- None
+- Migrate QAGS notebook prompt builders to `JudgePrompt`. Existing logs are unchanged. Use a fresh project/evaluator name, or bump an explicit evaluator version, before rescoring; scores from different prompt protocols are not directly interchangeable. Changing `input_policy` also requires a distinct evaluator identity. Prompt metadata now stores role-separated message records.
 
 ### Miscellaneous
 - None

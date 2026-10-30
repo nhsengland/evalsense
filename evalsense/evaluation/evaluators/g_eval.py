@@ -16,15 +16,30 @@ from evalsense.evaluation import (
     ScoreCalculator,
     ScorerFactory,
 )
+from evalsense.evaluation.judge_prompt import (
+    JudgeInputError,
+    JudgeInputPolicy,
+    JudgePrompt,
+    PROTOCOL,
+    validate_judge_data,
+    generate_judge,
+)
 from evalsense.generation import ModelConfig
 from evalsense.logging import get_logger
-from evalsense.utils.text import extract_score, extract_weighted_score, format_template
+from evalsense.utils.text import extract_score, extract_weighted_score
 
 logger = get_logger(__name__)
 
 
 class GEvalScoreCalculator(ScoreCalculator):
-    """G-Eval score calculator."""
+    """G-Eval with trusted template instructions and JSON-encoded sample fields.
+
+    Templates and provider configuration are trusted evaluator code. Sample data
+    never fills the system instructions. Complete in-range integer responses are
+    required before the existing optional log-probability weighting is applied.
+    Isolation and optional instruction screening are mitigations, not proof of
+    injection resistance. Re-score under a new evaluator identity when migrating.
+    """
 
     def __init__(
         self,
@@ -36,6 +51,8 @@ class GEvalScoreCalculator(ScoreCalculator):
         max_score: int = 10,
         normalise: bool = True,
         debug: bool = False,
+        *,
+        input_policy: JudgeInputPolicy = "isolate",
     ):
         """
         Initializes the G-Eval score calculator.
@@ -50,6 +67,8 @@ class GEvalScoreCalculator(ScoreCalculator):
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
+            input_policy (JudgeInputPolicy): Isolate evidence, or also reject known
+                instruction phrases. Screening is heuristic and may flag quotations.
         """
         self.model = model
         self.prompt_template = prompt_template
@@ -59,6 +78,8 @@ class GEvalScoreCalculator(ScoreCalculator):
         self.max_score = max_score
         self.normalise = normalise
         self.debug = debug
+        validate_judge_data(None, input_policy)
+        self.input_policy: JudgeInputPolicy = input_policy
         self.warned_weighted_score = False
 
     @override
@@ -69,7 +90,7 @@ class GEvalScoreCalculator(ScoreCalculator):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Score:
         """This method is not supported for G-Eval and will raise an error when called.
 
@@ -92,7 +113,7 @@ class GEvalScoreCalculator(ScoreCalculator):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Score:
         """Calculates the G-Eval score asynchronously.
 
@@ -111,16 +132,35 @@ class GEvalScoreCalculator(ScoreCalculator):
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,
         )
-        if metadata is None:
-            metadata = {}
-        llm_input = format_template(
+        validate_judge_data(
+            {
+                "prediction": prediction,
+                "reference": reference,
+                "input": input,
+                "metadata": metadata,
+            },
+            self.input_policy,
+        )
+        if metadata and {"prediction", "reference", "input"}.intersection(metadata):
+            raise JudgeInputError(
+                "Sample metadata must not override reserved judge fields."
+            )
+        prompt = JudgePrompt.from_template(
             self.prompt_template,
             prediction=prediction,
             reference=reference,
             input=input,
-            **metadata,
+            **(metadata or {}),
         )
-        output = await self.model.generate(llm_input, config=logprobs_config)
+        output, llm_input = await generate_judge(
+            self.model,
+            prompt,
+            logprobs_config,
+            policy=self.input_policy,
+            kind="rating",
+            min_score=self.min_score,
+            max_score=self.max_score,
+        )
 
         raw_score = extract_score(output.completion, self.min_score, self.max_score)
         if self.logprobs:
@@ -156,6 +196,8 @@ class GEvalScoreCalculator(ScoreCalculator):
             answer=prediction,
             metadata={
                 "prompt": llm_input,
+                "judge_input_protocol": PROTOCOL,
+                "judge_input_policy": self.input_policy,
                 "output_text": output.completion,
                 "raw_score": raw_score,
             },
@@ -178,6 +220,8 @@ class GEvalScorerFactory(ScorerFactory):
         max_score: int = 10,
         normalise: bool = True,
         debug: bool = False,
+        *,
+        input_policy: JudgeInputPolicy = "isolate",
     ):
         """
         Initialize the G-Eval scorer factory.
@@ -195,6 +239,8 @@ class GEvalScorerFactory(ScorerFactory):
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
+            input_policy (JudgeInputPolicy): Isolate evidence, or also reject known
+                instruction phrases. Screening is heuristic and may flag quotations.
         """
         self.name = name
         self.prompt_template = prompt_template
@@ -207,6 +253,8 @@ class GEvalScorerFactory(ScorerFactory):
         self.max_score = max_score
         self.normalise = normalise
         self.debug = debug
+        validate_judge_data(None, input_policy)
+        self.input_policy: JudgeInputPolicy = input_policy
 
     @override
     def create_scorer(self, model: Model) -> Scorer:
@@ -231,6 +279,7 @@ class GEvalScorerFactory(ScorerFactory):
                 max_score=self.max_score,
                 normalise=self.normalise,
                 debug=self.debug,
+                input_policy=self.input_policy,
             )
 
             async def score(state: TaskState, target: Target):
@@ -262,6 +311,7 @@ def get_g_eval_evaluator(
     max_score: int = 10,
     normalise: bool = True,
     debug: bool = False,
+    input_policy: JudgeInputPolicy = "isolate",
 ) -> Evaluator:
     """
     Constructs a G-Eval evaluator that can be used in EvalSense evaluation pipeline.
@@ -288,6 +338,8 @@ def get_g_eval_evaluator(
         max_score (int): The maximum valid score.
         normalise (bool): Whether to normalise the scores between 0 and 1.
         debug (bool): Whether to report repeated errors in the log.
+        input_policy (JudgeInputPolicy): Isolate evidence, or also reject known
+            instruction phrases. Does not guarantee injection resistance.
 
     Returns:
         Evaluator: The constructed G-Eval evaluator.
@@ -305,6 +357,7 @@ def get_g_eval_evaluator(
             max_score=max_score,
             normalise=normalise,
             debug=debug,
+            input_policy=input_policy,
         ),
         model_config=model_config,
     )

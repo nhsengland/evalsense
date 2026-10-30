@@ -17,6 +17,13 @@ from evalsense.evaluation import (
     ScoreCalculator,
     ScorerFactory,
 )
+from evalsense.evaluation.judge_prompt import (
+    JudgeInputPolicy,
+    JudgePrompt,
+    PROTOCOL,
+    generate_judge,
+    validate_judge_data,
+)
 from evalsense.generation import ModelConfig
 from evalsense.logging import get_logger
 from evalsense.utils.text import (
@@ -29,13 +36,21 @@ logger = get_logger(__name__)
 
 
 class QagsConfig(Protocol):
-    """A protocol for configuring QAGS evaluation."""
+    """Configuration for QAGS with an explicit judge instruction/data boundary.
+
+    Prompt hooks must return JudgePrompt. Keep instructions static and put source
+    texts, metadata, generated questions and answers in its data. Legacy strings
+    are rejected because their instruction boundary cannot be recovered safely.
+    Optional ``input_policy="reject"`` screens known instruction phrases without
+    rewriting the evidence. It can flag benign quotations and miss other attacks.
+    """
 
     answer_comparison_mode: Literal["ternary", "exact", "judge"]
     logprobs: bool
     top_logprobs: int
     ci: float
     debug: bool
+    input_policy: JudgeInputPolicy
 
     def __init__(
         self,
@@ -44,6 +59,8 @@ class QagsConfig(Protocol):
         top_logprobs: int = 20,
         ci: float = 0.1,
         debug: bool = False,
+        *,
+        input_policy: JudgeInputPolicy = "isolate",
     ):
         """
         Initializes the QAGS configuration.
@@ -66,12 +83,16 @@ class QagsConfig(Protocol):
                 answers with a score of 0.9 or are confident "yes", while answers
                 with a score of 0.1 or lower are confident "no".
             debug (bool): Whether to report repeated errors in the log.
+            input_policy (JudgeInputPolicy): Isolate evidence, or also reject known
+                instruction phrases in source data and generated intermediates.
         """
         self.answer_comparison_mode = answer_comparison_mode
         self.logprobs = logprobs
         self.top_logprobs = top_logprobs
         self.ci = ci
         self.debug = debug
+        validate_judge_data(None, input_policy)
+        self.input_policy = input_policy
 
     def enforce_not_none[T](self, param_name: str, param_value: T | None) -> T:
         """
@@ -100,7 +121,7 @@ class QagsConfig(Protocol):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> JudgePrompt:
         """
         Constructs the prompt for generating the questions for the model output.
 
@@ -122,7 +143,7 @@ class QagsConfig(Protocol):
                 state metadata. Optional.
 
         Returns:
-            str: The generated prompt.
+            JudgePrompt: Trusted instructions and untrusted data.
         """
         ...
 
@@ -136,7 +157,7 @@ class QagsConfig(Protocol):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> JudgePrompt:
         """
         Constructs the prompt for generating the answer to a single question.
 
@@ -158,7 +179,7 @@ class QagsConfig(Protocol):
                 state metadata. Optional.
 
         Returns:
-            str: The generated prompt.
+            JudgePrompt: Trusted instructions and untrusted data.
         """
         ...
 
@@ -172,7 +193,7 @@ class QagsConfig(Protocol):
         prediction: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> JudgePrompt:
         """
         Constructs the prompt for comparing answers to the generated questions.
 
@@ -190,7 +211,7 @@ class QagsConfig(Protocol):
                 state metadata. Optional.
 
         Returns:
-            str: The generated prompt.
+            JudgePrompt: Trusted instructions and untrusted data.
         """
         if self.answer_comparison_mode == "judge":
             raise NotImplementedError(
@@ -300,8 +321,15 @@ class QagsScoreCalculator(ScoreCalculator):
         # We don't actually need the logprobs until comparing the answers,
         # but the vLLM provider uses the config from the first sample in the batch
         # so we need to use consistent config for all samples.
-        prediction_questions_output = await self.model.generate(
-            prediction_questions_prompt, config=self.generate_config
+        (
+            prediction_questions_output,
+            prediction_questions_messages,
+        ) = await generate_judge(
+            self.model,
+            prediction_questions_prompt,
+            self.generate_config,
+            policy=self.config.input_policy,
+            kind="questions",
         )
         prediction_questions = extract_lines(
             prediction_questions_output.completion,
@@ -316,8 +344,12 @@ class QagsScoreCalculator(ScoreCalculator):
             reference=reference,
             metadata=metadata,
         )
-        reference_questions_output = await self.model.generate(
-            reference_questions_prompt, config=self.generate_config
+        reference_questions_output, reference_questions_messages = await generate_judge(
+            self.model,
+            reference_questions_prompt,
+            self.generate_config,
+            policy=self.config.input_policy,
+            kind="questions",
         )
         reference_questions = extract_lines(
             reference_questions_output.completion,
@@ -327,8 +359,8 @@ class QagsScoreCalculator(ScoreCalculator):
         questions = prediction_questions + reference_questions
 
         score_metadata["questions"] = questions
-        score_metadata["prediction_questions_prompt"] = prediction_questions_prompt
-        score_metadata["reference_questions_prompt"] = reference_questions_prompt
+        score_metadata["prediction_questions_prompt"] = prediction_questions_messages
+        score_metadata["reference_questions_prompt"] = reference_questions_messages
         score_metadata["raw_prediction_questions"] = (
             prediction_questions_output.completion
         )
@@ -381,8 +413,14 @@ class QagsScoreCalculator(ScoreCalculator):
                 reference=reference,
                 metadata=metadata,
             )
-            prediction_answer_output = await self.model.generate(
-                prediction_answer_prompt, config=self.generate_config
+            prediction_answer_output, prediction_answer_messages = await generate_judge(
+                self.model,
+                prediction_answer_prompt,
+                self.generate_config,
+                policy=self.config.input_policy,
+                kind="ternary"
+                if self.config.answer_comparison_mode == "ternary"
+                else "text",
             )
             prediction_answers.append(prediction_answer_output.completion)
 
@@ -394,8 +432,14 @@ class QagsScoreCalculator(ScoreCalculator):
                 reference=reference,
                 metadata=metadata,
             )
-            reference_answer_output = await self.model.generate(
-                reference_answer_prompt, config=self.generate_config
+            reference_answer_output, reference_answer_messages = await generate_judge(
+                self.model,
+                reference_answer_prompt,
+                self.generate_config,
+                policy=self.config.input_policy,
+                kind="ternary"
+                if self.config.answer_comparison_mode == "ternary"
+                else "text",
             )
             reference_answers.append(reference_answer_output.completion)
 
@@ -405,8 +449,10 @@ class QagsScoreCalculator(ScoreCalculator):
             score_metadata["raw_reference_answers"].append(
                 reference_answer_output.completion
             )
-            score_metadata["prediction_answer_prompts"].append(prediction_answer_prompt)
-            score_metadata["reference_answer_prompts"].append(reference_answer_prompt)
+            score_metadata["prediction_answer_prompts"].append(
+                prediction_answer_messages
+            )
+            score_metadata["reference_answer_prompts"].append(reference_answer_messages)
 
         return prediction_answers, reference_answers
 
@@ -608,6 +654,7 @@ class QagsScoreCalculator(ScoreCalculator):
             Score: The Inspect AI Score object with the calculated result.
         """
         answer_comparisons: list[float] = []
+        score_metadata["answer_comparison_prompts"] = []
         for question, prediction_answer, reference_answer in zip(
             questions,
             raw_prediction_answers,
@@ -622,8 +669,12 @@ class QagsScoreCalculator(ScoreCalculator):
                 reference=reference,
                 metadata=metadata,
             )
-            answer_comparison_output = await self.model.generate(
-                answer_comparison_prompt, config=self.generate_config
+            answer_comparison_output, answer_comparison_messages = await generate_judge(
+                self.model,
+                answer_comparison_prompt,
+                self.generate_config,
+                policy=self.config.input_policy,
+                kind="binary",
             )
             answer_comparison = float(
                 extract_ternary_answer(
@@ -654,6 +705,9 @@ class QagsScoreCalculator(ScoreCalculator):
 
                         logger.error(error_message)
             answer_comparisons.append(answer_comparison)
+            score_metadata["answer_comparison_prompts"].append(
+                answer_comparison_messages
+            )
 
         def to_match_symbol(answer_comparison: float) -> str:
             if answer_comparison > 1 - self.config.ci:
@@ -736,7 +790,19 @@ class QagsScoreCalculator(ScoreCalculator):
             Score: The Inspect AI Score object with the calculated result.
         """
 
-        score_metadata = {}
+        validate_judge_data(
+            {
+                "prediction": prediction,
+                "reference": reference,
+                "input": input,
+                "metadata": metadata,
+            },
+            self.config.input_policy,
+        )
+        score_metadata = {
+            "judge_input_protocol": PROTOCOL,
+            "judge_input_policy": self.config.input_policy,
+        }
 
         all_questions = await self._generate_questions(
             prediction=prediction,
