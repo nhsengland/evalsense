@@ -1,11 +1,12 @@
 from abc import abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Protocol, runtime_checkable
 
 from inspect_ai.model import Model
 from inspect_ai.scorer import Score, Scorer
 
 from evalsense.generation import ModelConfig
+from evalsense.evaluation.metric_implementation import MetricImplementation
 
 
 @runtime_checkable
@@ -86,12 +87,19 @@ class ScorerFactory(Protocol):
 
 @dataclass
 class Evaluator:
-    """A class for LLM output evaluators."""
+    """A class for LLM output evaluators.
+
+    Attributes:
+        implementation (MetricImplementation | None): Immutable built-in metric
+            provenance, included in evaluation identity. Custom evaluators default
+            to None and retain their existing identity.
+    """
 
     name: str
     scorer: Scorer | ScorerFactory
     model_config: ModelConfig | None = None
     cleanup_fun: Callable[[], None] | None = None
+    implementation: MetricImplementation | None = field(default=None, kw_only=True)
 
     @property
     def model_name(self) -> str:

@@ -1,3 +1,4 @@
+from evalsense.evaluation.metric_implementation import MetricImplementation
 from evalsense.evaluation.evaluator import Evaluator, ScoreCalculator, ScorerFactory
 from evalsense.evaluation.experiment import (
     EvaluationRecord,
@@ -12,6 +13,7 @@ from evalsense.evaluation.experiment import (
 )
 
 __all__ = [
+    "MetricImplementation",
     "Evaluator",
     "ScoreCalculator",
     "ScorerFactory",

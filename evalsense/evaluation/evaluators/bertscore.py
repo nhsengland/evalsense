@@ -1,7 +1,6 @@
 import gc
 from typing import Any, override
 
-import evaluate
 from inspect_ai.scorer import (
     Metric,
     Score,
@@ -14,6 +13,7 @@ from inspect_ai.solver import TaskState
 from inspect_ai.util import concurrency
 
 from evalsense.evaluation import Evaluator, ScoreCalculator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 
 
 class BertScoreCalculator(ScoreCalculator):
@@ -37,7 +37,8 @@ class BertScoreCalculator(ScoreCalculator):
             num_layers (int, optional): The layer of representations to use.
             idf (bool | dict[str, float], optional): Use IDF weighting — can be a precomputed IDF dictionary.
         """
-        self.bertscore_module = evaluate.load("bertscore")
+        self.implementation = MetricImplementation.resolve("bertscore")
+        self.bertscore_module = self.implementation.load()
         self.model_type = model_type
         self.lang = lang
         self.num_layers = num_layers
@@ -111,6 +112,7 @@ class BertScoreCalculator(ScoreCalculator):
             answer=prediction,
             metadata={
                 "hashcode": result["hashcode"],  # type: ignore
+                "metric_provenance": self.implementation.provenance,
             },
         )
 
@@ -235,7 +237,7 @@ def get_bertscore_evaluator(
                 setattr(
                     calculator,
                     "bertscore_module",
-                    evaluate.load("bertscore"),
+                    calculator.implementation.load(),
                 )
 
     def cleanup_bertscore() -> None:
@@ -271,4 +273,5 @@ def get_bertscore_evaluator(
         name=name,
         scorer=bertscore_scorer(),
         cleanup_fun=cleanup_bertscore,
+        implementation=calculator.implementation,
     )

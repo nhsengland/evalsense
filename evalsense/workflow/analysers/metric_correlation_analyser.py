@@ -12,6 +12,8 @@ import seaborn as sns
 
 from evalsense.workflow import Project, ResultAnalyser
 
+from evalsense.workflow.analysers._provenance import check_metric_implementations
+
 OUTPUT_FORMATTERS = {
     "polars": lambda df: df,
     "pandas": lambda df: df.to_pandas(),
@@ -92,6 +94,7 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
                 optionally a visualization.
         """
         eval_logs = project.get_logs(type="evaluation", status="success")
+        check_metric_implementations(eval_logs)
 
         result_data: dict[str, list[float | int]] = defaultdict(list)
         for log in eval_logs.values():

@@ -1,6 +1,5 @@
 from typing import Any, cast, override
 
-import evaluate
 from inspect_ai.scorer import (
     Metric,
     MetricProtocol,
@@ -15,13 +14,15 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 
 from evalsense.evaluation import Evaluator, ScoreCalculator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 
 
 class BleuPrecisionScoreCalculator(ScoreCalculator):
     """Calculator for computing BLEU scores."""
 
     def __init__(self):
-        self.bleu_module = evaluate.load("bleu")
+        self.implementation = MetricImplementation.resolve("bleu")
+        self.bleu_module = self.implementation.load()
 
     @override
     def calculate(
@@ -63,6 +64,7 @@ class BleuPrecisionScoreCalculator(ScoreCalculator):
             metadata={
                 "prediction": prediction,
                 "reference": reference,
+                "metric_provenance": self.implementation.provenance,
             },
         )
 
@@ -98,16 +100,35 @@ class BleuPrecisionScoreCalculator(ScoreCalculator):
         )
 
 
-def bleu_metric() -> MetricProtocol:
+def bleu_metric(
+    *, implementation: MetricImplementation | None = None
+) -> MetricProtocol:
     """
     Base metric for BLEU scores.
+
+    Args:
+        implementation (MetricImplementation | None): Pinned implementation shared
+            with the sample scorer. Defaults to the supported BLEU implementation.
+
+    Rejects input scores with absent or different implementation provenance.
+    Historical scores must be rescored before recomputing this corpus metric.
 
     Returns:
         MetricProtocol: A function that computes BLEU scores.
     """
 
+    implementation = implementation or MetricImplementation.resolve("bleu")
+
     def metric(scores: list[SampleScore]) -> Value:
-        bleu_module = evaluate.load("bleu")
+        if any(
+            (score.score.metadata or {}).get("metric_provenance")
+            != implementation.provenance
+            for score in scores
+        ):
+            raise ValueError(
+                "Corpus BLEU requires scores from the same recorded metric implementation."
+            )
+        bleu_module = implementation.load()
         predictions = [score.score.metadata["prediction"] for score in scores]  # type: ignore
         references = [score.score.metadata["reference"] for score in scores]  # type: ignore
         result = bleu_module.compute(predictions=predictions, references=references)
@@ -138,14 +159,14 @@ def get_bleu_evaluator(
         Evaluator: An evaluator for BLEU scores.
     """
 
+    bleu_calculator = BleuPrecisionScoreCalculator()
+
     @metric(name=name)
     def bleu() -> MetricProtocol:
-        return bleu_metric()
+        return bleu_metric(implementation=bleu_calculator.implementation)
 
     if metrics is None:
         metrics = [bleu()]
-
-    bleu_calculator = BleuPrecisionScoreCalculator()
 
     @scorer(name=scorer_name, metrics=metrics)
     def bleu_precision_scorer() -> Scorer:
@@ -156,4 +177,8 @@ def get_bleu_evaluator(
 
         return score
 
-    return Evaluator(name, scorer=bleu_precision_scorer())
+    return Evaluator(
+        name,
+        scorer=bleu_precision_scorer(),
+        implementation=bleu_calculator.implementation,
+    )

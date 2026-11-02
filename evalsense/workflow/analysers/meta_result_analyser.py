@@ -9,6 +9,8 @@ from scipy.stats import spearmanr
 from evalsense.evaluation import MetaTierGroupedRecord
 from evalsense.workflow import Project, ResultAnalyser
 
+from evalsense.workflow.analysers._provenance import check_metric_implementations
+
 OUTPUT_FORMATTERS = {
     "polars": lambda df: df,
     "pandas": lambda df: df.to_pandas(),
@@ -64,6 +66,7 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
             T: The analysed results in the specified output format.
         """
         eval_logs = project.get_logs(type="evaluation", status="success")
+        check_metric_implementations(eval_logs)
 
         # Data structure for tracking the intermediate results
         # The nested dictionary is indexed by perturbation record → sample ID → perturbation tier

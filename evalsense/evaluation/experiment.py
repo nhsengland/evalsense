@@ -52,11 +52,15 @@ class GenerationRecord(BaseModel, frozen=True):
     model_record: ModelRecord
     experiment_name: str | None = None
 
-    def get_evaluation_record(self, evaluator_name: str) -> "EvaluationRecord":
+    def get_evaluation_record(
+        self, evaluator_name: str, *, evaluator_provenance_json: str = ""
+    ) -> "EvaluationRecord":
         """Generates an evaluation record from the generation record.
 
         Args:
             evaluator_name (str): The name of the evaluator.
+            evaluator_provenance_json (str): Canonical metric implementation
+                provenance. Empty for legacy or custom evaluators.
 
         Returns:
             EvaluationRecord: The evaluation record.
@@ -64,6 +68,7 @@ class GenerationRecord(BaseModel, frozen=True):
         return EvaluationRecord(
             **self.model_dump(),
             evaluator_name=evaluator_name,
+            evaluator_provenance_json=evaluator_provenance_json,
         )
 
     @property
@@ -150,9 +155,11 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         model_record (ModelRecord): The record of the model.
         experiment_name (str | None): The name of the experiment, if applicable.
         evaluator_name (str): The name of the evaluator.
+        evaluator_provenance_json (str): Recorded metric implementation and runtime.
     """
 
     evaluator_name: str
+    evaluator_provenance_json: str = ""
 
     @property
     def generation_record(self) -> GenerationRecord:
@@ -162,7 +169,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
             GenerationRecord: The generation record.
         """
         return GenerationRecord(
-            **self.model_dump(exclude={"evaluator_name"}),
+            **self.model_dump(exclude={"evaluator_name", "evaluator_provenance_json"}),
         )
 
     def get_meta_grouped_record(self, metric_name: str) -> "MetaTierGroupedRecord":
@@ -206,7 +213,11 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         generation_equal = super().__eq__(other)
         if generation_equal is NotImplemented:
             return generation_equal
-        return generation_equal and self.evaluator_name == other.evaluator_name
+        return (
+            generation_equal
+            and self.evaluator_name == other.evaluator_name
+            and self.evaluator_provenance_json == other.evaluator_provenance_json
+        )
 
     def __lt__(self, other: object) -> bool:
         """Checks if this record is less than another record.
@@ -222,7 +233,10 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         if super().__lt__(other):
             return True
         elif super().__eq__(other):
-            return self.evaluator_name < other.evaluator_name
+            return (self.evaluator_name, self.evaluator_provenance_json) < (
+                other.evaluator_name,
+                other.evaluator_provenance_json,
+            )
         else:
             return False
 
@@ -240,6 +254,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
                 self.model_record,
                 self.experiment_name,
                 self.evaluator_name,
+                self.evaluator_provenance_json,
             )
         )
 
@@ -257,6 +272,7 @@ class MetaTierGroupedRecord(EvaluationRecord, frozen=True):
         model_record (ModelRecord): The record of the model.
         experiment_name (str | None): The name of the experiment, if applicable.
         evaluator_name (str): The name of the evaluator.
+        evaluator_provenance_json (str): Recorded metric implementation and runtime.
         metric_name (str): The name of the metric being evaluated.
     """
 
@@ -314,6 +330,7 @@ class MetaTierGroupedRecord(EvaluationRecord, frozen=True):
                 self.model_record,
                 self.experiment_name,
                 self.evaluator_name,
+                self.evaluator_provenance_json,
                 self.metric_name,
             )
         )
@@ -362,6 +379,11 @@ class ExperimentConfig:
 
         return self.generation_record.get_evaluation_record(
             self.evaluator.name,
+            evaluator_provenance_json=(
+                self.evaluator.implementation.provenance_json
+                if self.evaluator.implementation is not None
+                else ""
+            ),
         )
 
 
