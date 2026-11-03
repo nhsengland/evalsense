@@ -19,7 +19,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - None
 
 ### Miscellaneous
-- None
+- Add a baseline correctness suite and CI matrix for numerical metrics, statistical analysis, cache reuse and judge failure handling. The test runner rejects empty and entirely skipped runs.
 
 ## v0.1.6
 
