@@ -16,7 +16,7 @@ jobs:
             dependencies: minimum
     env:
       MPLBACKEND: Agg
-      HF_HOME: ${{ runner.temp }}/evalsense-test-metrics
+      HF_HOME: ${{ github.workspace }}/.cache/evalsense-test-metrics
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
