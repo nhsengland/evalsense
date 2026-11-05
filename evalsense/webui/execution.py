@@ -15,6 +15,7 @@ from evalsense.tasks.task_preprocessor import DefaultTaskPreprocessor
 from evalsense.webui.configurators import EvaluatorConfigurator
 from evalsense.webui.state import AppState
 from evalsense.workflow import Pipeline, Project
+from evalsense.utils.cache import fingerprint
 
 
 def get_dataset_manager(state: AppState) -> DatasetManager:
@@ -155,6 +156,21 @@ def execute_meta_evaluation(state: AppState):
             dataset_manager=dataset_manager,
             generation_steps=generation_steps,
             field_spec=perturbation_record_to_sample,
+            field_spec_version=fingerprint(
+                {
+                    "mapper": "meta-evaluation-v1",
+                    "fields": {
+                        key: state[key]
+                        for key in (
+                            "input_field_name",
+                            "target_field_name",
+                            "choices_field_name",
+                            "id_field_name",
+                            "metadata_fields",
+                        )
+                    },
+                }
+            ),
             task_preprocessor=perturb_task_preprocessor,
         )
         tasks.append(task_config)
