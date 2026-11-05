@@ -1,33 +1,29 @@
+# EvalSense
+
+A framework for systematic evaluation of large language models on open-ended, domain-specific tasks.
+
+[![PyPI](https://img.shields.io/pypi/v/evalsense)](https://pypi.org/project/evalsense/)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue)](https://github.com/nhsengland/evalsense/blob/main/pyproject.toml)
+[![CI](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml/badge.svg)](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml)
+[![MIT licence](https://img.shields.io/badge/Licence-MIT-green)](https://github.com/nhsengland/evalsense/blob/main/LICENCE)
+
 > [!NOTE]
-> This project is under development. The API may undergo major changes between versions, so we recommend checking the [CHANGELOG](https://github.com/nhsengland/evalsense/blob/main/CHANGELOG.md) for any breaking changes before upgrading.
+> This project is under active development. APIs may change between versions. Check the [changelog](./CHANGELOG.md) before upgrading.
 
-# EvalSense: LLM Evaluation
+## Project leadership
 
-<div align="center">
+EvalSense is owned and managed by NHS England's Data Science and Applied AI team.
 
-[![status: experimental](https://github.com/GIScience/badges/raw/master/status/experimental.svg)](https://github.com/GIScience/badges#experimental)
-[![PyPI package version](https://img.shields.io/pypi/v/evalsense)](https://pypi.org/project/evalsense/)
-[![license: MIT](https://img.shields.io/badge/License-MIT-brightgreen)](https://github.com/nhsengland/evalsense/blob/main/LICENCE)
-[![EvalSense status](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml/badge.svg)](https://github.com/nhsengland/evalsense/actions/workflows/evalsense.yml)
-[![Guide status](https://github.com/nhsengland/evalsense/actions/workflows/guide.yml/badge.svg)](https://github.com/nhsengland/evalsense/actions/workflows/guide.yml)
-[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff)](https://www.python.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
-[![React](https://img.shields.io/badge/-React-61DAFB?logo=react&logoColor=white&style=flat)](https://react.dev/)
+| Role | Person |
+| --- | --- |
+| **Scientific and Technical Lead** | [Sylvester Kaczmarek (@sylvesterkaczmarek)](https://github.com/sylvesterkaczmarek) |
+| **Creator** | [Adam Dejl (@adamdejl)](https://github.com/adamdejl) |
 
-</div>
-<div align="center">
-
-[![Python v3.12](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org/downloads/)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Checked with pyright](https://microsoft.github.io/pyright/img/pyright_badge.svg)](https://microsoft.github.io/pyright/)
-[![ESLint](https://img.shields.io/badge/ESLint-3A33D1?logo=eslint)](https://eslint.org/)
-
-</div>
+Sylvester leads current scientific and technical development and maintenance, including work on evaluation correctness, reproducibility and reliability. Adam originally created EvalSense through an NHS England PhD Data Science internship.
 
 ## About
 
-EvalSense is a framework for systematic evaluation of large language models (LLMs) on open-ended generation tasks, with a particular focus on bespoke, domain-specific evaluations. Some of its key features include:
+EvalSense supports the evaluation of open-ended text generation, with a particular focus on bespoke, domain-specific methods. Its key features include:
 
 - **Broad model support.** Out-of-the-box compatibility with a wide range of local and API-based model providers, including [Ollama](https://github.com/ollama/ollama), [Hugging Face](https://github.com/huggingface/transformers), [vLLM](https://github.com/vllm-project/vllm), [OpenAI](https://platform.openai.com/docs/api-reference/introduction), [Anthropic](https://docs.claude.com/en/home) and [others](https://inspect.aisi.org.uk/providers.html).
 - **Evaluation guidance.** An [interactive evaluation guide](https://nhsengland.github.io/evalsense/guide) and automated meta-evaluation tools assist in selecting the most appropriate evaluation methods for a specific use-case, including the use of perturbed data to assess method effectiveness.
@@ -41,7 +37,7 @@ More information about EvalSense can be found on its [homepage](https://nhsengla
 
 _**Note:** Only public or fake data are shared in this repository._
 
-## Project Stucture
+## Project structure
 
 - The main code for the EvalSense Python package can be found under [`evalsense/`](https://github.com/nhsengland/evalsense/tree/main/evalsense).
 - The accompanying documentation is available in the [`docs/`](https://github.com/nhsengland/evalsense/tree/main/docs) folder.
@@ -92,7 +88,7 @@ To clone the repo:
 
 `git clone git@github.com:nhsengland/evalsense.git`
 
-To setup the Python environment for the project:
+To set up the Python environment for the project:
 
 - Install [uv](https://github.com/astral-sh/uv) if it's not installed already
 - `uv sync --all-extras`
@@ -101,7 +97,7 @@ To setup the Python environment for the project:
 
 Note that the code is formatted with [ruff](https://github.com/astral-sh/ruff) and type-checked by [pyright](https://github.com/microsoft/pyright) in `standard` type checking mode. For the best development experience, we recommend enabling the corresponding extensions in your preferred code editor.
 
-To setup the Node environment for the LLM evaluation guide (located under [`guide/`](https://github.com/nhsengland/evalsense/tree/main/guide)):
+To set up the Node environment for the LLM evaluation guide (located under [`guide/`](https://github.com/nhsengland/evalsense/tree/main/guide)):
 
 - Install [node](https://nodejs.org/en/download) if it's not installed already
 - Change to the `guide/` directory (`cd guide`)
@@ -130,25 +126,23 @@ after installing the package and its dependencies. Note that you need to install
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Contributions are welcome. Please review [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b amazing-feature`)
-3. Commit your Changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the Branch (`git push origin amazing-feature`)
-5. Open a Pull Request
+1. Fork the repository.
+2. Create a branch (`git checkout -b feature/short-description`).
+3. Make and test your changes.
+4. Commit and push your branch.
+5. Open a pull request.
 
-_See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidance._
-
-## License
+## Licence
 
 Unless stated otherwise, the codebase is released under [the MIT Licence][mit].
 This covers both the codebase and any sample code in the documentation.
 
-_See [LICENSE](./LICENSE) for more information._
+_See [LICENCE](./LICENCE) for more information._
 
 The documentation is [© Crown copyright][copyright] and available under the terms
-of the [Open Government 3.0][ogl] licence.
+of the [Open Government Licence v3.0][ogl].
 
 [mit]: LICENCE
 [copyright]: http://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/
@@ -156,7 +150,7 @@ of the [Open Government 3.0][ogl] licence.
 
 ## Contact
 
-This project is currently maintained by [@adamdejl](https://github.com/adamdejl). If you have any questions, suggestions for new features or want to report a bug, please [open an issue](https://github.com/nhsengland/evalsense/issues/new/choose). For security concerns, please file a [private vulnerability report](https://github.com/nhsengland/evalsense/security/advisories/new).
+EvalSense is currently maintained by [Sylvester Kaczmarek](https://github.com/sylvesterkaczmarek), its Scientific and Technical Lead. For bugs, feature requests and contributions, please [open an issue](https://github.com/nhsengland/evalsense/issues/new/choose) or [submit a pull request](https://github.com/nhsengland/evalsense/compare). Report security vulnerabilities through a [private vulnerability report](https://github.com/nhsengland/evalsense/security/advisories/new).
 
 To find out more about the [NHS England Data Science](https://nhsengland.github.io/datascience/) visit our [project website](https://nhsengland.github.io/datascience/our_work/) or get in touch at [datascience@nhs.net](mailto:datascience@nhs.net).
 
