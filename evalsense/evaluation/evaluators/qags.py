@@ -867,6 +867,7 @@ def get_qags_evaluator(
     | dict[str, list[Metric]]
     | None = None,
     model_config: ModelConfig,
+    version: str | None = None,
 ) -> Evaluator:
     """
     Constructs a QAGS evaluator that can be used in EvalSense evaluation pipeline.
@@ -882,11 +883,20 @@ def get_qags_evaluator(
         model_config (ModelConfig): The configuration of the model to be used
             for evaluation.
 
+        version (str | None): Cache version for custom code or external resources.
+
     Returns:
         Evaluator: The constructed QAGS evaluator.
     """
+    cache_parameters = {
+        "method": "qags",
+        "config": {"implementation": type(config), "parameters": vars(config)},
+        "metrics": metrics,
+    }
     metric_name = f"{name} ({model_name or model_config.name})"
     return Evaluator(
+        version=version,
+        cache_parameters=cache_parameters,
         name=metric_name,
         scorer=QagsScorerFactory(
             name=metric_name,

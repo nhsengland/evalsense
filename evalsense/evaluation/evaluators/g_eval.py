@@ -262,6 +262,7 @@ def get_g_eval_evaluator(
     max_score: int = 10,
     normalise: bool = True,
     debug: bool = False,
+    version: str | None = None,
 ) -> Evaluator:
     """
     Constructs a G-Eval evaluator that can be used in EvalSense evaluation pipeline.
@@ -289,11 +290,27 @@ def get_g_eval_evaluator(
         normalise (bool): Whether to normalise the scores between 0 and 1.
         debug (bool): Whether to report repeated errors in the log.
 
+        version (str | None): Cache version for custom code or external resources.
+
     Returns:
         Evaluator: The constructed G-Eval evaluator.
     """
+    cache_parameters = {
+        "method": "g_eval",
+        "quality_name": quality_name,
+        "metrics": metrics,
+        "prompt_template": prompt_template,
+        "logprobs": logprobs,
+        "top_logprobs": top_logprobs,
+        "min_score": min_score,
+        "max_score": max_score,
+        "normalise": normalise,
+        "debug": debug,
+    }
     metric_name = f"{name} ({quality_name}, {model_name or model_config.name})"
     return Evaluator(
+        version=version,
+        cache_parameters=cache_parameters,
         name=metric_name,
         scorer=GEvalScorerFactory(
             name=metric_name,

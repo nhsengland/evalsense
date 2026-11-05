@@ -7,15 +7,16 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
-- None
+- Custom solvers, preprocessing functions, and sample mappers now require explicit cache versions. Existing name-only cache entries remain readable but are not reused.
 
 ### Enhancements
-- None
+- Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
 
 ### Bug fixes
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
 
 ### Documentation
+- Add result-management guidance, notebook cache notes and fingerprint field documentation.
 - Restore correlation analyser argument documentation and consolidate pairing, count and label guidance in the API docstrings.
 
 ### Miscellaneous
