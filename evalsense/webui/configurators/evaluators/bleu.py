@@ -28,8 +28,8 @@ class BleuConfigurator(EvaluatorConfigurator):
             {
                 "input_name": "name",
                 "component": gr.Textbox(
-                    label="Metric Name",
-                    info="The name of the metric to show in the results.",
+                    label="Evaluator Name",
+                    info="Evaluator name; its corpus aggregate is labelled <name> (corpus).",
                     value="BLEU",
                 ),
                 "parser": None,
@@ -38,8 +38,8 @@ class BleuConfigurator(EvaluatorConfigurator):
                 "input_name": "scorer_name",
                 "component": gr.Textbox(
                     label="Scorer Name",
-                    info="The name of the internal scorer to show in the results.",
-                    value="BLEU Precision",
+                    info="Sample-level unsmoothed BLEU-4 used in correlation and meta-evaluation.",
+                    value="Sentence BLEU",
                 ),
                 "parser": None,
             },

@@ -14,8 +14,9 @@ def check_metric_implementations(logs: dict[EvaluationRecord, EvalLog]) -> None:
     seen: dict[tuple[str, str], str] = {}
     for record, log in logs.items():
         labels = {("evaluator", record.evaluator_name)}
-        if log.results:
-            labels.update(("score", score.name) for score in log.results.scores)
+        results = getattr(log, "results", None)
+        if results:
+            labels.update(("score", score.name) for score in results.scores)
         for sample in log.samples or []:
             for name, score in (sample.scores or {}).items():
                 labels.add(("score", name))

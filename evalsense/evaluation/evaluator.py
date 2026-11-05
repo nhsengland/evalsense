@@ -7,6 +7,7 @@ from inspect_ai.scorer import Score, Scorer
 
 from evalsense.generation import ModelConfig
 from evalsense.evaluation.metric_implementation import MetricImplementation
+from evalsense.utils.cache import fingerprint
 
 
 @runtime_checkable
@@ -87,19 +88,37 @@ class ScorerFactory(Protocol):
 
 @dataclass
 class Evaluator:
-    """A class for LLM output evaluators.
-
-    Attributes:
-        implementation (MetricImplementation | None): Immutable built-in metric
-            provenance, included in evaluation identity. Custom evaluators default
-            to None and retain their existing identity.
-    """
+    """A class for LLM output evaluators."""
 
     name: str
     scorer: Scorer | ScorerFactory
     model_config: ModelConfig | None = None
     cleanup_fun: Callable[[], None] | None = None
+    version: str | None = None
+    cache_parameters: dict[str, Any] | None = None
     implementation: MetricImplementation | None = field(default=None, kw_only=True)
+
+    @property
+    def cache_key(self) -> str:
+        """Include the scorer's declared configuration and judge model settings."""
+        params: dict[str, Any] = {
+            "scorer": self.scorer
+            if self.cache_parameters is None
+            else {
+                "implementation": self.scorer
+                if callable(self.scorer)
+                else type(self.scorer),
+                "parameters": self.cache_parameters,
+            },
+            "model": self.model_config.record
+            if self.model_config is not None
+            else None,
+        }
+        # Preserve existing custom-evaluator fingerprints; built-in metric script
+        # and runtime changes must invalidate evaluation reuse.
+        if self.implementation is not None:
+            params["metric_implementation"] = self.implementation.provenance_json
+        return fingerprint(params, version=self.version)
 
     @property
     def model_name(self) -> str:

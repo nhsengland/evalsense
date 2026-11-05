@@ -205,11 +205,14 @@ class ImplementationTests(unittest.TestCase):
         self.assertEqual(legacy.evaluator_provenance_json, "")
 
     def test_custom_evaluators_keep_their_existing_identity(self):
-        evaluator = Evaluator("custom", cast(Any, lambda: None))
+        evaluator = Evaluator("custom", cast(Any, lambda: None), version="1")
         record = experiment(evaluator).evaluation_record
         self.assertEqual(record.evaluator_provenance_json, "")
         self.assertEqual(
-            record, record.generation_record.get_evaluation_record("custom")
+            record,
+            record.generation_record.get_evaluation_record(
+                "custom", evaluator_fingerprint=record.evaluator_fingerprint
+            ),
         )
 
     def test_direct_scores_preserve_values_and_include_manifest(self):
@@ -373,7 +376,12 @@ class ImplementationTests(unittest.TestCase):
                         ValueError, "different metric implementations"
                     ),
                 ):
-                    cls()(project)
+                    if cls is TabularResultAnalyser:
+                        TabularResultAnalyser()(project)
+                    elif cls is MetricCorrelationAnalyser:
+                        MetricCorrelationAnalyser()(project)
+                    else:
+                        MetaResultAnalyser()(project, expected_tiers=[0, 1])
         check_metric_implementations({record: source_log()})
         legacy = record.model_copy(update={"evaluator_provenance_json": ""})
         check_metric_implementations({legacy: source_log()})
