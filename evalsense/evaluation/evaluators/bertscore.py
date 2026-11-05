@@ -16,15 +16,26 @@ from inspect_ai.util import concurrency
 from evalsense.evaluation import Evaluator, ScoreCalculator
 
 
+def _validate_pairwise_idf(idf: bool) -> None:
+    """Do not estimate corpus weights from the single pair supplied to compute."""
+    if idf is not False:
+        raise ValueError(
+            "BERTScore IDF weighting requires a reference corpus. "
+            "This evaluator scores one pair at a time and supports only idf=False. "
+            "Automatic IDF and precomputed IDF dictionaries are not supported "
+            "by this backend; use a corpus-aware BERTScore scorer for IDF weighting."
+        )
+
+
 class BertScoreCalculator(ScoreCalculator):
-    """Calculator for computing BERTScores."""
+    """Calculator for per-sample BERTScore without IDF weighting."""
 
     def __init__(
         self,
         model_type: str = "microsoft/deberta-xlarge-mnli",
         lang: str = "en",
         num_layers: int | None = None,
-        idf: bool | dict[str, float] = False,
+        idf: bool = False,
     ):
         """
         Initializes the BERTScore calculator.
@@ -35,8 +46,14 @@ class BertScoreCalculator(ScoreCalculator):
                 model according to BERTScore authors.
             lang (str, optional): The language of the text. Defaults to "en".
             num_layers (int, optional): The layer of representations to use.
-            idf (bool | dict[str, float], optional): Use IDF weighting — can be a precomputed IDF dictionary.
+            idf (bool, optional): Must be False. Estimating IDF from a single
+                reference is invalid, and the Evaluate backend does not use supplied
+                IDF dictionaries as fixed weights. Defaults to False.
+
+        Raises:
+            ValueError: If idf is not False. No metric or model is loaded in that case.
         """
+        _validate_pairwise_idf(idf)
         self.bertscore_module = evaluate.load("bertscore")
         self.model_type = model_type
         self.lang = lang
@@ -84,6 +101,9 @@ class BertScoreCalculator(ScoreCalculator):
                 "Reference is required for computing BERTScore, but was None."
             )
 
+        # Configuration is public and may have changed since construction.
+        _validate_pairwise_idf(self.idf)
+        _validate_pairwise_idf(kwargs.get("idf", False))
         predictions = [prediction]
         references = [reference]
 
@@ -94,7 +114,7 @@ class BertScoreCalculator(ScoreCalculator):
             model_type=self.model_type,
             num_layers=self.num_layers,
             verbose=verbose,
-            idf=self.idf,
+            idf=False,
             device=device,
             batch_size=batch_size,
             nthreads=nthreads,
@@ -150,6 +170,8 @@ class BertScoreCalculator(ScoreCalculator):
         Returns:
             Score: Inspect AI Score with the calculated evaluation results.
         """
+        # Generic calculator callers may supply options through kwargs.
+        _validate_pairwise_idf(kwargs.get("idf", False))
         return self.calculate(
             prediction=prediction,
             reference=reference,
@@ -173,7 +195,7 @@ def get_bertscore_evaluator(
     lang: str = "en",
     num_layers: int | None = None,
     verbose: bool = False,
-    idf: bool | dict[str, float] = False,
+    idf: bool = False,
     device: str | None = None,
     batch_size: int = 64,
     nthreads: int = 1,
@@ -198,8 +220,9 @@ def get_bertscore_evaluator(
             default is the number of layers tuned on WMT16 correlation data, which
             depends on the `model_type` used.
         verbose (bool, optional): Whether to turn on verbose mode. Defaults to `False`
-        idf (bool | dict, optional): Use IDF weighting — can be a precomputed IDF dictionary.
-            Defaults to `False` (no IDF weighting).
+        idf (bool, optional): Must be False because this evaluator scores one
+            sample at a time. Automatic IDF and precomputed IDF dictionaries are
+            unsupported. Defaults to False (no IDF weighting).
         device (str | None, optional): The device to use for computing the contextual
             embeddings. If this argument is not set or `None`, the model will be
             loaded on `cuda:0` if available.
@@ -217,6 +240,10 @@ def get_bertscore_evaluator(
 
     Returns:
         Evaluator: The BERTScore evaluator.
+
+    Raises:
+        ValueError: If idf is not False. Use a corpus-aware BERTScore scorer
+            when IDF weighting is required.
     """
     cache_parameters = {
         "method": "bertscore",

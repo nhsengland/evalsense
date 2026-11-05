@@ -10,6 +10,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Custom solvers, preprocessing functions, and sample mappers now require explicit cache versions. Existing name-only cache entries remain readable but are not reused.
 - Model configuration rejects inline credential fields, non-public headers, credential-bearing URLs and opaque objects. Configure provider authentication through environment variables or its credential chain. Use plain public configuration values.
 - Meta-evaluation now requires an explicit complete set of at least two tier IDs. Results are separated by experiment/scorer identity, with exclusion counts and confidence intervals. Duplicate observations and mixed epochs are rejected.
+- Per-sample BERTScore now rejects `idf=True` and IDF dictionaries. Only `idf=False` is supported by the current backend.
 
 ### Enhancements
 - Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
@@ -19,6 +20,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 - Prevent incomplete two-tier and undefined meta-evaluation correlations from silently inflating the reported mean. Report failed/missing logs and unestimable intervals.
+- Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
 
 ### Documentation
 - Add result-management guidance, notebook cache notes and fingerprint field documentation.
