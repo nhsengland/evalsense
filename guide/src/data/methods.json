@@ -41,8 +41,8 @@
     "category": "automated",
     "description_short": "Measures modified n-gram precision between the output and the reference with a brevity penalty.",
     "description_long_file": "bleu.mdx",
-    "link_implementation": "https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.BleuPrecisionScoreCalculator",
-    "link_name": "BleuPrecisionScoreCalculator",
+    "link_implementation": "https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.BleuScoreCalculator",
+    "link_name": "BleuScoreCalculator",
     "reference_requirement": "required",
     "supported_tasks": ["summarization", "open-ended-qa", "text-generation"],
     "assessed_qualities": [{ "id": "correctness", "coverage": "Poor" }],
@@ -50,7 +50,7 @@
       { "id": "hallucination", "coverage": "Poor" },
       { "id": "omissions", "coverage": "Poor" }
     ],
-    "output_values": "Precision values between 0 and 1. Higher is better.",
+    "output_values": "Sentence and corpus BLEU-4 between 0 and 1, reported separately. Higher is better.",
     "advantages": [
       "Automated",
       "Fast",

@@ -5,6 +5,7 @@ from evalsense.evaluation.evaluators.bertscore import (
 )
 from evalsense.evaluation.evaluators.bleu import (
     BleuPrecisionScoreCalculator,
+    BleuScoreCalculator,
     bleu_metric,
     get_bleu_evaluator,
 )
@@ -29,6 +30,7 @@ __all__ = [
     "BertScoreLengthError",
     "get_bertscore_evaluator",
     "BleuPrecisionScoreCalculator",
+    "BleuScoreCalculator",
     "bleu_metric",
     "get_bleu_evaluator",
     "GEvalScoreCalculator",

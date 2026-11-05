@@ -7,6 +7,9 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+- The BLEU evaluator now records unsmoothed sentence BLEU-4 instead of unigram precision. The default scorer is `Sentence BLEU`; the aggregate is `<evaluator name> (corpus)`.
+
+  Re-score under a new evaluator name or in a fresh project; existing caches and notebook outputs are unchanged. Update result-column selectors. The legacy `BleuPrecisionScoreCalculator` remains available for direct unigram-precision callers. Corpus BLEU arithmetic is unchanged; repeated-epoch aggregation remains tracked separately in #69.
 - BERTScore rejects inputs exceeding a declared tokenizer/model limit or whose length capability cannot be determined, rather than returning scores for truncated text. XLNet's explicit no-fixed-limit declaration is supported; finite tokenizer limits still apply.
 - Custom solvers, preprocessing functions, and sample mappers now require explicit cache versions. Existing name-only cache entries remain readable but are not reused.
 - Model configuration rejects inline credential fields, non-public headers, credential-bearing URLs and opaque objects. Configure provider authentication through environment variables or its credential chain. Use plain public configuration values.
@@ -18,6 +21,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.

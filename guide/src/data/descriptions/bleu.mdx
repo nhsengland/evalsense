@@ -16,7 +16,12 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
 <Typography variant="body2" gutterBottom>
   Note that, unlike most other evaluation metrics, BLEU is meant to be computed
   for a whole corpus of samples and may not be meaningful when applied to an
-  individual pair of a reference text and an evaluated text.
+  individual pair of a reference text and an evaluated text. EvalSense reports
+  unsmoothed sentence BLEU-4 for sample-level correlation and meta-evaluation,
+  and a separately labelled corpus BLEU-4 in the summary. Corpus BLEU is recomputed
+  over all supplied pairs, not averaged from sentence scores. Sentence scores
+  can be zero for predictions shorter than four tokens or missing an n-gram order;
+  interpret short-input correlations accordingly.
 </Typography>
 
 <Typography variant="subtitle1" gutterBottom>
