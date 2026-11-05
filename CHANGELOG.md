@@ -8,16 +8,19 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 ### Breaking changes
 - Custom solvers, preprocessing functions, and sample mappers now require explicit cache versions. Existing name-only cache entries remain readable but are not reused.
+- Model configuration rejects inline credential fields, non-public headers, credential-bearing URLs and opaque objects. Configure provider authentication through environment variables or its credential chain. Use plain public configuration values.
 
 ### Enhancements
 - Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
 
 ### Bug fixes
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
+- Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 
 ### Documentation
 - Add result-management guidance, notebook cache notes and fingerprint field documentation.
 - Restore correlation analyser argument documentation and consolidate pairing, count and label guidance in the API docstrings.
+- Document authentication setup and the configuration boundary. Existing files, logs and backups are not scrubbed: rotate any previously exposed credentials and handle those artifacts separately. Secrets embedded in arbitrary prompts, innocuous field values or custom provider logs remain the caller's responsibility.
 
 ### Miscellaneous
 - None

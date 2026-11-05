@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 from inspect_ai.model import GenerateConfigArgs, Model
 
+from evalsense.utils.credentials import ModelCredentialError, validate_public_config
+
 
 @total_ordering
 class ModelRecord(BaseModel, frozen=True):
@@ -68,11 +70,45 @@ class ModelRecord(BaseModel, frozen=True):
 
 @dataclass
 class ModelConfig:
-    """Configuration for a model to be used in an experiment."""
+    """Public configuration for a model used in an experiment.
 
-    model: str | Model
-    model_args: dict[str, Any] = field(default_factory=dict)
-    generation_args: GenerateConfigArgs = field(default_factory=GenerateConfigArgs)
+    Credentials belong in provider-managed environment variables/credential chains,
+    not model_args or generation_args. Common credential fields, non-public HTTP headers,
+    credential-bearing URLs and opaque objects are rejected before persistence or
+    pipeline use. Checks repeat because callers can mutate the argument dictionaries.
+    Credentials are never hashed, silently dropped or replaced by redaction placeholders.
+    Public protocol/version headers are limited to Accept, Content-Type, User-Agent,
+    api-version and anthropic-version. Other headers require provider-managed setup.
+
+    Authentication already held privately by an Inspect provider is not inspected.
+    Its public model_args/config are checked, but this does not sanitise arbitrary
+    provider logs, prompts or historical project files. Never put secrets in public
+    names or other innocuous-looking fields. Revoke previously exposed credentials.
+    """
+
+    model: str | Model = field(repr=False)
+    model_args: dict[str, Any] = field(default_factory=dict, repr=False)
+    generation_args: GenerateConfigArgs = field(
+        default_factory=GenerateConfigArgs, repr=False
+    )
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Check serialisable settings without echoing rejected keys or values."""
+        if type(self.model_args) is not dict or type(self.generation_args) is not dict:
+            raise ModelCredentialError(
+                "Model and generation arguments must be dictionaries of public options."
+            )
+        validate_public_config(self.name)
+        validate_public_config(self.model_args)
+        validate_public_config(self.generation_args)
+        if isinstance(self.model, Model):
+            validate_public_config(self.model.model_args)
+            validate_public_config(dict(self.model.config))
+            validate_public_config(getattr(self.model, "_explicit_base_url", None))
+            validate_public_config(getattr(self.model.api, "base_url", None))
 
     @property
     def name(self) -> str:
@@ -84,6 +120,7 @@ class ModelConfig:
     @property
     def record(self) -> ModelRecord:
         """Returns a record of the model configuration."""
+        self.validate()
         # Remove arguments not directly affecting the used model or generation
         # procedure, so that we can match equivalent records.
         filtered_model_args = {
@@ -101,13 +138,11 @@ class ModelConfig:
             name=self.name,
             model_args_json=json.dumps(
                 filtered_model_args,
-                default=str,
                 sort_keys=True,
                 ensure_ascii=True,
             ),
             generation_args_json=json.dumps(
                 filtered_generation_args,
-                default=str,
                 sort_keys=True,
                 ensure_ascii=True,
             ),

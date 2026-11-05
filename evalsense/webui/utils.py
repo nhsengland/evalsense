@@ -1,9 +1,11 @@
 import ast
+import json
 from typing import Any, Callable, TypedDict
 
 import gradio as gr
 
 from evalsense.constants import PROJECTS_PATH
+from evalsense.utils.credentials import ModelCredentialError, validate_public_config
 from evalsense.webui.state import AppState
 
 type GradioInput = gr.Checkbox | gr.Dropdown | gr.Radio | gr.Textbox
@@ -56,7 +58,9 @@ def list_parser(input_string: str) -> list[str]:
 
 
 def dict_parser(input_string: str) -> dict[str, Any]:
-    """Parses a string representation of a dictionary into an actual dictionary.
+    """Parse public model options without echoing rejected input.
+
+    Credential fields and unsupported values are rejected before session storage.
 
     Arguments:
         input_string (str): The input string to parse.
@@ -67,9 +71,33 @@ def dict_parser(input_string: str) -> dict[str, Any]:
     if not input_string:
         return {}
     try:
-        return ast.literal_eval(input_string)
-    except Exception:
-        raise gr.Error(f"Invalid dictionary format: {input_string}")
+        value = ast.literal_eval(input_string)
+    except (SyntaxError, ValueError, TypeError, RecursionError):
+        raise gr.Error(
+            "Invalid dictionary format. Enter a Python dictionary without credentials."
+        ) from None
+    if type(value) is not dict:
+        raise gr.Error("Expected a Python dictionary without credentials.")
+    validate_public_config(value)
+    return value
+
+
+def configuration_for_display(value: dict[str, Any]) -> dict[str, Any]:
+    """Hide unsafe legacy UI state rather than echoing it into JSON components."""
+    try:
+        if any(
+            key in value and type(value[key]) is not dict
+            for key in ("model_args", "generation_args")
+        ):
+            raise ModelCredentialError(
+                "Model argument containers must be dictionaries."
+            )
+        validate_public_config(value)
+    except ModelCredentialError:
+        return {
+            "configuration": "Hidden: remove this configuration and use provider-managed authentication."
+        }
+    return json.loads(json.dumps(value))
 
 
 def setup_listeners(
