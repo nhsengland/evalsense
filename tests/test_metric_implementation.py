@@ -232,6 +232,9 @@ class ImplementationTests(unittest.TestCase):
             with (
                 self.subTest(calculator=cls.__name__),
                 patch(f"{MODULE}.evaluate.load", side_effect=fake_metric),
+                # This suite verifies metric provenance; tokenizer limits are
+                # exercised separately when the optional transformers extra is present.
+                patch.object(BertScoreCalculator, "_validate_input_lengths"),
             ):
                 calculator = cls()
                 result = calculator.calculate(
@@ -250,7 +253,12 @@ class ImplementationTests(unittest.TestCase):
                 )
 
     def test_bertscore_cleanup_loads_the_same_pinned_implementation(self):
-        with patch(f"{MODULE}.evaluate.load", side_effect=fake_metric) as load:
+        with (
+            patch(f"{MODULE}.evaluate.load", side_effect=fake_metric) as load,
+            # The fake backend does not have tokenizer assets; length checks
+            # are covered by the dedicated BERTScore regression suite.
+            patch.object(BertScoreCalculator, "_validate_input_lengths"),
+        ):
             evaluator = get_bertscore_evaluator()
             assert evaluator.implementation is not None
             expected = evaluator.implementation.provenance
