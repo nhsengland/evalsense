@@ -51,6 +51,11 @@ class Pipeline:
                 all_experiments.extend(experiment.all_experiments)
             else:
                 all_experiments.append(experiment)
+        # Validate cache identities before any expensive generation starts.
+        for experiment in all_experiments:
+            _ = experiment.generation_record
+            if experiment.evaluator is not None:
+                _ = experiment.evaluation_record
         self.experiments = all_experiments
         self.project = project
         self._maintain_order = maintain_order

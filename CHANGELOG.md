@@ -7,16 +7,16 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
-- None
+- Custom solvers, preprocessing functions, and sample mappers now require explicit cache versions. Existing name-only cache entries remain readable but are not reused.
 
 ### Enhancements
-- None
+- Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
 
 ### Bug fixes
 - None
 
 ### Documentation
-- None
+- Add result-management guidance, notebook cache notes and fingerprint field documentation.
 
 ### Miscellaneous
 - None
