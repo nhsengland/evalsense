@@ -89,6 +89,17 @@ def _encoded_length(tokenizer: Any, text: str) -> int:
     return len(tokenizer.encode(text, **kwargs))
 
 
+def _validate_pairwise_idf(idf: bool) -> None:
+    """Do not estimate corpus weights from the single pair supplied to compute."""
+    if idf is not False:
+        raise ValueError(
+            "BERTScore IDF weighting requires a reference corpus. "
+            "This evaluator scores one pair at a time and supports only idf=False. "
+            "Automatic IDF and precomputed IDF dictionaries are not supported "
+            "by this backend; use a corpus-aware BERTScore scorer for IDF weighting."
+        )
+
+
 class BertScoreCalculator(ScoreCalculator):
     """Compute BERTScore without silently discarding tokens from either text.
 
@@ -114,6 +125,10 @@ class BertScoreCalculator(ScoreCalculator):
     is loaded lazily, keeps only the current model/tokenizer setting, and is reset
     on cleanup. This calculator does not truncate, segment documents or average
     chunk scores. Increasing batch_size does not extend the context limit.
+
+    This per-sample implementation rejects IDF weighting because corpus
+    weights cannot be estimated from a single reference. Only idf=False
+    is supported.
     """
 
     def __init__(
@@ -121,7 +136,7 @@ class BertScoreCalculator(ScoreCalculator):
         model_type: str = "microsoft/deberta-xlarge-mnli",
         lang: str = "en",
         num_layers: int | None = None,
-        idf: bool | dict[str, float] = False,
+        idf: bool = False,
     ):
         """
         Initializes the BERTScore calculator.
@@ -132,8 +147,14 @@ class BertScoreCalculator(ScoreCalculator):
                 model according to BERTScore authors.
             lang (str, optional): The language of the text. Defaults to "en".
             num_layers (int, optional): The layer of representations to use.
-            idf (bool | dict[str, float], optional): Use IDF weighting — can be a precomputed IDF dictionary.
+            idf (bool, optional): Must be False. Estimating IDF from a single
+                reference is invalid, and the Evaluate backend does not use supplied
+                IDF dictionaries as fixed weights. Defaults to False.
+
+        Raises:
+            ValueError: If idf is not False. No metric or model is loaded in that case.
         """
+        _validate_pairwise_idf(idf)
         self.bertscore_module = evaluate.load("bertscore")
         self.model_type = model_type
         self.lang = lang
@@ -207,6 +228,9 @@ class BertScoreCalculator(ScoreCalculator):
                 "Reference is required for computing BERTScore, but was None."
             )
 
+        # Validate public IDF configuration before loading tokenizer resources.
+        _validate_pairwise_idf(self.idf)
+        _validate_pairwise_idf(kwargs.get("idf", False))
         self._validate_input_lengths(prediction, reference, use_fast_tokenizer)
         predictions = [prediction]
         references = [reference]
@@ -218,7 +242,7 @@ class BertScoreCalculator(ScoreCalculator):
             model_type=self.model_type,
             num_layers=self.num_layers,
             verbose=verbose,
-            idf=self.idf,
+            idf=False,
             device=device,
             batch_size=batch_size,
             nthreads=nthreads,
@@ -279,6 +303,8 @@ class BertScoreCalculator(ScoreCalculator):
         Returns:
             Score: Inspect AI Score with the calculated evaluation results.
         """
+        # Generic calculator callers may supply options through kwargs.
+        _validate_pairwise_idf(kwargs.get("idf", False))
         return self.calculate(
             prediction=prediction,
             reference=reference,
@@ -302,13 +328,14 @@ def get_bertscore_evaluator(
     lang: str = "en",
     num_layers: int | None = None,
     verbose: bool = False,
-    idf: bool | dict[str, float] = False,
+    idf: bool = False,
     device: str | None = None,
     batch_size: int = 64,
     nthreads: int = 1,
     rescale_with_baseline: bool = False,
     baseline_path: str | None = None,
     use_fast_tokenizer: bool = False,
+    version: str | None = None,
 ) -> Evaluator:
     """
     Returns a BERTScore evaluator.
@@ -331,8 +358,9 @@ def get_bertscore_evaluator(
             default is the number of layers tuned on WMT16 correlation data, which
             depends on the `model_type` used.
         verbose (bool, optional): Whether to turn on verbose mode. Defaults to `False`
-        idf (bool | dict, optional): Use IDF weighting — can be a precomputed IDF dictionary.
-            Defaults to `False` (no IDF weighting).
+        idf (bool, optional): Must be False because this evaluator scores one
+            sample at a time. Automatic IDF and precomputed IDF dictionaries are
+            unsupported. Defaults to False (no IDF weighting).
         device (str | None, optional): The device to use for computing the contextual
             embeddings. If this argument is not set or `None`, the model will be
             loaded on `cuda:0` if available.
@@ -346,9 +374,32 @@ def get_bertscore_evaluator(
         use_fast_tokenizer (bool, optional): The `use_fast` parameter passed to HF
             tokenizer. Defaults to `False`.
 
+        version (str | None): Cache version for custom code or external resources.
+
     Returns:
         Evaluator: The BERTScore evaluator.
+
+    Raises:
+        ValueError: If idf is not False. Use a corpus-aware BERTScore scorer
+            when IDF weighting is required.
     """
+    cache_parameters = {
+        "method": "bertscore",
+        "metrics": metrics,
+        "model_type": model_type,
+        "lang": lang,
+        "num_layers": num_layers,
+        "idf": idf,
+        "device": device,
+        "batch_size": batch_size,
+        "rescale_with_baseline": rescale_with_baseline,
+        "baseline_path": baseline_path,
+        "use_fast_tokenizer": use_fast_tokenizer,
+    }
+    # Progress logging never changes scores. IDF worker count is irrelevant when
+    # IDF is disabled; device and batch size still identify numerical execution.
+    if idf is not False:
+        cache_parameters["nthreads"] = nthreads
     if metrics is None:
         metrics = [
             {"BERTScore Precision": [mean()]},
@@ -403,6 +454,8 @@ def get_bertscore_evaluator(
         return score
 
     return Evaluator(
+        version=version,
+        cache_parameters=cache_parameters,
         name=name,
         scorer=bertscore_scorer(),
         cleanup_fun=cleanup_bertscore,

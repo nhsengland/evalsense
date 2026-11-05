@@ -23,6 +23,15 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
 </Typography>
 
 <Typography variant="body2" gutterBottom>
+  IDF weights must be estimated from a reference corpus and held fixed across
+  comparisons. EvalSense currently scores one prediction/reference pair at a
+  time and supports only unweighted BERTScore. Its evaluator rejects automatic
+  IDF and precomputed IDF dictionaries; use a corpus-aware scorer when IDF
+  weighting is required. Increasing the embedding batch size does not supply
+  that corpus.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
   While potentially more powerful than traditional statistical metrics,
   BERTScore still requires a reference text and its performance can depend on
   the specific BERT model used and the layers from which embeddings are

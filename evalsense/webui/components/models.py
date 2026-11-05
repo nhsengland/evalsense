@@ -1,7 +1,8 @@
 import gradio as gr
 
 from evalsense.webui.state import AppModelConfig, AppState
-from evalsense.webui.utils import dict_parser
+from evalsense.webui.utils import configuration_for_display, dict_parser
+from evalsense.utils.credentials import validate_public_config
 
 
 def models_tab(state: gr.State):
@@ -19,7 +20,7 @@ def models_tab(state: gr.State):
     )
     model_args = gr.Textbox(
         label="Model Arguments",
-        info="The arguments to pass to the model during evaluation, formatted as a Python dictionary. These will be passed to the [`get_model`](https://inspect.aisi.org.uk/reference/inspect_ai.model.html#get_model) function when creating the model.",
+        info="The arguments to pass to the model during evaluation, formatted as a Python dictionary. Public options only; configure credentials through provider environment variables. These will be passed to the [`get_model`](https://inspect.aisi.org.uk/reference/inspect_ai.model.html#get_model) function when creating the model.",
     )
     generation_args = gr.Textbox(
         label="Generation Arguments",
@@ -37,6 +38,7 @@ def models_tab(state: gr.State):
             "model_args": dict_parser(args),
             "generation_args": dict_parser(gen_args),
         }
+        validate_public_config(new_model)
         state["model_configs"].append(new_model)
         return gr.update(value=""), gr.update(value=""), gr.update(value=""), state
 
@@ -48,8 +50,11 @@ def models_tab(state: gr.State):
             gr.Markdown("No models configured yet.")
 
         for i, model_config in enumerate(local_state["model_configs"]):
-            gr.Markdown(f"### Model #{i + 1} — {model_config['model_name']}")
-            gr.JSON(dict(model_config), label="Model Config")
+            public_config = configuration_for_display(dict(model_config))
+            gr.Markdown(
+                f"### Model #{i + 1} — {public_config.get('model_name', 'configuration hidden')}"
+            )
+            gr.JSON(public_config, label="Model Config")
             model_remove_button = gr.Button("Remove Model", variant="stop")
 
             @model_remove_button.click(inputs=[state], outputs=[state])

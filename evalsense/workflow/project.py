@@ -14,6 +14,7 @@ from evalsense.evaluation import (
 )
 from evalsense.logging import get_logger
 from evalsense.utils.files import to_safe_filename
+from evalsense.utils.cache import fingerprint
 
 logger = get_logger(__name__)
 
@@ -282,9 +283,14 @@ class Project:
             log_path = Path(generation_result.log_location)
             evaluator_name = record_key.evaluator_name
             log_time, core_name, random_id = log_path.stem.split("_", 2)
+            if record_key.evaluator_fingerprint:
+                # Keep configuration identity in the filename without growing
+                # long task/model labels beyond filesystem component limits.
+                core_name = f"evaluation-{fingerprint(record_key)}"
+            else:
+                core_name = f"{core_name}-{to_safe_filename(evaluator_name)}"
             new_log_path = self.evaluation_log_path / (
-                f"{log_time}_{core_name}-{to_safe_filename(evaluator_name)}_"
-                + f"{random_id}{log_path.suffix}"
+                f"{log_time}_{core_name}_{random_id}{log_path.suffix}"
             )
             new_log_path.parent.mkdir(parents=True, exist_ok=True)
             if not new_log_path.exists():
