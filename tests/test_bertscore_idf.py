@@ -20,11 +20,12 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 from evalsense.datasets.managers.huggingface import HuggingFaceDatasetManager
 from evalsense.evaluation import ExperimentConfig
 from evalsense.evaluation.evaluators import BertScoreCalculator, get_bertscore_evaluator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 from evalsense.generation import GenerationSteps, ModelConfig
 from evalsense.workflow import Pipeline, Project
 
 
-LOAD_METRIC = "evalsense.evaluation.evaluators.bertscore.evaluate.load"
+LOAD_METRIC = "evalsense.evaluation.metric_implementation.MetricImplementation.load"
 VALUES = {
     "BERTScore Precision": 0.9,
     "BERTScore Recall": 0.6,
@@ -115,7 +116,15 @@ class PairwiseIdfTests(unittest.TestCase):
         b = explicit.calculate(prediction="prediction", reference="reference")
         self.assertEqual(a.value, VALUES)
         self.assertEqual(a.model_dump(), b.model_dump())
-        self.assertEqual(a.metadata, {"hashcode": "fixture-no-idf"})
+        self.assertEqual(
+            a.metadata,
+            {
+                "hashcode": "fixture-no-idf",
+                "metric_provenance": MetricImplementation.resolve(
+                    "bertscore"
+                ).provenance,
+            },
+        )
         self.assertEqual(a.answer, "prediction")
         self.assertEqual(backend.calls[0], backend.calls[1])
         self.assertIs(backend.calls[0]["idf"], False)
@@ -384,7 +393,15 @@ class PipelineIdfTests(unittest.TestCase):
             assert log is not None and log.samples and log.samples[0].scores
             score = next(iter(log.samples[0].scores.values()))
             self.assertEqual(score.value, VALUES)
-            self.assertEqual(score.metadata, {"hashcode": "fixture-no-idf"})
+            self.assertEqual(
+                score.metadata,
+                {
+                    "hashcode": "fixture-no-idf",
+                    "metric_provenance": MetricImplementation.resolve(
+                        "bertscore"
+                    ).provenance,
+                },
+            )
             self.assertEqual(len(backend.calls), 1)
             self.assertIs(backend.calls[0]["idf"], False)
 

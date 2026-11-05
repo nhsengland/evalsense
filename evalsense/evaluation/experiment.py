@@ -60,7 +60,11 @@ class GenerationRecord(BaseModel, frozen=True):
     task_fingerprint: str = ""
 
     def get_evaluation_record(
-        self, evaluator_name: str, evaluator_fingerprint: str = ""
+        self,
+        evaluator_name: str,
+        evaluator_fingerprint: str = "",
+        *,
+        evaluator_provenance_json: str = "",
     ) -> "EvaluationRecord":
         """Generates an evaluation record from the generation record.
 
@@ -69,6 +73,8 @@ class GenerationRecord(BaseModel, frozen=True):
             evaluator_fingerprint (str): Identity of the evaluator configuration,
                 including its judge settings and explicit version. Defaults to
                 an empty string for legacy/manual records without a fingerprint.
+            evaluator_provenance_json (str): Canonical metric script and runtime
+                provenance. Empty for custom or legacy implementations.
 
         Returns:
             EvaluationRecord: The evaluation record.
@@ -77,6 +83,7 @@ class GenerationRecord(BaseModel, frozen=True):
             **self.model_dump(),
             evaluator_name=evaluator_name,
             evaluator_fingerprint=evaluator_fingerprint,
+            evaluator_provenance_json=evaluator_provenance_json,
         )
 
     @property
@@ -175,6 +182,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         task_fingerprint (str): Identity of preprocessing and sample field mapping.
             Empty for legacy records without this identity.
         evaluator_name (str): The name of the evaluator.
+        evaluator_provenance_json (str): Canonical script/runtime provenance.
         evaluator_fingerprint (str): Identity of the evaluator configuration,
             including its judge settings and explicit version. Empty for legacy
             records without this identity.
@@ -182,6 +190,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
 
     evaluator_name: str
     evaluator_fingerprint: str = ""
+    evaluator_provenance_json: str = ""
 
     @property
     def generation_record(self) -> GenerationRecord:
@@ -191,7 +200,13 @@ class EvaluationRecord(GenerationRecord, frozen=True):
             GenerationRecord: The generation record.
         """
         return GenerationRecord(
-            **self.model_dump(exclude={"evaluator_name", "evaluator_fingerprint"}),
+            **self.model_dump(
+                exclude={
+                    "evaluator_name",
+                    "evaluator_fingerprint",
+                    "evaluator_provenance_json",
+                }
+            ),
         )
 
     def get_meta_grouped_record(self, metric_name: str) -> "MetaTierGroupedRecord":
@@ -240,6 +255,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
             generation_equal
             and self.evaluator_name == other.evaluator_name
             and self.evaluator_fingerprint == other.evaluator_fingerprint
+            and self.evaluator_provenance_json == other.evaluator_provenance_json
         )
 
     def __lt__(self, other: object) -> bool:
@@ -256,9 +272,14 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         if super().__lt__(other):
             return True
         elif super().__eq__(other):
-            return (self.evaluator_name, self.evaluator_fingerprint) < (
+            return (
+                self.evaluator_name,
+                self.evaluator_fingerprint,
+                self.evaluator_provenance_json,
+            ) < (
                 other.evaluator_name,
                 other.evaluator_fingerprint,
+                other.evaluator_provenance_json,
             )
         else:
             return False
@@ -280,6 +301,7 @@ class EvaluationRecord(GenerationRecord, frozen=True):
                 self.task_fingerprint,
                 self.evaluator_name,
                 self.evaluator_fingerprint,
+                self.evaluator_provenance_json,
             )
         )
 
@@ -304,6 +326,7 @@ class MetaTierGroupedRecord(EvaluationRecord, frozen=True):
         evaluator_fingerprint (str): Identity of the evaluator configuration,
             including its judge settings and explicit version. Empty for legacy
             records without this identity.
+        evaluator_provenance_json (str): Canonical script/runtime provenance.
         metric_name (str): The name of the metric being evaluated.
     """
 
@@ -364,6 +387,7 @@ class MetaTierGroupedRecord(EvaluationRecord, frozen=True):
                 self.task_fingerprint,
                 self.evaluator_name,
                 self.evaluator_fingerprint,
+                self.evaluator_provenance_json,
                 self.metric_name,
             )
         )
@@ -424,6 +448,11 @@ class ExperimentConfig:
         return self.generation_record.get_evaluation_record(
             self.evaluator.name,
             self.evaluator.cache_key,
+            evaluator_provenance_json=(
+                self.evaluator.implementation.provenance_json
+                if self.evaluator.implementation is not None
+                else ""
+            ),
         )
 
 

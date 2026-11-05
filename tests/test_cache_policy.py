@@ -20,7 +20,9 @@ from evalsense.utils.cache import CacheIdentityError, fingerprint
 
 class CachePolicyTests(unittest.TestCase):
     def test_bertscore_ignores_logging_and_unweighted_idf_threads(self):
-        with patch("evalsense.evaluation.evaluators.bertscore.evaluate.load"):
+        with patch(
+            "evalsense.evaluation.metric_implementation.MetricImplementation.load"
+        ):
             baseline = get_bertscore_evaluator().cache_key
             for options in (
                 {"verbose": True},
@@ -32,7 +34,9 @@ class CachePolicyTests(unittest.TestCase):
                     self.assertEqual(baseline, other.cache_key)
 
     def test_bertscore_keeps_device_and_batch_size_in_identity(self):
-        with patch("evalsense.evaluation.evaluators.bertscore.evaluate.load"):
+        with patch(
+            "evalsense.evaluation.metric_implementation.MetricImplementation.load"
+        ):
             baseline = get_bertscore_evaluator(device="cpu", batch_size=8).cache_key
             for options in (
                 {"device": "cuda", "batch_size": 8},
@@ -44,7 +48,9 @@ class CachePolicyTests(unittest.TestCase):
 
     def test_excluded_options_are_still_passed_to_the_calculator(self):
         with (
-            patch("evalsense.evaluation.evaluators.bertscore.evaluate.load"),
+            patch(
+                "evalsense.evaluation.metric_implementation.MetricImplementation.load"
+            ),
             patch(
                 "evalsense.evaluation.evaluators.bertscore.BertScoreCalculator.calculate_async",
                 new_callable=AsyncMock,

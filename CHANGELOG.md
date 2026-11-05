@@ -7,6 +7,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+- Built-in BLEU, ROUGE and BERTScore evaluations now have implementation-aware cache identities. Historical entries remain readable but are not reused. The standard analysers reject mixed or unrecorded implementations under the same labels; analyse legacy results separately.
 - The BLEU evaluator now records unsmoothed sentence BLEU-4 instead of unigram precision. The default scorer is `Sentence BLEU`; the aggregate is `<evaluator name> (corpus)`.
 
   Re-score under a new evaluator name or in a fresh project; existing caches and notebook outputs are unchanged. Update result-column selectors. The legacy `BleuPrecisionScoreCalculator` remains available for direct unigram-precision callers. Corpus BLEU arithmetic is unchanged; repeated-epoch aggregation remains tracked separately in #69.
@@ -21,6 +22,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Pin Evaluate metric scripts to full commits, check their loaded content hashes (including cached fallbacks), and record Python/runtime package versions in scores and project records. BERTScore reloads and corpus BLEU use the same pinned definition.
 - Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
@@ -29,6 +31,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
 
 ### Documentation
+- Describe metric provenance and migration. Keep historical logs, retain the lockfile and use frozen installation for the project environment. Recreate evaluators in a fresh process after changing packages. Model/tokenizer files, custom metric code, hardware and numerical nondeterminism still require separate controls; these pins do not guarantee bitwise-identical results.
 - Document the BERTScore length policy and XLNet tokenizer constraints in the component docstrings.
 
   Existing cached results are not repaired or revalidated. Use a fresh project or a new evaluator name when applying this policy to previously scored data; with versioned components, also update their version. Preserve original logs as historical results. The pipeline records length-check failures instead of successful prefix-only scores.

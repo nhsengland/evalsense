@@ -18,6 +18,7 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 from evalsense.datasets.managers.huggingface import HuggingFaceDatasetManager
 from evalsense.evaluation import ExperimentConfig
 from evalsense.evaluation.evaluators import BertScoreCalculator, get_bertscore_evaluator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 from evalsense.generation import GenerationSteps, ModelConfig
 from evalsense.workflow import Pipeline, Project
 
@@ -52,7 +53,10 @@ def state(text: str) -> TaskState:
 class LengthPolicyTests(unittest.TestCase):
     def setUp(self):
         self.backend = RecordingMetric()
-        load = patch(f"{MODULE}.evaluate.load", return_value=self.backend)
+        load = patch(
+            "evalsense.evaluation.metric_implementation.MetricImplementation.load",
+            return_value=self.backend,
+        )
         self.load = load.start()
         self.addCleanup(load.stop)
         context = patch(
@@ -90,7 +94,15 @@ class LengthPolicyTests(unittest.TestCase):
                 "BERTScore F1": 24 / 35,
             },
         )
-        self.assertEqual(result.metadata, {"hashcode": "fixture"})
+        self.assertEqual(
+            result.metadata,
+            {
+                "hashcode": "fixture",
+                "metric_provenance": MetricImplementation.resolve(
+                    "bertscore"
+                ).provenance,
+            },
+        )
         self.assertEqual(result.answer, text)
         self.assertEqual(self.backend.calls[0]["predictions"], [text])
         self.assertEqual(self.backend.calls[0]["references"], [text])
@@ -248,7 +260,15 @@ class LengthPolicyTests(unittest.TestCase):
             calculator.calculate(prediction=text, reference=text),
             asyncio.run(calculator.calculate_async(prediction=text, reference=text)),
         ):
-            self.assertEqual(result.metadata, {"hashcode": "fixture"})
+            self.assertEqual(
+                result.metadata,
+                {
+                    "hashcode": "fixture",
+                    "metric_provenance": MetricImplementation.resolve(
+                        "bertscore"
+                    ).provenance,
+                },
+            )
             self.assertEqual(result.answer, text)
         self.assertEqual(len(self.backend.calls), 2)
         for call in self.backend.calls:

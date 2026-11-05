@@ -16,6 +16,7 @@ from inspect_ai.log import EvalLog
 
 from evalsense.evaluation import GenerationRecord
 from evalsense.workflow import Project, ResultAnalyser
+from evalsense.workflow.analysers._provenance import check_metric_implementations
 
 OUTPUT_FORMATTERS = {
     "polars": lambda df: df,
@@ -192,9 +193,9 @@ class MetricCorrelationAnalyser[T: CorrelationResults](ResultAnalyser[T]):
             raise ValueError("corr_method must be 'spearman' or 'pearson'.")
         observations: dict[MetricKey, dict[ObservationKey, float]] = defaultdict(dict)
         evaluator_names: dict[MetricKey, str] = {}
-        for record, log in project.get_logs(
-            type="evaluation", status="success"
-        ).items():
+        eval_logs = project.get_logs(type="evaluation", status="success")
+        check_metric_implementations(eval_logs)
+        for record, log in eval_logs.items():
             if not log.samples:
                 continue
             generation = record.generation_record

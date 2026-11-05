@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from evalsense.evaluation.evaluators import BertScoreCalculator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 from evalsense.evaluation.evaluators.bertscore import (
     _encoded_length,
     _input_limit,
@@ -264,7 +265,7 @@ class NativeLengthTests(unittest.TestCase):
         self.assertGreater(float(f.item()), 0.999)
         metric = Mock()
         with patch(
-            "evalsense.evaluation.evaluators.bertscore.evaluate.load",
+            "evalsense.evaluation.metric_implementation.MetricImplementation.load",
             return_value=metric,
         ):
             calculator = BertScoreCalculator(model_type=str(self.path), num_layers=1)
@@ -297,7 +298,7 @@ class NativeLengthTests(unittest.TestCase):
         metric = Mock()
         metric.compute.side_effect = compute
         with patch(
-            "evalsense.evaluation.evaluators.bertscore.evaluate.load",
+            "evalsense.evaluation.metric_implementation.MetricImplementation.load",
             return_value=metric,
         ):
             calculator = BertScoreCalculator(model_type=str(self.path), num_layers=1)
@@ -316,7 +317,15 @@ class NativeLengthTests(unittest.TestCase):
                 "BERTScore F1": float(f.item()),
             },
         )
-        self.assertEqual(score.metadata, {"hashcode": native.hash})
+        self.assertEqual(
+            score.metadata,
+            {
+                "hashcode": native.hash,
+                "metric_provenance": MetricImplementation.resolve(
+                    "bertscore"
+                ).provenance,
+            },
+        )
         self.assertEqual(seen[0]["predictions"], [prediction])
         self.assertEqual(seen[0]["references"], [reference])
 
@@ -418,7 +427,7 @@ class NativeXLNetLengthTests(unittest.TestCase):
 
         metric = Mock(compute=Mock(side_effect=compute))
         with patch(
-            "evalsense.evaluation.evaluators.bertscore.evaluate.load",
+            "evalsense.evaluation.metric_implementation.MetricImplementation.load",
             return_value=metric,
         ):
             calculator = BertScoreCalculator(model_type=str(self.path), num_layers=1)
@@ -436,7 +445,15 @@ class NativeXLNetLengthTests(unittest.TestCase):
                 "BERTScore F1": float(f.item()),
             },
         )
-        self.assertEqual(result.metadata, {"hashcode": native.hash})
+        self.assertEqual(
+            result.metadata,
+            {
+                "hashcode": native.hash,
+                "metric_provenance": MetricImplementation.resolve(
+                    "bertscore"
+                ).provenance,
+            },
+        )
         self.assertEqual(calls[0]["predictions"], [prediction])
         self.assertEqual(calls[0]["references"], [reference])
         self.assertTrue(lengths)
@@ -482,7 +499,7 @@ class NativeXLNetLengthTests(unittest.TestCase):
                 with (
                     patch("bert_score.utils.get_tokenizer", return_value=tokenizer),
                     patch(
-                        "evalsense.evaluation.evaluators.bertscore.evaluate.load",
+                        "evalsense.evaluation.metric_implementation.MetricImplementation.load",
                         return_value=metric,
                     ),
                 ):

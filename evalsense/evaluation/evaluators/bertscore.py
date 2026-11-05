@@ -2,7 +2,6 @@ import gc
 from numbers import Integral
 from typing import Any, override
 
-import evaluate
 from inspect_ai.scorer import (
     Metric,
     Score,
@@ -15,6 +14,7 @@ from inspect_ai.solver import TaskState
 from inspect_ai.util import concurrency
 
 from evalsense.evaluation import Evaluator, ScoreCalculator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 
 
 class BertScoreLengthError(ValueError):
@@ -155,7 +155,8 @@ class BertScoreCalculator(ScoreCalculator):
             ValueError: If idf is not False. No metric or model is loaded in that case.
         """
         _validate_pairwise_idf(idf)
-        self.bertscore_module = evaluate.load("bertscore")
+        self.implementation = MetricImplementation.resolve("bertscore")
+        self.bertscore_module = self.implementation.load()
         self.model_type = model_type
         self.lang = lang
         self.num_layers = num_layers
@@ -259,6 +260,7 @@ class BertScoreCalculator(ScoreCalculator):
             answer=prediction,
             metadata={
                 "hashcode": result["hashcode"],  # type: ignore
+                "metric_provenance": self.implementation.provenance,
             },
         )
 
@@ -420,7 +422,7 @@ def get_bertscore_evaluator(
                 setattr(
                     calculator,
                     "bertscore_module",
-                    evaluate.load("bertscore"),
+                    calculator.implementation.load(),
                 )
 
     def cleanup_bertscore() -> None:
@@ -459,4 +461,5 @@ def get_bertscore_evaluator(
         name=name,
         scorer=bertscore_scorer(),
         cleanup_fun=cleanup_bertscore,
+        implementation=calculator.implementation,
     )

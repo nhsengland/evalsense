@@ -14,6 +14,7 @@ from scipy.stats import binomtest, bootstrap, spearmanr
 
 from evalsense.evaluation import MetaTierGroupedRecord
 from evalsense.workflow import Project, ResultAnalyser
+from evalsense.workflow.analysers._provenance import check_metric_implementations
 
 OUTPUT_FORMATTERS = {
     "polars": lambda df: df,
@@ -295,6 +296,9 @@ class MetaResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
 
         cohorts: dict[MetaTierGroupedRecord, _Cohort] = {}
         logs = project.get_logs(type="evaluation")
+        check_metric_implementations(
+            {record: log for record, log in logs.items() if log.status == "success"}
+        )
         for record, result in project.records.evaluation.items():
             group = record.get_meta_grouped_record("")
             cohort = cohorts.setdefault(group, _Cohort())

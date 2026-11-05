@@ -32,11 +32,12 @@ from evalsense.evaluation.evaluators import (
     bleu_metric,
     get_bleu_evaluator,
 )
+from evalsense.evaluation.metric_implementation import MetricImplementation
 from evalsense.generation import ModelRecord
 from evalsense.workflow import Project
 from evalsense.workflow.analysers import TabularResultAnalyser
 
-LOAD = "evalsense.evaluation.evaluators.bleu.evaluate.load"
+LOAD = "evalsense.evaluation.metric_implementation.MetricImplementation.load"
 BLEU_REVISION = "4bc9d73a0ebdfcb960e09da5166c86591fc219b0"
 
 
@@ -100,6 +101,7 @@ class BleuTests(unittest.TestCase):
                 "bleu_sample_variant": "sentence_bleu_4",
                 "max_order": 4,
                 "smooth": False,
+                "metric_provenance": MetricImplementation.resolve("bleu").provenance,
             },
         )
         self.backend.compute.assert_called_once_with(
@@ -113,7 +115,14 @@ class BleuTests(unittest.TestCase):
         calculator = BleuPrecisionScoreCalculator()
         result = calculator.calculate(prediction="p", reference="r")
         self.assertEqual(result.value, 1.0)
-        self.assertEqual(result.metadata, {"prediction": "p", "reference": "r"})
+        self.assertEqual(
+            result.metadata,
+            {
+                "prediction": "p",
+                "reference": "r",
+                "metric_provenance": MetricImplementation.resolve("bleu").provenance,
+            },
+        )
         self.assertEqual(
             asyncio.run(
                 calculator.calculate_async(prediction="p", reference="r")
@@ -174,7 +183,16 @@ class BleuTests(unittest.TestCase):
     def test_corpus_recomputes_from_text_not_sample_values(self):
         samples = [
             SampleScore(
-                score=Score(value=99.0, metadata={"prediction": p, "reference": r})
+                score=Score(
+                    value=99.0,
+                    metadata={
+                        "prediction": p,
+                        "reference": r,
+                        "metric_provenance": MetricImplementation.resolve(
+                            "bleu"
+                        ).provenance,
+                    },
+                )
             )
             for p, r in [("p1", "r1"), ("p2", "r2")]
         ]

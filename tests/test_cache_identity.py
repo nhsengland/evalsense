@@ -207,7 +207,7 @@ class CacheIdentityTests(unittest.TestCase):
 
     def test_bertscore_parameters_have_distinct_keys_without_loading_models(self):
         with patch(
-            "evalsense.evaluation.evaluators.bertscore.evaluate.load",
+            "evalsense.evaluation.metric_implementation.MetricImplementation.load",
             return_value=Mock(),
         ):
             baseline = get_bertscore_evaluator()

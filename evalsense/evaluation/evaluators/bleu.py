@@ -1,6 +1,5 @@
 from typing import Any, cast, override
 
-import evaluate
 from inspect_ai.scorer import (
     Metric,
     MetricProtocol,
@@ -15,6 +14,7 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 
 from evalsense.evaluation import Evaluator, ScoreCalculator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 
 
 class BleuPrecisionScoreCalculator(ScoreCalculator):
@@ -25,7 +25,8 @@ class BleuPrecisionScoreCalculator(ScoreCalculator):
     """
 
     def __init__(self):
-        self.bleu_module = evaluate.load("bleu")
+        self.implementation = MetricImplementation.resolve("bleu")
+        self.bleu_module = self.implementation.load()
 
     @override
     def calculate(
@@ -67,6 +68,7 @@ class BleuPrecisionScoreCalculator(ScoreCalculator):
             metadata={
                 "prediction": prediction,
                 "reference": reference,
+                "metric_provenance": self.implementation.provenance,
             },
         )
 
@@ -160,24 +162,40 @@ class BleuScoreCalculator(BleuPrecisionScoreCalculator):
                 "bleu_sample_variant": "sentence_bleu_4",
                 "max_order": 4,
                 "smooth": False,
+                "metric_provenance": self.implementation.provenance,
             },
         )
 
 
-def bleu_metric() -> MetricProtocol:
+def bleu_metric(
+    *, implementation: MetricImplementation | None = None
+) -> MetricProtocol:
     """
-    Compute unsmoothed corpus BLEU-4 from the prediction/reference metadata.
+    Base metric for BLEU scores.
 
-    Uses the backend's default 13a tokenization and recomputes pooled counts and
-    brevity penalty, rather than averaging sentence scores. Repeated-epoch
-    aggregation is a separate limitation tracked in issue #69.
+    Args:
+        implementation (MetricImplementation | None): Pinned implementation shared
+            with the sample scorer. Defaults to the supported BLEU implementation.
+
+    Rejects input scores with absent or different implementation provenance.
+    Historical scores must be rescored before recomputing this corpus metric.
 
     Returns:
         MetricProtocol: A function that computes BLEU scores.
     """
 
+    implementation = implementation or MetricImplementation.resolve("bleu")
+
     def metric(scores: list[SampleScore]) -> Value:
-        bleu_module = evaluate.load("bleu")
+        if any(
+            (score.score.metadata or {}).get("metric_provenance")
+            != implementation.provenance
+            for score in scores
+        ):
+            raise ValueError(
+                "Corpus BLEU requires scores from the same recorded metric implementation."
+            )
+        bleu_module = implementation.load()
         predictions = [score.score.metadata["prediction"] for score in scores]  # type: ignore
         references = [score.score.metadata["reference"] for score in scores]  # type: ignore
         result = bleu_module.compute(
@@ -227,14 +245,14 @@ def get_bleu_evaluator(
         "metrics": metrics,
     }
 
+    bleu_calculator = BleuScoreCalculator()
+
     @metric(name=f"{name} (corpus)")
     def bleu() -> MetricProtocol:
-        return bleu_metric()
+        return bleu_metric(implementation=bleu_calculator.implementation)
 
     if metrics is None:
         metrics = [bleu()]
-
-    bleu_calculator = BleuScoreCalculator()
 
     @scorer(name=scorer_name, metrics=metrics)
     def sentence_bleu_scorer() -> Scorer:
@@ -250,4 +268,5 @@ def get_bleu_evaluator(
         version=version,
         cache_parameters=cache_parameters,
         scorer=sentence_bleu_scorer(),
+        implementation=bleu_calculator.implementation,
     )

@@ -18,6 +18,12 @@ jobs:
       - name: Install project
         run: uv sync --all-extras --dev
       - run: echo "$PWD/.venv/bin" >> $GITHUB_PATH
+      - name: Check pinned metric scripts and provenance
+        env:
+          EVALSENSE_TEST_NATIVE_METRICS: "1"
+          EVALSENSE_TEST_BERTSCRIPT: "1"
+          MPLBACKEND: Agg
+        run: uv run --no-sync python -m unittest discover -s tests -p 'test_metric_implementation.py' -v
       - name: Typecheck project
         uses: jakebailey/pyright-action@v2
         with:
