@@ -5,6 +5,8 @@ from evalsense.webui.configurators.evaluator_configurator import (
     EvaluatorConfiguratorRegistry,
 )
 from evalsense.webui.state import AppState
+from evalsense.webui.utils import configuration_for_display
+from evalsense.utils.credentials import validate_public_config
 
 
 def evaluators_tab(state: gr.State):
@@ -50,10 +52,14 @@ def evaluators_tab(state: gr.State):
                 if parser:
                     try:
                         value = parser(arg)
-                    except Exception as e:
-                        raise gr.Error(f"Error parsing '{arg}' as {input_name}: {e}")
+                    except Exception:
+                        raise gr.Error(
+                            f"Invalid {input_name}. Check the format and keep credentials out of configuration."
+                        ) from None
                 parsed_args[input_name] = value
 
+            # Validate before retaining options in session state.
+            validate_public_config(parsed_args)
             # Update state
             state = args[-1]
             state["evaluator_configs"].append(
@@ -72,7 +78,10 @@ def evaluators_tab(state: gr.State):
             gr.Markdown(
                 f"### Evaluator #{i + 1} — {evaluator_config['evaluator_name']}"
             )
-            gr.JSON(dict(evaluator_config["evaluator_args"]), label="Evaluator Config")
+            gr.JSON(
+                configuration_for_display(dict(evaluator_config["evaluator_args"])),
+                label="Evaluator Config",
+            )
             evaluator_remove_button = gr.Button("Remove Evaluator", variant="stop")
 
             @evaluator_remove_button.click(inputs=[state], outputs=[state])

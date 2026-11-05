@@ -195,6 +195,8 @@ def get_bleu_evaluator(
     metrics: list[Metric | dict[str, list[Metric]]]
     | dict[str, list[Metric]]
     | None = None,
+    *,
+    version: str | None = None,
 ) -> Evaluator:
     """
     Return sentence BLEU-4 scores with a separately labelled corpus BLEU metric.
@@ -214,9 +216,16 @@ def get_bleu_evaluator(
             The metrics to use for the evaluation. If `None`, the default metric
             will be used (unsmoothed corpus BLEU-4).
 
+        version (str | None): Cache version for custom code or external resources.
+
     Returns:
         Evaluator: An evaluator for BLEU scores.
     """
+    cache_parameters = {
+        "method": "bleu",
+        "scorer_name": scorer_name,
+        "metrics": metrics,
+    }
 
     @metric(name=f"{name} (corpus)")
     def bleu() -> MetricProtocol:
@@ -236,4 +245,9 @@ def get_bleu_evaluator(
 
         return score
 
-    return Evaluator(name, scorer=sentence_bleu_scorer())
+    return Evaluator(
+        name,
+        version=version,
+        cache_parameters=cache_parameters,
+        scorer=sentence_bleu_scorer(),
+    )

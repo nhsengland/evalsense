@@ -1,0 +1,23 @@
+name: Meta-evaluation checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  meta-evaluation:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.7.3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install web UI and test minimum numerical dependencies
+        run: |
+          uv sync --frozen --no-dev --extra webui
+          uv pip install 'scipy==1.15.3' 'inspect-ai==0.3.87' 'polars==1.22.0'
+      - name: Run meta-evaluation and caller tests
+        run: uv run --no-sync python -m unittest discover -s tests -p 'test_meta*.py' -v

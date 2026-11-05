@@ -1,0 +1,25 @@
+name: BERTScore length checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  bertscore-backend:
+    runs-on: ubuntu-latest
+    env:
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
+      CUDA_VISIBLE_DEVICES: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.7.3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install locked transformer dependencies
+        run: uv sync --frozen --no-dev --extra transformers --python 3.12
+      - name: Install offline XLNet tokenizer test dependency
+        run: uv pip install 'sentencepiece==0.2.1'
+      - name: Test with local tokenizers and tiny BERT/XLNet models
+        run: uv run --no-sync python -m unittest discover -s tests -p 'test_bertscore_length_backend.py' -v
