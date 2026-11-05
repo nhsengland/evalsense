@@ -26,6 +26,6 @@ jobs:
         run: uv sync --frozen --no-dev --python "${{ matrix.python-version }}"
       - name: Check minimum supported Inspect and Polars
         if: matrix.dependencies == 'minimum'
-        run: uv pip install 'inspect-ai==0.3.87' 'polars==1.22.0'
+        run: uv pip install 'inspect-ai==0.3.87' 'polars==1.22.0' 'evaluate==0.4.3' 'datasets==3.2.0'
       - name: Run regression tests
         run: uv run --no-sync python -m unittest discover -s tests -v

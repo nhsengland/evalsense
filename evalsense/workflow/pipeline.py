@@ -51,6 +51,18 @@ class Pipeline:
                 all_experiments.extend(experiment.all_experiments)
             else:
                 all_experiments.append(experiment)
+        # Reject unsafe configurations and establish cache identities before
+        # any generation, evaluation, or persistent record access.
+        for experiment in all_experiments:
+            experiment.model_config.validate()
+            if (
+                experiment.evaluator is not None
+                and experiment.evaluator.model_config is not None
+            ):
+                experiment.evaluator.model_config.validate()
+            _ = experiment.generation_record
+            if experiment.evaluator is not None:
+                _ = experiment.evaluation_record
         self.experiments = all_experiments
         self.project = project
         self._maintain_order = maintain_order
@@ -121,6 +133,7 @@ class Pipeline:
         Returns:
             Model: The model for the current experiment.
         """
+        new_model_config.validate()
         if new_model_config != self._active_model_config:
             logger.info(f"▶️  Loading model {new_model_config.name}.")
 

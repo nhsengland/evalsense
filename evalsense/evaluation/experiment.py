@@ -9,6 +9,7 @@ from evalsense.datasets import DatasetManager, DatasetRecord
 from evalsense.evaluation import Evaluator
 from evalsense.generation import GenerationSteps, ModelConfig, ModelRecord
 from evalsense.tasks import DefaultTaskPreprocessor, TaskPreprocessor
+from evalsense.utils.cache import fingerprint
 
 type RecordStatus = Literal["started", "success", "cancelled", "error"]
 type ExperimentDefinitions = (
@@ -44,6 +45,10 @@ class GenerationRecord(BaseModel, frozen=True):
         task_name (str): The name of the task.
         model_record (ModelRecord): The record of the model.
         experiment_name (str | None): The name of the experiment, if applicable.
+        generator_fingerprint (str): Identity of the solver configuration and
+            explicit version. Empty for legacy records without this identity.
+        task_fingerprint (str): Identity of preprocessing and sample field mapping.
+            Empty for legacy records without this identity.
     """
 
     dataset_record: DatasetRecord
@@ -51,12 +56,25 @@ class GenerationRecord(BaseModel, frozen=True):
     task_name: str
     model_record: ModelRecord
     experiment_name: str | None = None
+    generator_fingerprint: str = ""
+    task_fingerprint: str = ""
 
-    def get_evaluation_record(self, evaluator_name: str) -> "EvaluationRecord":
+    def get_evaluation_record(
+        self,
+        evaluator_name: str,
+        evaluator_fingerprint: str = "",
+        *,
+        evaluator_provenance_json: str = "",
+    ) -> "EvaluationRecord":
         """Generates an evaluation record from the generation record.
 
         Args:
             evaluator_name (str): The name of the evaluator.
+            evaluator_fingerprint (str): Identity of the evaluator configuration,
+                including its judge settings and explicit version. Defaults to
+                an empty string for legacy/manual records without a fingerprint.
+            evaluator_provenance_json (str): Canonical metric script and runtime
+                provenance. Empty for custom or legacy implementations.
 
         Returns:
             EvaluationRecord: The evaluation record.
@@ -64,6 +82,8 @@ class GenerationRecord(BaseModel, frozen=True):
         return EvaluationRecord(
             **self.model_dump(),
             evaluator_name=evaluator_name,
+            evaluator_fingerprint=evaluator_fingerprint,
+            evaluator_provenance_json=evaluator_provenance_json,
         )
 
     @property
@@ -95,6 +115,8 @@ class GenerationRecord(BaseModel, frozen=True):
             and self.task_name == other.task_name
             and self.model_record == other.model_record
             and self.experiment_name == other.experiment_name
+            and self.generator_fingerprint == other.generator_fingerprint
+            and self.task_fingerprint == other.task_fingerprint
         )
 
     def __lt__(self, other: object) -> bool:
@@ -114,12 +136,16 @@ class GenerationRecord(BaseModel, frozen=True):
             self.task_name,
             self.model_record,
             self.experiment_name or "",
+            self.generator_fingerprint,
+            self.task_fingerprint,
         ) < (
             other.dataset_record,
             other.generator_name,
             other.task_name,
             other.model_record,
             other.experiment_name or "",
+            other.generator_fingerprint,
+            other.task_fingerprint,
         )
 
     def __hash__(self) -> int:
@@ -135,6 +161,8 @@ class GenerationRecord(BaseModel, frozen=True):
                 self.task_name,
                 self.model_record,
                 self.experiment_name,
+                self.generator_fingerprint,
+                self.task_fingerprint,
             )
         )
 
@@ -149,10 +177,20 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         task_name (str): The name of the task.
         model_record (ModelRecord): The record of the model.
         experiment_name (str | None): The name of the experiment, if applicable.
+        generator_fingerprint (str): Identity of the solver configuration and
+            explicit version. Empty for legacy records without this identity.
+        task_fingerprint (str): Identity of preprocessing and sample field mapping.
+            Empty for legacy records without this identity.
         evaluator_name (str): The name of the evaluator.
+        evaluator_provenance_json (str): Canonical script/runtime provenance.
+        evaluator_fingerprint (str): Identity of the evaluator configuration,
+            including its judge settings and explicit version. Empty for legacy
+            records without this identity.
     """
 
     evaluator_name: str
+    evaluator_fingerprint: str = ""
+    evaluator_provenance_json: str = ""
 
     @property
     def generation_record(self) -> GenerationRecord:
@@ -162,7 +200,13 @@ class EvaluationRecord(GenerationRecord, frozen=True):
             GenerationRecord: The generation record.
         """
         return GenerationRecord(
-            **self.model_dump(exclude={"evaluator_name"}),
+            **self.model_dump(
+                exclude={
+                    "evaluator_name",
+                    "evaluator_fingerprint",
+                    "evaluator_provenance_json",
+                }
+            ),
         )
 
     def get_meta_grouped_record(self, metric_name: str) -> "MetaTierGroupedRecord":
@@ -175,8 +219,9 @@ class EvaluationRecord(GenerationRecord, frozen=True):
             PerturbationGroupedRecord: The perturbation grouped record.
         """
         return MetaTierGroupedRecord(
-            **self.model_dump(exclude={"generator_name"}),
+            **self.model_dump(exclude={"generator_name", "generator_fingerprint"}),
             generator_name="",
+            generator_fingerprint="",
             metric_name=metric_name,
         )
 
@@ -206,7 +251,12 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         generation_equal = super().__eq__(other)
         if generation_equal is NotImplemented:
             return generation_equal
-        return generation_equal and self.evaluator_name == other.evaluator_name
+        return (
+            generation_equal
+            and self.evaluator_name == other.evaluator_name
+            and self.evaluator_fingerprint == other.evaluator_fingerprint
+            and self.evaluator_provenance_json == other.evaluator_provenance_json
+        )
 
     def __lt__(self, other: object) -> bool:
         """Checks if this record is less than another record.
@@ -222,7 +272,15 @@ class EvaluationRecord(GenerationRecord, frozen=True):
         if super().__lt__(other):
             return True
         elif super().__eq__(other):
-            return self.evaluator_name < other.evaluator_name
+            return (
+                self.evaluator_name,
+                self.evaluator_fingerprint,
+                self.evaluator_provenance_json,
+            ) < (
+                other.evaluator_name,
+                other.evaluator_fingerprint,
+                other.evaluator_provenance_json,
+            )
         else:
             return False
 
@@ -239,7 +297,11 @@ class EvaluationRecord(GenerationRecord, frozen=True):
                 self.task_name,
                 self.model_record,
                 self.experiment_name,
+                self.generator_fingerprint,
+                self.task_fingerprint,
                 self.evaluator_name,
+                self.evaluator_fingerprint,
+                self.evaluator_provenance_json,
             )
         )
 
@@ -256,7 +318,15 @@ class MetaTierGroupedRecord(EvaluationRecord, frozen=True):
         task_name (str): The name of the task.
         model_record (ModelRecord): The record of the model.
         experiment_name (str | None): The name of the experiment, if applicable.
+        generator_fingerprint (str): Empty when grouping across tier generators;
+            otherwise the solver configuration and explicit version identity.
+        task_fingerprint (str): Identity of preprocessing and sample field mapping.
+            Empty for legacy records without this identity.
         evaluator_name (str): The name of the evaluator.
+        evaluator_fingerprint (str): Identity of the evaluator configuration,
+            including its judge settings and explicit version. Empty for legacy
+            records without this identity.
+        evaluator_provenance_json (str): Canonical script/runtime provenance.
         metric_name (str): The name of the metric being evaluated.
     """
 
@@ -313,7 +383,11 @@ class MetaTierGroupedRecord(EvaluationRecord, frozen=True):
                 self.task_name,
                 self.model_record,
                 self.experiment_name,
+                self.generator_fingerprint,
+                self.task_fingerprint,
                 self.evaluator_name,
+                self.evaluator_fingerprint,
+                self.evaluator_provenance_json,
                 self.metric_name,
             )
         )
@@ -332,6 +406,7 @@ class ExperimentConfig:
     )
     evaluator: Evaluator | None = None
     name: str | None = None
+    field_spec_version: str | None = field(default=None, kw_only=True)
 
     @property
     def generation_record(self) -> GenerationRecord:
@@ -346,6 +421,16 @@ class ExperimentConfig:
             task_name=self.task_preprocessor.name,
             model_record=self.model_config.record,
             experiment_name=self.name,
+            generator_fingerprint=self.generation_steps.cache_key,
+            task_fingerprint=fingerprint(
+                {
+                    "preprocessor": self.task_preprocessor.cache_key,
+                    "field_spec": fingerprint(
+                        self.field_spec if self.field_spec is not None else FieldSpec(),
+                        version=self.field_spec_version,
+                    ),
+                }
+            ),
         )
 
     @property
@@ -362,6 +447,12 @@ class ExperimentConfig:
 
         return self.generation_record.get_evaluation_record(
             self.evaluator.name,
+            self.evaluator.cache_key,
+            evaluator_provenance_json=(
+                self.evaluator.implementation.provenance_json
+                if self.evaluator.implementation is not None
+                else ""
+            ),
         )
 
 
@@ -375,6 +466,7 @@ class TaskConfig:
     task_preprocessor: TaskPreprocessor = field(
         default_factory=lambda: DefaultTaskPreprocessor()
     )
+    field_spec_version: str | None = field(default=None, kw_only=True)
 
 
 @dataclass
@@ -414,6 +506,7 @@ class ExperimentBatchConfig:
                                 dataset_manager=task.dataset_manager,
                                 generation_steps=task.generation_steps,
                                 field_spec=task.field_spec,
+                                field_spec_version=task.field_spec_version,
                                 task_preprocessor=task.task_preprocessor,
                                 model_config=llm_manager,
                                 evaluator=evaluator,
@@ -426,6 +519,7 @@ class ExperimentBatchConfig:
                             dataset_manager=task.dataset_manager,
                             generation_steps=task.generation_steps,
                             field_spec=task.field_spec,
+                            field_spec_version=task.field_spec_version,
                             task_preprocessor=task.task_preprocessor,
                             model_config=llm_manager,
                             name=self.name,

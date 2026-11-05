@@ -81,7 +81,7 @@ def _parse_answers(answers: list[str], source: str) -> list[bool | None]:
 
 
 class QagsConfig(Protocol):
-    """Configuration for EvalSense's QAGS-derived QA agreement metric.
+    """Configuration for EvalSense's QAGS QA agreement metric.
 
     EvalSense adapts [Wang et al. (2020)](https://aclanthology.org/2020.acl-main.450/)
     by generating questions from both texts and supporting ternary, exact-match
@@ -275,7 +275,7 @@ class QagsConfig(Protocol):
 
 
 class QagsScoreCalculator(ScoreCalculator):
-    """QAGS-derived score calculator with strict answer validation.
+    """QAGS score calculator with strict answer validation.
 
     Each unique question has equal weight within a document. Both texts must
     supply exactly one nonempty answer per question in every comparison mode.
@@ -325,7 +325,7 @@ class QagsScoreCalculator(ScoreCalculator):
         self,
         model: Model,
         config: QagsConfig,
-        name: str = "QAGS-derived",
+        name: str = "QAGS",
         debug: bool = False,
     ):
         """
@@ -334,7 +334,7 @@ class QagsScoreCalculator(ScoreCalculator):
         Args:
             model (Model): The model to use for evaluation.
             config (QagsConfig): The configuration for the QAGS score calculator.
-            name (str): The name of the score calculator. Defaults to "QAGS-derived".
+            name (str): The name of the score calculator. Defaults to "QAGS".
             debug (bool): Whether to report repeated errors in the log.
         """
         if config.answer_comparison_mode not in ("ternary", "exact", "judge"):
@@ -606,7 +606,7 @@ class QagsScoreCalculator(ScoreCalculator):
             else 0.0
         )
 
-        explanation = "QAGS-derived Evaluation Report\n\n\nMismatched Q&As\n"
+        explanation = "QAGS Evaluation Report\n\n\nMismatched Q&As\n"
         for i, (question, pa, ra) in enumerate(
             zip(questions, prediction_answers, reference_answers)
         ):
@@ -685,7 +685,7 @@ class QagsScoreCalculator(ScoreCalculator):
             else 0.0
         )
 
-        explanation = "QAGS-derived Evaluation Report\n\n\nMismatched Q&As\n"
+        explanation = "QAGS Evaluation Report\n\n\nMismatched Q&As\n"
         for i, (question, pa, ra) in enumerate(
             zip(questions, prediction_answers, reference_answers)
         ):
@@ -810,7 +810,7 @@ class QagsScoreCalculator(ScoreCalculator):
 
         accuracy = sum(answer_comparisons) / len(answer_comparisons)
 
-        explanation = "QAGS-derived Evaluation Report\n\n\nMismatched Q&As\n"
+        explanation = "QAGS Evaluation Report\n\n\nMismatched Q&As\n"
         for i, (question, pa, ra, ac) in enumerate(
             zip(
                 questions,
@@ -941,7 +941,7 @@ class QagsScoreCalculator(ScoreCalculator):
 
 
 class QagsScorerFactory(ScorerFactory):
-    """Scorer factory for the QAGS-derived QA agreement metric."""
+    """Scorer factory for the QAGS QA agreement metric."""
 
     def __init__(
         self,
@@ -1011,15 +1011,16 @@ class QagsScorerFactory(ScorerFactory):
 def get_qags_evaluator(
     *,
     config: QagsConfig,
-    name: str = "QAGS-derived",
+    name: str = "QAGS",
     model_name: str | None = None,
     metrics: list[Metric | dict[str, list[Metric]]]
     | dict[str, list[Metric]]
     | None = None,
     model_config: ModelConfig,
+    version: str | None = None,
 ) -> Evaluator:
     """
-    Constructs a QAGS-derived evaluator for EvalSense.
+    Constructs a QAGS evaluator for EvalSense.
 
     The configured prompts select the two comparison texts and question types.
     See QagsConfig for the method and QagsScoreCalculator for score definitions,
@@ -1038,11 +1039,20 @@ def get_qags_evaluator(
         model_config (ModelConfig): The configuration of the model to be used
             for evaluation.
 
+        version (str | None): Cache version for custom code or external resources.
+
     Returns:
         Evaluator: The constructed QAGS evaluator.
     """
+    cache_parameters = {
+        "method": "qags",
+        "config": {"implementation": type(config), "parameters": vars(config)},
+        "metrics": metrics,
+    }
     metric_name = f"{name} ({model_name or model_config.name})"
     return Evaluator(
+        version=version,
+        cache_parameters=cache_parameters,
         name=metric_name,
         scorer=QagsScorerFactory(
             name=metric_name,

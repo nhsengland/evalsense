@@ -1,6 +1,5 @@
 from typing import Any, override
 
-import evaluate
 from inspect_ai.scorer import (
     Metric,
     Score,
@@ -12,13 +11,15 @@ from inspect_ai.scorer import (
 from inspect_ai.solver import TaskState
 
 from evalsense.evaluation import Evaluator, ScoreCalculator
+from evalsense.evaluation.metric_implementation import MetricImplementation
 
 
 class RougeScoreCalculator(ScoreCalculator):
     """Calculator for computing ROUGE scores."""
 
     def __init__(self):
-        self.rouge_module = evaluate.load("rouge")
+        self.implementation = MetricImplementation.resolve("rouge")
+        self.rouge_module = self.implementation.load()
 
     @override
     def calculate(
@@ -59,6 +60,7 @@ class RougeScoreCalculator(ScoreCalculator):
                 "ROUGE-L": result["rougeL"],  # type: ignore
             },
             answer=prediction,
+            metadata={"metric_provenance": self.implementation.provenance},
         )
 
     @override
@@ -98,6 +100,8 @@ def get_rouge_evaluator(
     metrics: list[Metric | dict[str, list[Metric]]]
     | dict[str, list[Metric]]
     | None = None,
+    *,
+    version: str | None = None,
 ) -> Evaluator:
     """
     Returns an evaluator for ROUGE scores.
@@ -108,9 +112,15 @@ def get_rouge_evaluator(
             The metrics to use for evaluation. If None, defaults to ROUGE-1, ROUGE-2,
             and ROUGE-L with mean aggregation.
 
+        version (str | None): Cache version for custom code or external resources.
+
     Returns:
         Evaluator: An evaluator for ROUGE scores.
     """
+    cache_parameters = {
+        "method": "rouge",
+        "metrics": metrics,
+    }
     if metrics is None:
         metrics = [
             {
@@ -131,4 +141,10 @@ def get_rouge_evaluator(
 
         return score
 
-    return Evaluator(name, scorer=rouge_scorer())
+    return Evaluator(
+        name,
+        version=version,
+        cache_parameters=cache_parameters,
+        scorer=rouge_scorer(),
+        implementation=rouge_calculator.implementation,
+    )

@@ -399,7 +399,7 @@ class AsyncQagsTests(unittest.IsolatedAsyncioTestCase):
             result.metadata["question_weighting"], "uniform_unique_questions"
         )
         assert result.explanation is not None
-        self.assertIn("QAGS-derived", result.explanation)
+        self.assertIn("QAGS", result.explanation)
         for call in cast(Any, fake.generate).await_args_list:
             prompt = json.loads(call.args[0])
             self.assertEqual(prompt["input"], "source")
@@ -617,7 +617,9 @@ class PipelineTests(unittest.TestCase):
             score = next(iter(result.samples[0].scores.values()))
             assert isinstance(score.value, dict)
             self.assertTrue(all(value == 1.0 for value in score.value.values()))
-            self.assertIn("QAGS-derived", experiment.evaluation_record.evaluator_name)
+            self.assertTrue(
+                experiment.evaluation_record.evaluator_name.startswith("QAGS (")
+            )
             for suffix in (".json", ".eval"):
                 path = Path(directory) / f"roundtrip{suffix}"
                 write_eval_log(result, location=str(path))

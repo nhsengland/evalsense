@@ -23,12 +23,36 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
 </Typography>
 
 <Typography variant="body2" gutterBottom>
+  IDF weights must be estimated from a reference corpus and held fixed across
+  comparisons. EvalSense currently scores one prediction/reference pair at a
+  time and supports only unweighted BERTScore. Its evaluator rejects automatic
+  IDF and precomputed IDF dictionaries; use a corpus-aware scorer when IDF
+  weighting is required. Increasing the embedding batch size does not supply
+  that corpus.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
   While potentially more powerful than traditional statistical metrics,
   BERTScore still requires a reference text and its performance can depend on
   the specific BERT model used and the layers from which embeddings are
   extracted. It can also only capture semantic overlap between the individual
   tokens and not the overall meaning of the text, which makes it only poorly
   correlated with human judgement when assessing correctness.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  EvalSense checks both texts against the selected tokenizer/model's declared
+  context before scoring, counting special tokens as well. Text exceeding that
+  limit raises an error rather than receiving a score for a truncated prefix.
+  Models such as XLNet can have no fixed positional limit and are supported,
+  although any finite tokenizer limit still applies. Unknown limits remain errors.
+  Longer documents need a suitable model and enough memory; no fixed limit does
+  not establish reliable long-document evaluation. See the{" "}
+  <Link href="https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.BertScoreCalculator">
+    library documentation
+  </Link>{" "}
+  for tokenizer constraints. Increasing the embedding batch size does not extend
+  a model's context, and previously cached results are not revalidated automatically.
 </Typography>
 
 <Typography variant="subtitle1" gutterBottom>

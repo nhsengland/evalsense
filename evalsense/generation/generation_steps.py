@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 from inspect_ai.solver import Solver
 
+from evalsense.utils.cache import fingerprint
+
 
 # This class wraps solvers to provide a unique identifier (name) for each
 # generation procedure to be used in experiments, allowing the users to
@@ -13,3 +15,9 @@ class GenerationSteps:
 
     name: str
     steps: Solver | list[Solver]
+    version: str | None = None
+
+    @property
+    def cache_key(self) -> str:
+        """Identity of solver parameters and the caller's custom-code version."""
+        return fingerprint(self.steps, version=self.version)
