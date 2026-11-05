@@ -67,7 +67,7 @@ class GEvalConfigurator(EvaluatorConfigurator):
                 "input_name": "model_args",
                 "component": gr.Textbox(
                     label="Model Arguments",
-                    info="The arguments to pass to the model during evaluation, formatted as a Python dictionary. These will be passed to the [`get_model`](https://inspect.aisi.org.uk/reference/inspect_ai.model.html#get_model) function when creating the model.",
+                    info="The arguments to pass to the model during evaluation, formatted as a Python dictionary. Public options only; configure credentials through provider environment variables. These will be passed to the [`get_model`](https://inspect.aisi.org.uk/reference/inspect_ai.model.html#get_model) function when creating the model.",
                 ),
                 "parser": dict_parser,
             },
