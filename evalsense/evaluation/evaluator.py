@@ -6,6 +6,7 @@ from inspect_ai.model import Model
 from inspect_ai.scorer import Score, Scorer
 
 from evalsense.generation import ModelConfig
+from evalsense.utils.cache import fingerprint
 
 
 @runtime_checkable
@@ -92,6 +93,28 @@ class Evaluator:
     scorer: Scorer | ScorerFactory
     model_config: ModelConfig | None = None
     cleanup_fun: Callable[[], None] | None = None
+    version: str | None = None
+    cache_parameters: dict[str, Any] | None = None
+
+    @property
+    def cache_key(self) -> str:
+        """Include the scorer's declared configuration and judge model settings."""
+        return fingerprint(
+            {
+                "scorer": self.scorer
+                if self.cache_parameters is None
+                else {
+                    "implementation": self.scorer
+                    if callable(self.scorer)
+                    else type(self.scorer),
+                    "parameters": self.cache_parameters,
+                },
+                "model": self.model_config.record
+                if self.model_config is not None
+                else None,
+            },
+            version=self.version,
+        )
 
     @property
     def model_name(self) -> str:
