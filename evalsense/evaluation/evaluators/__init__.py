@@ -1,5 +1,6 @@
 from evalsense.evaluation.evaluators.bertscore import (
     BertScoreCalculator,
+    BertScoreLengthError,
     get_bertscore_evaluator,
 )
 from evalsense.evaluation.evaluators.bleu import (
@@ -25,6 +26,7 @@ from evalsense.evaluation.evaluators.qags import (
 
 __all__ = [
     "BertScoreCalculator",
+    "BertScoreLengthError",
     "get_bertscore_evaluator",
     "BleuPrecisionScoreCalculator",
     "bleu_metric",

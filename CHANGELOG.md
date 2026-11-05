@@ -7,6 +7,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+- BERTScore rejects inputs exceeding a declared tokenizer/model limit or whose length capability cannot be determined, rather than returning scores for truncated text. XLNet's explicit no-fixed-limit declaration is supported; finite tokenizer limits still apply.
 - Custom solvers, preprocessing functions, and sample mappers now require explicit cache versions. Existing name-only cache entries remain readable but are not reused.
 - Model configuration rejects inline credential fields, non-public headers, credential-bearing URLs and opaque objects. Configure provider authentication through environment variables or its credential chain. Use plain public configuration values.
 - Meta-evaluation now requires an explicit complete set of at least two tier IDs. Results are separated by experiment/scorer identity, with exclusion counts and confidence intervals. Duplicate observations and mixed epochs are rejected.
@@ -17,12 +18,16 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 - Prevent incomplete two-tier and undefined meta-evaluation correlations from silently inflating the reported mean. Report failed/missing logs and unestimable intervals.
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
 
 ### Documentation
+- Document the BERTScore length policy and XLNet tokenizer constraints in the component docstrings.
+
+  Existing cached results are not repaired or revalidated. Use a fresh project or a new evaluator name when applying this policy to previously scored data; with versioned components, also update their version. Preserve original logs as historical results. The pipeline records length-check failures instead of successful prefix-only scores.
 - Add result-management guidance, notebook cache notes and fingerprint field documentation.
 - Restore correlation analyser argument documentation and consolidate pairing, count and label guidance in the API docstrings.
 - Document authentication setup and the configuration boundary. Existing files, logs and backups are not scrubbed: rotate any previously exposed credentials and handle those artifacts separately. Secrets embedded in arbitrary prompts, innocuous field values or custom provider logs remain the caller's responsibility.

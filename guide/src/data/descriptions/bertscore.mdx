@@ -40,6 +40,21 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
   correlated with human judgement when assessing correctness.
 </Typography>
 
+<Typography variant="body2" gutterBottom>
+  EvalSense checks both texts against the selected tokenizer/model's declared
+  context before scoring, counting special tokens as well. Text exceeding that
+  limit raises an error rather than receiving a score for a truncated prefix.
+  Models such as XLNet can have no fixed positional limit and are supported,
+  although any finite tokenizer limit still applies. Unknown limits remain errors.
+  Longer documents need a suitable model and enough memory; no fixed limit does
+  not establish reliable long-document evaluation. See the{" "}
+  <Link href="https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.BertScoreCalculator">
+    library documentation
+  </Link>{" "}
+  for tokenizer constraints. Increasing the embedding batch size does not extend
+  a model's context, and previously cached results are not revalidated automatically.
+</Typography>
+
 <Typography variant="subtitle1" gutterBottom>
   Calculation
 </Typography>
