@@ -50,8 +50,13 @@ def get_remote_file_headers(
             wait=wait_exponential(multiplier=1, min=2, max=32),
             reraise=True,
         ):
-            headers = {"User-Agent": USER_AGENT}
-            with attempt as _, requests.head(url, headers=headers) as response:
+            headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
+            with (
+                attempt as _,
+                requests.head(
+                    url, headers=headers, allow_redirects=True, timeout=10
+                ) as response,
+            ):
                 response.raise_for_status()
                 return response.headers
     except Exception as e:
@@ -124,21 +129,63 @@ def verify_file(
     return True
 
 
-def _valid_content_range(value: str, offset: int, file_size: int) -> bool:
-    """Check that a single byte range covers the entire requested suffix."""
-    match = regex.fullmatch(r"bytes ([0-9]+)-([0-9]+)/([0-9]+|\*)", value, regex.I)
-    if match is None:
-        return False
+def _identity_encoding(headers: CaseInsensitiveDict[str]) -> bool:
+    return headers.get("Content-Encoding", "").strip().lower() in ("", "identity")
+
+
+def _content_length(headers: CaseInsensitiveDict[str]) -> int | None:
+    # iter_content writes decoded bytes. An encoded length counts bytes on the wire.
+    if not _identity_encoding(headers) or "Transfer-Encoding" in headers:
+        return None
+    value = headers.get("Content-Length")
+    if value is None:
+        return None
+    if not value.isascii() or not value.isdecimal():
+        raise ValueError(f"Invalid Content-Length: {value!r}")
+    return int(value)
+
+
+def _full_download_size(
+    response: requests.Response, file_size: int | None
+) -> int | None:
+    length = _content_length(response.headers)
+    if file_size is not None and length is not None and file_size != length:
+        raise ValueError(
+            f"GET Content-Length {length} differs from HEAD length {file_size}"
+        )
+    return length if length is not None else file_size
+
+
+def _range_total(
+    headers: CaseInsensitiveDict[str], offset: int, file_size: int | None
+) -> int | None:
+    """Return the complete size if this range covers the entire requested suffix."""
+    match = regex.fullmatch(
+        r"bytes ([0-9]+)-([0-9]+)/([0-9]+|\*)",
+        headers.get("Content-Range", ""),
+        regex.I,
+    )
+    if match is None or not _identity_encoding(headers):
+        return None
     try:
         start, end = int(match[1]), int(match[2])
         total = file_size if match[3] == "*" else int(match[3])
+        length = _content_length(headers)
     except ValueError:
-        return False
-    return start == offset and start <= end and end + 1 == total == file_size
+        return None
+    if start != offset or start > end or end + 1 != total:
+        return None
+    if file_size is not None and total != file_size:
+        return None
+    if length is not None and length != end - start + 1:
+        return None
+    return total
 
 
 @contextmanager
-def _download_response(url: str, headers: dict[str, str], offset: int, file_size: int):
+def _download_response(
+    url: str, headers: dict[str, str], offset: int, file_size: int | None
+):
     """Open the requested suffix, falling back once to a full GET if needed."""
     for start in ((offset, 0) if offset else (0,)):
         request_headers = {**headers, "Range": f"bytes={start}-"} if start else headers
@@ -149,13 +196,12 @@ def _download_response(url: str, headers: dict[str, str], offset: int, file_size
                 continue
             reply.raise_for_status()
             if reply.status_code == 200:
-                yield reply, 0
+                yield reply, 0, _full_download_size(reply, file_size)
                 return
             if start and reply.status_code == 206:
-                if _valid_content_range(
-                    reply.headers.get("Content-Range", ""), start, file_size
-                ):
-                    yield reply, start
+                total = _range_total(reply.headers, start, file_size)
+                if total is not None:
+                    yield reply, start, total
                     return
                 continue
             raise RuntimeError(f"Unexpected download status {reply.status_code}")
@@ -202,19 +248,21 @@ def download_file(
 
     # Try to determine the size of the downloaded file and resume support
     remote_file_headers = get_remote_file_headers(url, max_attempts=max_attempts)
-    file_size = int(remote_file_headers.get("Content-Length", 0))
-    supports_resume = "Accept-Ranges" in remote_file_headers
-    content_encoding = remote_file_headers.get("Content-Encoding", "")
-    compression_encodings = ["gzip", "deflate", "br", "zstd"]
-    if any(encoding in content_encoding for encoding in compression_encodings):
-        supports_resume = False
+    file_size = _content_length(remote_file_headers)
+    supports_resume = (
+        remote_file_headers.get("Accept-Ranges", "").strip().lower() == "bytes"
+        and _identity_encoding(remote_file_headers)
+    )
 
-    # Return early if file already downloaded
-    if not force_download and verify_file(
-        target_path,
-        expected_size=file_size,
-        expected_hash=expected_hash,
-        hash_type=hash_type,
+    if (
+        not force_download
+        and (file_size is not None or expected_hash is not None)
+        and verify_file(
+            target_path,
+            expected_size=file_size,
+            expected_hash=expected_hash,
+            hash_type=hash_type,
+        )
     ):
         return
 
@@ -225,10 +273,10 @@ def download_file(
         if temp_path.exists() and resume_download and supports_resume
         else 0
     )
-    if already_downloaded_size > file_size:
+    if file_size is not None and already_downloaded_size > file_size:
         # Partial download is corrupted — larger file size than expected
         already_downloaded_size = 0
-    headers = {"User-Agent": USER_AGENT}
+    headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
 
     # Try to download the file
     try:
@@ -242,13 +290,18 @@ def download_file(
                 _download_response(url, headers, already_downloaded_size, file_size) as (
                     response,
                     write_offset,
+                    expected_size,
                 ),
             ):
+                if expected_size is None and expected_hash is None:
+                    raise RuntimeError(
+                        "Cannot verify download: no decoded byte count or expected hash"
+                    )
                 mode = "ab" if write_offset else "wb"
                 with (
                     open(temp_path, mode) as file,
                     tqdm(
-                        total=file_size,
+                        total=expected_size,
                         initial=write_offset,
                         unit="B",
                         unit_scale=True,
@@ -266,6 +319,7 @@ def download_file(
 
                 if not verify_file(
                     temp_path,
+                    expected_size=expected_size,
                     expected_hash=expected_hash,
                     hash_type=hash_type,
                 ):
