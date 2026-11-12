@@ -210,12 +210,21 @@ def download_file(
             ):
                 response.raise_for_status()
 
-                mode = "ab" if already_downloaded_size > 0 else "wb"
+                if response.status_code == 200:
+                    write_offset = 0
+                elif response.status_code == 206 and already_downloaded_size:
+                    write_offset = already_downloaded_size
+                else:
+                    raise RuntimeError(
+                        f"Unexpected download status {response.status_code}"
+                    )
+
+                mode = "ab" if write_offset else "wb"
                 with (
                     open(temp_path, mode) as file,
                     tqdm(
                         total=file_size,
-                        initial=already_downloaded_size,
+                        initial=write_offset,
                         unit="B",
                         unit_scale=True,
                         unit_divisor=1024,
