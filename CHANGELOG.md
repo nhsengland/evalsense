@@ -23,6 +23,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 ### Bug fixes
 - Restart dataset downloads from byte zero when a server ignores a range request or returns an invalid byte range. Check the completed file size before replacing the dataset file. Downloads without a comparable byte count require a configured hash.
+- Resume interrupted downloads from the bytes written on the previous attempt. Discard partial files that fail verification.
 - Pin Evaluate metric scripts to full commits, check their loaded content hashes (including cached fallbacks), and record Python/runtime package versions in scores and project records. BERTScore reloads and corpus BLEU use the same pinned definition.
 - Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
