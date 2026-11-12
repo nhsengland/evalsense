@@ -29,6 +29,7 @@ keywords = [
 dependencies = [
     "datasets>=3.2.0",
     "evaluate>=0.4.3",
+    "filelock>=3.0",
     "inspect-ai>=0.3.87",
     "matplotlib>=3.10.0",
     "numpy>=2.0.0",
