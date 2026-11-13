@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import hashlib
 from pathlib import Path
 import unicodedata
@@ -123,6 +124,43 @@ def verify_file(
     return True
 
 
+def _valid_content_range(value: str, offset: int, file_size: int) -> bool:
+    """Check that a single byte range covers the entire requested suffix."""
+    match = regex.fullmatch(r"bytes ([0-9]+)-([0-9]+)/([0-9]+|\*)", value, regex.I)
+    if match is None:
+        return False
+    try:
+        start, end = int(match[1]), int(match[2])
+        total = file_size if match[3] == "*" else int(match[3])
+    except ValueError:
+        return False
+    return start == offset and start <= end and end + 1 == total == file_size
+
+
+@contextmanager
+def _download_response(url: str, headers: dict[str, str], offset: int, file_size: int):
+    """Open the requested suffix, falling back once to a full GET if needed."""
+    for start in ((offset, 0) if offset else (0,)):
+        request_headers = {**headers, "Range": f"bytes={start}-"} if start else headers
+        with requests.get(
+            url, stream=True, headers=request_headers, timeout=10
+        ) as reply:
+            if start and reply.status_code == 416:
+                continue
+            reply.raise_for_status()
+            if reply.status_code == 200:
+                yield reply, 0
+                return
+            if start and reply.status_code == 206:
+                if _valid_content_range(
+                    reply.headers.get("Content-Range", ""), start, file_size
+                ):
+                    yield reply, start
+                    return
+                continue
+            raise RuntimeError(f"Unexpected download status {reply.status_code}")
+
+
 def download_file(
     url: str,
     target_path: str | Path,
@@ -190,12 +228,7 @@ def download_file(
     if already_downloaded_size > file_size:
         # Partial download is corrupted — larger file size than expected
         already_downloaded_size = 0
-    headers = (
-        {"Range": f"bytes={already_downloaded_size}-"}
-        if already_downloaded_size > 0
-        else {}
-    )
-    headers["User-Agent"] = USER_AGENT
+    headers = {"User-Agent": USER_AGENT}
 
     # Try to download the file
     try:
@@ -206,19 +239,11 @@ def download_file(
         ):
             with (
                 attempt as _,
-                requests.get(url, stream=True, headers=headers, timeout=10) as response,
+                _download_response(url, headers, already_downloaded_size, file_size) as (
+                    response,
+                    write_offset,
+                ),
             ):
-                response.raise_for_status()
-
-                if response.status_code == 200:
-                    write_offset = 0
-                elif response.status_code == 206 and already_downloaded_size:
-                    write_offset = already_downloaded_size
-                else:
-                    raise RuntimeError(
-                        f"Unexpected download status {response.status_code}"
-                    )
-
                 mode = "ab" if write_offset else "wb"
                 with (
                     open(temp_path, mode) as file,

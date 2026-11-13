@@ -66,3 +66,29 @@ class DownloadFileTests(unittest.TestCase):
 
         self.assertEqual(self.target.read_bytes(), b"old")
         self.assertFalse(self.part.exists())
+
+    def test_invalid_range_restarts_without_appending(self):
+        for value in (None, "invalid", "bytes 2-5/6", "bytes 3-4/6", "bytes 3-5/7"):
+            with self.subTest(value=value):
+                self.part.write_bytes(b"abc")
+                self.get.reset_mock()
+                self.get.side_effect = [
+                    response(206, b"bad", {"Content-Range": value} if value else {}),
+                    response(200, b"abcdef"),
+                ]
+
+                self.download(force_download=True)
+
+                self.assertEqual(self.target.read_bytes(), b"abcdef")
+                first, second = self.get.call_args_list
+                self.assertEqual(first.kwargs["headers"]["Range"], "bytes=3-")
+                self.assertNotIn("Range", second.kwargs["headers"])
+
+    def test_unsatisfiable_range_restarts_with_full_request(self):
+        self.part.write_bytes(b"abcdef")
+        self.get.side_effect = [response(416, b""), response(200, b"abcdef")]
+
+        self.download()
+
+        self.assertEqual(self.target.read_bytes(), b"abcdef")
+        self.assertNotIn("Range", self.get.call_args.kwargs["headers"])
