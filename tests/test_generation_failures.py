@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from uuid import UUID
 import unittest
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ from inspect_ai.solver import generate
 from evalsense.datasets.managers.huggingface import HuggingFaceDatasetManager
 from evalsense.evaluation import ExperimentConfig, ResultRecord
 from evalsense.generation import GenerationSteps, ModelConfig
+from evalsense.utils.cache import fingerprint
 from evalsense.workflow import Pipeline, Project
 
 
@@ -72,3 +74,24 @@ class GenerationFailureTests(unittest.TestCase):
             ResultRecord(status="error", error_message="stop retry"),
         )
         self.assertTrue(previous.exists())
+
+    def test_new_attempts_separate_runs_with_the_same_display_name(self):
+        with patch("evalsense.workflow.pipeline.eval", return_value=[]) as run:
+            self.generate()
+            self.generate()
+            self.experiment.name = "another experiment"
+            self.generate()
+
+        first, retry, other = [Path(call.kwargs["log_dir"]) for call in run.call_args_list]
+        self.assertEqual(first.parent, retry.parent)
+        self.assertNotEqual(first, retry)
+        self.assertNotEqual(first.parent, other.parent)
+        self.assertEqual(other.parent.name, fingerprint(self.experiment.generation_record))
+        for call in run.call_args_list:
+            attempt = Path(call.kwargs["log_dir"])
+            self.assertTrue(attempt.is_dir())
+            self.assertEqual(UUID(attempt.name).version, 4)
+            self.assertEqual(
+                call.kwargs["tasks"].metadata["evalsense_generation_id"],
+                attempt.parent.name,
+            )
