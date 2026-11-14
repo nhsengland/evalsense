@@ -4,6 +4,7 @@ from pathlib import Path
 import unicodedata
 import regex
 import requests
+from filelock import FileLock
 from requests.utils import CaseInsensitiveDict
 
 from tenacity import Retrying, stop_after_attempt, wait_exponential
@@ -182,6 +183,33 @@ def _range_total(
     return total
 
 
+def _url_digest(url: str) -> str:
+    return hashlib.sha256(url.encode("utf-8")).hexdigest()
+
+
+def _strong_etag(value: str) -> bool:
+    return regex.fullmatch(r'"[\x21\x23-\x7e\x80-\xff]*"', value) is not None
+
+
+def _read_validator(path: Path, url: str) -> tuple[str, str] | None:
+    try:
+        source, location, tag = path.read_bytes().decode("latin-1").split("\n")
+    except (FileNotFoundError, ValueError):
+        return None
+    if source == _url_digest(url) and _strong_etag(tag):
+        return location, tag
+    return None
+
+
+def _save_validator(path: Path, url: str, response: requests.Response) -> None:
+    tag = response.headers.get("ETag", "")
+    if _strong_etag(tag) and _identity_encoding(response.headers):
+        location = _url_digest(response.url or url)
+        path.write_bytes(f"{_url_digest(url)}\n{location}\n{tag}".encode("latin-1"))
+    else:
+        path.unlink(missing_ok=True)
+
+
 @contextmanager
 def _download_response(
     url: str, headers: dict[str, str], partial_path: Path | None, file_size: int | None
@@ -195,8 +223,16 @@ def _download_response(
             pass
         if file_size is not None and offset > file_size:
             offset = 0
-    for start in ((offset, 0) if offset else (0,)):
-        request_headers = {**headers, "Range": f"bytes={start}-"} if start else headers
+    validator = (
+        _read_validator(partial_path.with_suffix(".part.etag"), url)
+        if offset and partial_path is not None
+        else None
+    )
+    for start in ((offset, 0) if validator else (0,)):
+        request_headers = headers
+        if start and validator:
+            _, tag = validator
+            request_headers = {**headers, "Range": f"bytes={start}-", "If-Range": tag}
         with requests.get(
             url, stream=True, headers=request_headers, timeout=10
         ) as reply:
@@ -206,7 +242,14 @@ def _download_response(
             if reply.status_code == 200:
                 yield reply, 0, _full_download_size(reply, file_size)
                 return
-            if start and reply.status_code == 206:
+            if start and validator and reply.status_code == 206:
+                # The ETag is scoped to the final URL, including any redirects.
+                location, tag = validator
+                if (
+                    reply.headers.get("ETag") != tag
+                    or _url_digest(reply.url or url) != location
+                ):
+                    continue
                 total = _range_total(reply.headers, start, file_size)
                 if total is not None:
                     yield reply, start, total
@@ -232,7 +275,7 @@ def download_file(
         url (str): The URL of the file to download.
         target_path (str | Path): The path to save the downloaded file.
         resume_download (bool, optional): Whether to resume a partially
-            downloaded file.
+            downloaded file when the server provides a strong ETag.
         force_download (bool, optional): Whether to force the download even
             if the file already exists.
         show_progress (bool, optional): Whether to show download progress.
@@ -276,6 +319,7 @@ def download_file(
 
     # Check existing partial download
     temp_path = target_path.with_suffix(target_path.suffix + ".part")
+    validator_path = temp_path.with_suffix(".part.etag")
     partial_path = temp_path if resume_download and supports_resume else None
     headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
 
@@ -288,6 +332,7 @@ def download_file(
         ):
             with (
                 attempt as _,
+                FileLock(temp_path.with_suffix(".part.lock")),
                 _download_response(url, headers, partial_path, file_size) as (
                     response,
                     write_offset,
@@ -312,12 +357,15 @@ def download_file(
                         leave=False,
                     ) as progress,
                 ):
+                    if not write_offset:
+                        _save_validator(validator_path, url, response)
                     for chunk in response.iter_content(chunk_size):
                         if chunk:
                             file.write(chunk)
                             file.flush()
                             progress.update(len(chunk))
 
+                validator_path.unlink(missing_ok=True)
                 if not verify_file(
                     temp_path,
                     expected_size=expected_size,

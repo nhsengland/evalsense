@@ -1282,6 +1282,7 @@ source = { editable = "." }
 dependencies = [
     { name = "datasets" },
     { name = "evaluate" },
+    { name = "filelock" },
     { name = "inspect-ai" },
     { name = "matplotlib" },
     { name = "numpy" },
@@ -1356,6 +1357,7 @@ requires-dist = [
     { name = "evalsense", extras = ["webui", "jupyter"], marker = "extra == 'interactive'" },
     { name = "evalsense", extras = ["webui", "jupyter", "transformers", "vllm"], marker = "extra == 'all'" },
     { name = "evaluate", specifier = ">=0.4.3" },
+    { name = "filelock", specifier = ">=3.0" },
     { name = "gradio", marker = "extra == 'webui'", specifier = ">=5.44.1" },
     { name = "inspect-ai", specifier = ">=0.3.87" },
     { name = "ipywidgets", marker = "extra == 'jupyter'", specifier = ">=8.1.5" },
