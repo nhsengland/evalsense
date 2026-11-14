@@ -234,9 +234,16 @@ class Pipeline:
                 )
         except (Exception, KeyboardInterrupt) as exc:
             message = str(exc) or type(exc).__name__
+            recovered = self.project._recover_generation_log(
+                attempt_dir, inspect_task.name, generation_id
+            )
             self.project.update_record(
                 record_key,
-                ResultRecord(status="error", error_message=message),
+                ResultRecord(
+                    status="error",
+                    error_message=message,
+                    log_location=recovered.location if recovered is not None else None,
+                ),
                 keep_previous_log=True,
             )
             logger.error(f"Generation failed: {message}")
@@ -395,6 +402,12 @@ class Pipeline:
             logger.info(
                 f"🔄  Starting evaluation for {experiment.evaluation_record.label}"
             )
+
+            # A recovered log is diagnostic until its generation succeeds.
+            generation = self.project.get_record(experiment.generation_record)
+            if generation is None or generation.status != "success":
+                logger.info("Skipping evaluation because generation has not succeeded.")
+                continue
 
             # Check if we have a record from the generations.
             prev_record = self.project.get_record(
