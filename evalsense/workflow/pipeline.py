@@ -1,9 +1,10 @@
+from pathlib import Path
 from typing import Any, cast
 from uuid import uuid4
 
 from inspect_ai import Task, eval, eval_retry, score, task
 from inspect_ai.dataset import Dataset
-from inspect_ai.log import EvalLog, read_eval_log, write_eval_log
+from inspect_ai.log import EvalLog, write_eval_log
 from inspect_ai.model import GenerateConfig, Model, get_model
 from tqdm.auto import tqdm
 
@@ -210,12 +211,25 @@ class Pipeline:
         # We need to create the task even when resuming from a previous log,
         # otherwise Inspect will not be able to resolve it.
         inspect_task = create_task(to_safe_filename(record_key.label))
-        start_new = prev_record is None or prev_record.log_location is None or force_rerun
-        if start_new:
-            self.project.update_record(record_key, ResultRecord())
+        previous_log = None
+        if not force_rerun and prev_record is not None and prev_record.log_location:
+            path = Path(prev_record.log_location)
+            if path.parent.parent.absolute() == attempt_dir.parent.absolute():
+                candidate = self.project._recover_generation_log(
+                    path.parent, inspect_task.name, generation_id
+                )
+                if (
+                    candidate is not None
+                    and Path(candidate.location) == path.absolute()
+                    and candidate.status != "success"
+                ):
+                    previous_log = candidate
 
         try:
-            if start_new:
+            if previous_log is None:
+                self.project.update_record(
+                    record_key, ResultRecord(), keep_previous_log=True
+                )
                 eval_logs = eval(
                     tasks=inspect_task,
                     model=self._active_model,
@@ -224,11 +238,9 @@ class Pipeline:
                     **(eval_kwargs or dict()),
                 )
             else:
-                assert prev_record is not None and prev_record.log_location is not None
-                logger.info(f"Retrying generation using log: {prev_record.log_location}")
-                prev_log = read_eval_log(prev_record.log_location)
+                logger.info(f"Retrying generation using log: {previous_log.location}")
                 eval_logs = eval_retry(
-                    tasks=prev_log,
+                    tasks=previous_log,
                     log_dir=str(attempt_dir),
                     **(eval_retry_kwargs or dict()),
                 )
@@ -237,6 +249,11 @@ class Pipeline:
             recovered = self.project._recover_generation_log(
                 attempt_dir, inspect_task.name, generation_id
             )
+            if (
+                recovered is not None and previous_log is not None
+                and recovered.eval.task_id != previous_log.eval.task_id
+            ):
+                recovered = None
             self.project.update_record(
                 record_key,
                 ResultRecord(
@@ -258,8 +275,11 @@ class Pipeline:
         if len(eval_logs) != 1:
             error_message = f"Expected one generation log, received {len(eval_logs)}."
             logger.error(error_message)
-        elif not self.project._owns_generation_log(
-            eval_logs[0], attempt_dir, inspect_task.name, generation_id
+        elif (
+            not self.project._owns_generation_log(
+                eval_logs[0], attempt_dir, inspect_task.name, generation_id
+            )
+            or (previous_log and eval_logs[0].eval.task_id != previous_log.eval.task_id)
         ):
             error_message = "Returned generation log does not belong to this attempt."
             logger.error(error_message)

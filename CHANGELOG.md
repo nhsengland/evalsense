@@ -22,6 +22,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Retry from a saved log only when it belongs to the current experiment. Start a fresh run for older logs that cannot establish ownership.
 - Keep a shared log until the last generation or evaluation record pointing to it is removed.
 - Require a single matching generation log before accepting the result returned by Inspect.
 - After generation fails, keep a diagnostic log only when the attempt directory contains one readable log with matching task and experiment metadata.
