@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from inspect_ai.dataset import MemoryDataset, Sample
-from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec, write_eval_log
+from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec, read_eval_log, write_eval_log
 from inspect_ai.solver import generate
 
 from evalsense.datasets.managers.huggingface import HuggingFaceDatasetManager
@@ -95,3 +95,24 @@ class GenerationFailureTests(unittest.TestCase):
                 call.kwargs["tasks"].metadata["evalsense_generation_id"],
                 attempt.parent.name,
             )
+
+    def test_multiple_returned_logs_cannot_choose_a_winner(self):
+        log = read_eval_log(str(self.write_log("other.json")))
+        with patch("evalsense.workflow.pipeline.eval", return_value=[log, log]):
+            self.generate()
+
+        record = self.project.get_record(self.key)
+        assert record is not None
+        self.assertEqual(record.status, "error")
+        self.assertIsNone(record.log_location)
+        self.assertIn("received 2", record.error_message or "")
+
+    def test_single_returned_log_from_another_attempt_is_rejected(self):
+        log = read_eval_log(str(self.write_log("other.json")))
+        with patch("evalsense.workflow.pipeline.eval", return_value=[log]):
+            self.generate()
+
+        record = self.project.get_record(self.key)
+        assert record is not None
+        self.assertEqual(record.status, "error")
+        self.assertIsNone(record.log_location)
