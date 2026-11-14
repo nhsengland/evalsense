@@ -384,6 +384,40 @@ class Project:
 
         return dict(sorted(results.items()))
 
+    def _recover_generation_log(
+        self, attempt_dir: Path, task_name: str, generation_id: str
+    ) -> EvalLog | None:
+        """Read the single log belonging to the interrupted generation attempt."""
+        generation_dir = self.generation_log_path / generation_id
+        if attempt_dir.parent != generation_dir:
+            return None
+        try:
+            if any(
+                path.is_symlink()
+                for path in (self.generation_log_path, generation_dir, attempt_dir)
+            ):
+                return None
+            candidates = [
+                path for path in attempt_dir.iterdir() if path.suffix in {".eval", ".json"}
+            ]
+            if len(candidates) != 1:
+                return None
+            log_file = candidates[0].absolute()
+            if log_file.is_symlink() or not log_file.is_file():
+                return None
+            log = read_eval_log(str(log_file))
+        except Exception as exc:
+            logger.warning(f"Could not recover a generation log from {attempt_dir}: {exc}")
+            return None
+
+        if (
+            Path(log.location) == log_file
+            and log.eval.task == task_name
+            and (log.eval.metadata or {}).get("evalsense_generation_id") == generation_id
+        ):
+            return log
+        return None
+
     def get_incomplete_logs(
         self,
         type: Literal["generation", "evaluation"],
