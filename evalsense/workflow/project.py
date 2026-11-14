@@ -151,6 +151,7 @@ class Project:
         record_key: GenerationRecord | EvaluationRecord,
         record_value: ResultRecord,
         *,
+        keep_previous_log: bool = False,
         init_eval_record_from_generations: bool = False,
     ):
         """Updates the generation or evaluation record with the specified result.
@@ -159,6 +160,7 @@ class Project:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to update.
             record_value (ResultRecord): The generation or evaluation result.
+            keep_previous_log (bool): Keep the previous file when replacing its record.
             init_eval_record_from_generations (bool): Whether to initialise a new
                 evaluation record if the evaluation record does not exist. Defaults
                 to False. This is only applicable if the record_key is an
@@ -169,7 +171,8 @@ class Project:
             init_eval_record_from_generations=init_eval_record_from_generations,
         )
         if (
-            current_record is not None
+            not keep_previous_log
+            and current_record is not None
             and current_record.log_location is not None
             and current_record.log_location != record_value.log_location
         ):
