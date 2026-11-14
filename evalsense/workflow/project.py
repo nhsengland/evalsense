@@ -268,24 +268,27 @@ class Project:
             return self._retrieve_verify_record(record_key)
         elif type(record_key) is EvaluationRecord:
             retrieved_eval_record = self._retrieve_verify_record(record_key)
-            if (
-                retrieved_eval_record is not None
-                or not init_eval_record_from_generations
-            ):
+            if not init_eval_record_from_generations:
                 return retrieved_eval_record
 
             generation_result = self._retrieve_verify_record(
                 record_key.generation_record
             )
-            if generation_result is None:
-                return None
             if (
-                generation_result.status != "success"
+                generation_result is None
+                or generation_result.status != "success"
                 or generation_result.log_location is None
             ):
-                self.records.evaluation[record_key] = generation_result
-                self._save()
-                return generation_result
+                return None
+
+            if retrieved_eval_record is not None and retrieved_eval_record.log_location:
+                # Older projects could store a failed generation as an evaluation.
+                evaluation_path = Path(retrieved_eval_record.log_location)
+                if (
+                    evaluation_path.resolve().parent == self.evaluation_log_path.resolve()
+                    and evaluation_path.resolve() != Path(generation_result.log_location).resolve()
+                ):
+                    return retrieved_eval_record
 
             # Create a new evaluation log based on the generation log
             log_path = Path(generation_result.log_location)
@@ -306,8 +309,7 @@ class Project:
             new_record = ResultRecord(
                 log_location=str(new_log_path),
             )
-            self.records.evaluation[record_key] = new_record
-            self._save()
+            self.update_record(record_key, new_record)
             return new_record
         else:
             raise TypeError(f"Invalid record type: {type(record_key)}")
