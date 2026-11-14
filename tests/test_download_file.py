@@ -8,6 +8,7 @@ from unittest.mock import patch
 from requests import Response
 from requests.structures import CaseInsensitiveDict
 from urllib3.response import HTTPResponse
+from tenacity import wait_none
 
 from evalsense.utils.files import download_file
 
@@ -34,9 +35,13 @@ class DownloadFileTests(unittest.TestCase):
         )
         self.get = self.enterContext(patch("evalsense.utils.files.requests.get"))
 
-    def download(self, **kwargs):
+    def download(self, max_attempts=1, **kwargs):
         download_file(
-            self.url, self.target, show_progress=False, max_attempts=1, **kwargs
+            self.url,
+            self.target,
+            show_progress=False,
+            max_attempts=max_attempts,
+            **kwargs,
         )
 
     def test_full_response_replaces_partial_file(self):
@@ -168,3 +173,37 @@ class DownloadFileTests(unittest.TestCase):
                 )
 
                 self.assertEqual(self.target.read_bytes(), b"abcdef")
+
+    def test_retry_resumes_from_bytes_written_before_interruption(self):
+        def interrupted(_chunk_size):
+            yield b"ab"
+            raise ConnectionError("interrupted transfer")
+
+        etag = '"v1"'
+        first = response(200, b"", {"ETag": etag})
+        self.enterContext(patch.object(first, "iter_content", interrupted))
+        self.enterContext(
+            patch("evalsense.utils.files.wait_exponential", return_value=wait_none())
+        )
+        self.get.side_effect = [
+            first,
+            response(206, b"cdef", {"Content-Range": "bytes 2-5/6", "ETag": etag}),
+        ]
+
+        self.download(max_attempts=2)
+
+        first_request, retry = self.get.call_args_list
+        self.assertNotIn("Range", first_request.kwargs["headers"])
+        self.assertEqual(retry.kwargs["headers"]["Range"], "bytes=2-")
+        self.assertEqual(self.target.read_bytes(), b"abcdef")
+        self.assertFalse(self.part.exists())
+
+    def test_failed_verification_discards_the_partial_file(self):
+        self.target.write_bytes(b"existing dataset")
+        self.get.return_value = response(200, b"abcdef", {"ETag": '"v1"'})
+
+        with self.assertRaisesRegex(RuntimeError, "could not be verified"):
+            self.download(expected_hash="0" * 64)
+
+        self.assertEqual(self.target.read_bytes(), b"existing dataset")
+        self.assertFalse(self.part.exists())

@@ -184,9 +184,17 @@ def _range_total(
 
 @contextmanager
 def _download_response(
-    url: str, headers: dict[str, str], offset: int, file_size: int | None
+    url: str, headers: dict[str, str], partial_path: Path | None, file_size: int | None
 ):
     """Open the requested suffix, falling back once to a full GET if needed."""
+    offset = 0
+    if partial_path is not None:
+        try:
+            offset = partial_path.stat().st_size
+        except FileNotFoundError:
+            pass
+        if file_size is not None and offset > file_size:
+            offset = 0
     for start in ((offset, 0) if offset else (0,)):
         request_headers = {**headers, "Range": f"bytes={start}-"} if start else headers
         with requests.get(
@@ -268,14 +276,7 @@ def download_file(
 
     # Check existing partial download
     temp_path = target_path.with_suffix(target_path.suffix + ".part")
-    already_downloaded_size = (
-        temp_path.stat().st_size
-        if temp_path.exists() and resume_download and supports_resume
-        else 0
-    )
-    if file_size is not None and already_downloaded_size > file_size:
-        # Partial download is corrupted — larger file size than expected
-        already_downloaded_size = 0
+    partial_path = temp_path if resume_download and supports_resume else None
     headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
 
     # Try to download the file
@@ -287,7 +288,7 @@ def download_file(
         ):
             with (
                 attempt as _,
-                _download_response(url, headers, already_downloaded_size, file_size) as (
+                _download_response(url, headers, partial_path, file_size) as (
                     response,
                     write_offset,
                     expected_size,
@@ -323,7 +324,7 @@ def download_file(
                     expected_hash=expected_hash,
                     hash_type=hash_type,
                 ):
-                    # temp_path.unlink()
+                    temp_path.unlink()
                     raise RuntimeError(
                         f"Downloaded file {target_path} could not be verified."
                     )
