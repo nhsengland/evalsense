@@ -8,8 +8,7 @@ import rehypeKatex from "rehype-katex";
 
 const config: Config = {
   title: "EvalSense",
-  tagline:
-    "Comprehensive guidance and tooling for evaluating large language models (LLMs)",
+  tagline: "Research-grade LLM evaluation, benchmarking and meta-evaluation",
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
