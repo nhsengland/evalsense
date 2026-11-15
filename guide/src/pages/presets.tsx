@@ -30,8 +30,8 @@ export default function PresetsPage() {
           Evaluation Presets
         </Typography>
         <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
-          Select a common scenario to pre-fill the interactive guide with
-          relevant settings.
+          Select a scenario to pre-fill the interactive guide with evaluation
+          priorities and suggested methods. Presets do not run evaluations.
         </Typography>
 
         <Grid container spacing={3}>
