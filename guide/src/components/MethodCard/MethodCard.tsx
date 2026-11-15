@@ -5,6 +5,7 @@ import CardActions from "@mui/material/CardActions";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Chip from "@mui/material/Chip";
+import Box from "@mui/material/Box";
 
 import MethodDetails from "@site/src/components/MethodDetails/MethodDetails";
 import {
@@ -21,6 +22,7 @@ interface MethodCardProps {
   onSelect?: (methodId: string) => void;
   isSelected?: boolean;
   showCoverageFor?: Quality | Risk;
+  showImplementationStatus?: boolean;
 }
 
 const MethodCard: React.FC<MethodCardProps> = ({
@@ -28,6 +30,7 @@ const MethodCard: React.FC<MethodCardProps> = ({
   onSelect,
   isSelected,
   showCoverageFor,
+  showImplementationStatus = false,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -57,7 +60,21 @@ const MethodCard: React.FC<MethodCardProps> = ({
           <Typography gutterBottom variant="h6" component="h2">
             {method.name || "Unnamed Method"}
           </Typography>
-          <Chip label={categoryName} size="small" sx={{ mb: 1 }} />
+          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mb: 1 }}>
+            <Chip label={categoryName} size="small" />
+            {showImplementationStatus && (
+              <Chip
+                label={
+                  method.link_implementation
+                    ? "Implemented in EvalSense"
+                    : "Not yet implemented"
+                }
+                color={method.link_implementation ? "success" : "default"}
+                size="small"
+                variant="outlined"
+              />
+            )}
+          </Box>
           <Typography variant="body2" color="text.secondary">
             {method.description_short || "No description."}
           </Typography>
