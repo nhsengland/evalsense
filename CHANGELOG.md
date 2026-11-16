@@ -18,6 +18,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Per-sample BERTScore now rejects `idf=True` and IDF dictionaries. Only `idf=False` is supported by the current backend.
 
 ### Enhancements
+- Show the dataset version and optional experiment name next to the generation ID in summary tables.
 - Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 

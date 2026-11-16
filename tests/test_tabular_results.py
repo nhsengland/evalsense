@@ -138,3 +138,24 @@ class TabularResultTests(unittest.TestCase):
             ]
             self.assertEqual(len(cols), 1)
             self.assertCountEqual(table[cols[0]].to_list(), [value, None])
+
+    def test_dataset_revision_and_experiment_name_are_readable(self):
+        runs = [
+            record(
+                0,
+                experiment_name=name,
+                dataset_record=DatasetRecord(
+                    name="data", version=version, splits=("test",)
+                ),
+            )
+            for name, version in ((None, "v1"), ("replication", "v2"))
+        ]
+        logs = {run: summary(score(0.5)) for run in runs}
+        table = TabularResultAnalyser[pl.DataFrame]()(project(logs))
+        self.assertCountEqual(
+            table.select("dataset_version", "experiment_name", "generation_id").rows(),
+            [
+                ("v1", None, runs[0].generation_id),
+                ("v2", "replication", runs[1].generation_id),
+            ],
+        )
