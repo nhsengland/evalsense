@@ -65,6 +65,7 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
             if not log.results:
                 continue
 
+            generation_id = eval_record.generation_id
             for score in log.results.scores:
                 for metric_name, metric in score.metrics.items():
                     value = metric.value
@@ -76,6 +77,7 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
                             "task": eval_record.task_name,
                             "generator": eval_record.generator_name,
                             "model": eval_record.model_record.name,
+                            "generation_id": generation_id,
                             "metric": f"{score.name}/{metric_name}",
                             "value": value,
                         }
@@ -84,7 +86,7 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
         df = pl.DataFrame(result_data)
         df = df.pivot(
             on="metric",
-            index=["dataset", "splits", "task", "generator", "model"],
+            index=["dataset", "splits", "task", "generator", "model", "generation_id"],
             values="value",
             aggregate_function="first",
         )
