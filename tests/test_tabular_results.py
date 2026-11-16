@@ -159,3 +159,36 @@ class TabularResultTests(unittest.TestCase):
                 ("v2", "replication", runs[1].generation_id),
             ],
         )
+
+    def test_no_metrics_returns_the_identity_columns_in_both_formats(self):
+        expected = [
+            "dataset",
+            "splits",
+            "task",
+            "generator",
+            "model",
+            "generation_id",
+            "dataset_version",
+            "experiment_name",
+        ]
+        for logs in ({}, {record(0): log([])}, {record(0): summary()}):
+            data = project(logs)
+            polars = TabularResultAnalyser[pl.DataFrame]()(data)
+            pandas = TabularResultAnalyser(output_format="pandas")(data)
+            self.assertEqual(polars.columns, expected)
+            self.assertEqual(polars.height, 0)
+            self.assertEqual(list(pandas.columns), expected)
+            self.assertEqual(len(pandas), 0)
+            self.assertTrue(all(dtype == pl.String for dtype in polars.dtypes))
+
+    def test_missing_integer_counts_keep_their_precision_beside_float_metrics(self):
+        count = 2**53 + 1
+        logs = {
+            record(0): summary(score(count, "events", "count"), score(0.25)),
+            record(1): summary(score(0.5)),
+        }
+        polars = TabularResultAnalyser[pl.DataFrame]()(project(logs))
+        self.assertEqual(polars["events/count"].drop_nulls().to_list(), [count])
+        pandas = TabularResultAnalyser(output_format="pandas")(project(logs))
+        observed = pandas["events/count"].dropna().iloc[0]
+        self.assertEqual(int(observed), count)
