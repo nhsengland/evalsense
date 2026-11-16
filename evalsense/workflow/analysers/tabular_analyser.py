@@ -95,14 +95,20 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
 
     @override
     def __call__(self, project: Project, **kwargs: dict) -> T:
-        """Analyses the evaluation results.
+        """Summarise successful evaluation logs by stored generation configuration.
 
         Args:
             project (Project): The project holding the evaluation data to analyse.
             **kwargs (dict): Additional arguments for the analysis.
 
         Returns:
-            T: The analysed results in the specified output format.
+            T: One row per generation ID with available aggregate metrics. Metrics
+                for different evaluators share a row when their generation matches.
+                A project without aggregates returns just the identity columns.
+
+        Raises:
+            ValueError: If an aggregate is duplicated for a generation, if metric
+                labels remain ambiguous, or if metric implementations conflict.
         """
         eval_logs = project.get_logs(type="evaluation", status="success")
         check_metric_implementations(eval_logs)
