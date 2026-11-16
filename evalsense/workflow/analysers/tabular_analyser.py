@@ -61,6 +61,7 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
         check_metric_implementations(eval_logs)
 
         result_data = []
+        seen: set[tuple[str, str]] = set()
         for eval_record, log in eval_logs.items():
             if not log.results:
                 continue
@@ -68,7 +69,13 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
             generation_id = eval_record.generation_id
             for score in log.results.scores:
                 for metric_name, metric in score.metrics.items():
-                    value = metric.value
+                    label = f"{score.name}/{metric_name}"
+                    cell = (generation_id, label)
+                    if cell in seen:
+                        raise ValueError(
+                            f"Duplicate summary metric {label!r} for generation {generation_id}."
+                        )
+                    seen.add(cell)
 
                     result_data.append(
                         {
@@ -78,8 +85,8 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
                             "generator": eval_record.generator_name,
                             "model": eval_record.model_record.name,
                             "generation_id": generation_id,
-                            "metric": f"{score.name}/{metric_name}",
-                            "value": value,
+                            "metric": label,
+                            "value": metric.value,
                         }
                     )
 
@@ -88,7 +95,6 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
             on="metric",
             index=["dataset", "splits", "task", "generator", "model", "generation_id"],
             values="value",
-            aggregate_function="first",
         )
         if self.output_format in OUTPUT_FORMATTERS:
             return cast(T, OUTPUT_FORMATTERS[self.output_format](df))
