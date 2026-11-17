@@ -91,3 +91,50 @@ class TabularResultTests(unittest.TestCase):
                 logs = {record(0): summary(score(0.2), score(later))}
                 with self.assertRaisesRegex(ValueError, "Duplicate.*quality/mean"):
                     TabularResultAnalyser()(project(logs))
+
+    def test_distinct_evaluator_settings_keep_their_own_metric_columns(self):
+        logs = {
+            record(0, evaluator_fingerprint=fp): summary(score(value))
+            for fp, value in (("configuration-a", 0.2), ("configuration-b", 0.9))
+        }
+        analyser = TabularResultAnalyser[pl.DataFrame]()
+        table = analyser(project(logs))
+        cols = [col for col in table.columns if col.startswith("quality/mean [judge, ")]
+        self.assertEqual(len(cols), 2)
+        self.assertCountEqual(table.select(cols).row(0), [0.2, 0.9])
+        reversed_table = analyser(project(dict(reversed(logs.items()))))
+        self.assertEqual(table.select(cols).rows(), reversed_table.select(cols).rows())
+
+    def test_slashes_in_scorer_and_metric_names_do_not_alias_cells(self):
+        data = project({record(0): summary(score(1, "a/b", "c"), score(2, "a", "b/c"))})
+        table = TabularResultAnalyser[pl.DataFrame]()(data)
+        cols = [col for col in table.columns if col.startswith("a/b/c [")]
+        self.assertCountEqual(table.select(cols).row(0), [1, 2])
+
+    def test_different_aggregates_with_one_display_name_remain_distinct(self):
+        for other in (
+            score(2, scorer="another"),
+            score(2, reducer="median"),
+            score(2, params={"k": 2}),
+        ):
+            with self.subTest(other=other):
+                table = TabularResultAnalyser[pl.DataFrame]()(
+                    project({record(0): summary(score(1), other)})
+                )
+                labels = [
+                    col for col in table.columns if col.startswith("quality/mean [")
+                ]
+                self.assertCountEqual(table.select(labels).row(0), [1, 2])
+
+    def test_disjoint_generations_do_not_share_a_mislabelled_column(self):
+        logs = {
+            record(0, evaluator_name="left"): summary(score(0.2)),
+            record(1, evaluator_name="right"): summary(score(0.9)),
+        }
+        table = TabularResultAnalyser[pl.DataFrame]()(project(logs))
+        for name, value in (("left", 0.2), ("right", 0.9)):
+            cols = [
+                col for col in table.columns if col.startswith(f"quality/mean [{name},")
+            ]
+            self.assertEqual(len(cols), 1)
+            self.assertCountEqual(table[cols[0]].to_list(), [value, None])
