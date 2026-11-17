@@ -121,15 +121,26 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
                             "generator": eval_record.generator_name,
                             "model": eval_record.model_record.name,
                             "generation_id": generation_id,
+                            "dataset_version": eval_record.dataset_record.version,
+                            "experiment_name": eval_record.experiment_name,
                             "metric": key,
                             "value": metric.value,
                         }
                     )
 
-        df = pl.DataFrame(result_data)
+        df = pl.DataFrame(result_data, schema_overrides={"experiment_name": pl.String})
         df = df.pivot(
             on="metric",
-            index=["dataset", "splits", "task", "generator", "model", "generation_id"],
+            index=[
+                "dataset",
+                "splits",
+                "task",
+                "generator",
+                "model",
+                "generation_id",
+                "dataset_version",
+                "experiment_name",
+            ],
             values="value",
         ).rename(_metric_labels(columns))
         if self.output_format in OUTPUT_FORMATTERS:
