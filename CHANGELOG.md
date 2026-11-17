@@ -25,6 +25,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ### Bug fixes
 - Keep distinct generation configurations on separate rows in tabular summaries. The new `generation_id` column identifies the stored configuration.
 - Pin Evaluate metric scripts to full commits, check their loaded content hashes (including cached fallbacks), and record Python/runtime package versions in scores and project records. BERTScore reloads and corpus BLEU use the same pinned definition.
+- Preserve integer counts in sparse summary tables and return identity columns when no aggregate metrics are available.
 - Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
 - Reject duplicate summary cells, including repeated equal values.
