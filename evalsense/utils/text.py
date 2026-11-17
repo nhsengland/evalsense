@@ -100,29 +100,31 @@ def extract_ternary_answer(
 
 
 def extract_score(text: str, min_score: int = 1, max_score: int = 10) -> int:
-    """
-    Extract the first numerical score from text that falls between min_score and max_score.
+    """Parse one complete, in-range, non-negative decimal integer.
+
+    Outer whitespace and leading zeroes are accepted. Signs, fractions, decimals,
+    wrappers and explanatory text are rejected instead of searching for digits.
 
     Args:
-        text (str): The text to extract the score from.
+        text (str): The complete judge response.
         min_score (int): The minimum valid score. Defaults to 1.
         max_score (int): The maximum valid score. Defaults to 10.
 
     Returns:
-        float | None: The extracted score if found and valid, otherwise None.
+        int: The validated integer rating.
+
+    Raises:
+        ValueError: If the response is not a complete in-range integer.
     """
-    pattern = r"\b\d+\b"
-    matches = regex.findall(pattern, text)
-
-    for match in matches:
-        try:
-            score = int(match)
-            if min_score <= score <= max_score:
-                return score
-        except ValueError:
-            continue
-
-    raise ValueError(f"Unable to extract a valid score from text: {text}.")
+    if not isinstance(text, str) or not regex.fullmatch(r"[0-9]+", text.strip()):
+        raise ValueError("Expected one complete integer score without extra text.")
+    try:
+        score = int(text.strip())
+    except ValueError:
+        raise ValueError("Integer score exceeds the supported range.") from None
+    if not min_score <= score <= max_score:
+        raise ValueError("Integer score is outside the configured rating scale.")
+    return score
 
 
 def _eval_weighted_options[T](
