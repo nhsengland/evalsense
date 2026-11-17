@@ -34,6 +34,14 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
   quality.
 </Typography>
 
+<Typography variant="body2" gutterBottom>
+  EvalSense requires one complete non-negative integer within the configured
+  rating scale. Outer whitespace and leading zeroes are accepted. Fractions
+  such as <code>0/10</code>, decimals, signed values and explanatory text fail
+  validation before optional probability weighting. Valid response syntax does
+  not establish the accuracy of the judge or validate multi-token rating weights.
+</Typography>
+
 <Typography variant="subtitle1" gutterBottom>
   Evaluation Process
 </Typography>
@@ -82,7 +90,7 @@ Instructions:
 
 - Compare the candidate summary to the reference summary.
 - Provide a numerical rating of the candidate summary's faithfulness on a scale from 1 (completely unfaithful) to 10 (fully faithful).
-- Respond only with the numerical rating without any explanation or context.
+- Respond only with one integer from 1 to 10, without a denominator, sign or explanation.
 
 Reference Note:
 
@@ -94,7 +102,7 @@ Candidate Note:
 
 Output Format:
 
-\[Numerical faithfulness rating only, from 1 to 10\]
+One integer from 1 to 10.
 
 </Box>
 </Typography>

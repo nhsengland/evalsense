@@ -31,7 +31,11 @@ SCORE_FORMAT = "evalsense.g-eval.integer.v1"
 
 
 class GEvalScoreCalculator(ScoreCalculator):
-    """G-Eval score calculator."""
+    """G-Eval with complete, in-range integer responses.
+
+    Reject malformed responses before optional weighting or normalisation.
+    Syntax validation does not establish judge accuracy or injection resistance.
+    """
 
     def __init__(
         self,
@@ -114,6 +118,10 @@ class GEvalScoreCalculator(ScoreCalculator):
 
         Returns:
             Score: The calculated score.
+
+        Raises:
+            ValueError: If the rating scale is invalid or the complete response
+                is not an in-range integer. Malformed responses are never repaired.
         """
         validate_score_range(self.min_score, self.max_score, normalise=self.normalise)
         logprobs_config = GenerateConfig(
@@ -290,8 +298,9 @@ def get_g_eval_evaluator(
             be a format string with {prediction} and (optionally) {reference} as
             placeholders, as well as any additional placeholders for entries in
             Inspect AI sample/task state metadata. The template should instruct the
-            judge model to respond with a numerical score between the specified
-            min_score and max_score.
+            judge model to return only one non-negative integer between min_score
+            and max_score. Fractions, decimals, signs and explanatory text fail
+            validation. Outer whitespace and leading zeroes are accepted.
         model_config (ModelConfig): The model configuration.
         logprobs (bool): Whether to use model log probabilities to compute weighted
             evaluation score instead of a standard score.

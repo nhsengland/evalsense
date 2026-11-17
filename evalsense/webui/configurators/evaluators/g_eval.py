@@ -64,7 +64,7 @@ class GEvalConfigurator(EvaluatorConfigurator):
                 "input_name": "prompt_template",
                 "component": gr.TextArea(
                     label="Prompt Template",
-                    info="The prompt template to use for evaluation. The supplied template should be a Python f-string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. The template should instruct the judge model to respond with a numerical score between the specified `min_score` and `max_score`.",
+                    info="The prompt template to use for evaluation. The supplied template should be a Python format string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. The template must request only one non-negative integer between `min_score` and `max_score`, without a denominator, sign, decimal or explanation.",
                     max_lines=15,
                 ),
                 "parser": None,
