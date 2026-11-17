@@ -84,3 +84,10 @@ class TabularResultTests(unittest.TestCase):
             table.select("generation_id", "quality/mean", "other/mean").rows(),
             [(first.generation_id, 0.2, 0.9)],
         )
+
+    def test_repeated_metric_for_one_generation_raises_even_for_equal_values(self):
+        for later in (0.2, 0.9):
+            with self.subTest(later=later):
+                logs = {record(0): summary(score(0.2), score(later))}
+                with self.assertRaisesRegex(ValueError, "Duplicate.*quality/mean"):
+                    TabularResultAnalyser()(project(logs))

@@ -26,6 +26,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Pin Evaluate metric scripts to full commits, check their loaded content hashes (including cached fallbacks), and record Python/runtime package versions in scores and project records. BERTScore reloads and corpus BLEU use the same pinned definition.
 - Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
+- Reject duplicate summary cells, including repeated equal values.
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 - Prevent incomplete two-tier and undefined meta-evaluation correlations from silently inflating the reported mean. Report failed/missing logs and unestimable intervals.
