@@ -23,6 +23,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Reject invalid G-Eval rating scales before requesting a judge response, including zero-width normalisation and non-integer endpoints.
 - Require a complete in-range integer rating instead of extracting numeric fragments from G-Eval responses. Previously scored results are unchanged; use a new evaluator version when re-scoring them.
 - Pin Evaluate metric scripts to full commits, check their loaded content hashes (including cached fallbacks), and record Python/runtime package versions in scores and project records. BERTScore reloads and corpus BLEU use the same pinned definition.
 - Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.

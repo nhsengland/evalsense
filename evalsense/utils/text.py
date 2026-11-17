@@ -99,6 +99,22 @@ def extract_ternary_answer(
     raise ValueError(f"Unable to extract a binary answer from text: {text}.")
 
 
+def validate_score_range(
+    min_score: int, max_score: int, *, normalise: bool = False
+) -> None:
+    """Require non-negative integer endpoints and a usable normalisation span."""
+    if type(min_score) is not int or type(max_score) is not int:
+        raise ValueError(
+            "Rating scale endpoints must be integers, not booleans or floats."
+        )
+    if min_score < 0 or max_score < min_score:
+        raise ValueError("Rating scale must satisfy 0 <= min_score <= max_score.")
+    if type(normalise) is not bool:
+        raise ValueError("normalise must be a boolean.")
+    if normalise and min_score == max_score:
+        raise ValueError("Normalised ratings require min_score < max_score.")
+
+
 def extract_score(text: str, min_score: int = 1, max_score: int = 10) -> int:
     """Parse one complete, in-range, non-negative decimal integer.
 
@@ -116,6 +132,7 @@ def extract_score(text: str, min_score: int = 1, max_score: int = 10) -> int:
     Raises:
         ValueError: If the response is not a complete in-range integer.
     """
+    validate_score_range(min_score, max_score)
     if not isinstance(text, str) or not regex.fullmatch(r"[0-9]+", text.strip()):
         raise ValueError("Expected one complete integer score without extra text.")
     try:
