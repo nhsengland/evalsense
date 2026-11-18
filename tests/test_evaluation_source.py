@@ -253,5 +253,56 @@ class EvaluationSourceTests(unittest.TestCase):
         self.assertEqual(list(self.project.evaluation_log_path.iterdir()), [])
 
 
+    def test_new_generation_invalidates_only_its_successful_evaluations(self):
+        old_path = self.save_generation()
+        first = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, first)
+        second_key = self.evaluation_key.model_copy(update={"evaluator_name": "other"})
+        second = self.project.get_record(second_key, init_eval_record_from_generations=True)
+        assert second is not None
+        self.project.update_record(second_key, second.model_copy(update={"status": "success"}))
+
+        unrelated_generation = self.generation_key.model_copy(update={"generator_name": "other"})
+        self.project.update_record(
+            unrelated_generation, ResultRecord(status="success", log_location=str(old_path))
+        )
+        unrelated_key = unrelated_generation.get_evaluation_record("exact")
+        unrelated = self.project.get_record(unrelated_key, init_eval_record_from_generations=True)
+        assert unrelated is not None
+        self.project.update_record(unrelated_key, unrelated.model_copy(update={"status": "success"}))
+
+        self.save_generation("2026_task_second.json", "replacement")
+        reopened = Project(self.project.name)
+        for key in (self.evaluation_key, second_key):
+            invalidated = reopened.get_record(key)
+            assert invalidated is not None
+            self.assertEqual(invalidated.status, "started")
+            self.assertEqual(invalidated.source_generation, first.source_generation)
+            self.assertIsNotNone(reopened.get_log(key))
+        self.assertEqual(set(reopened.get_logs("evaluation", status="success")), {unrelated_key})
+
+    def test_unchanged_generation_keeps_successful_evaluations(self):
+        path = self.save_generation()
+        completed = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, completed)
+        self.project.update_record(
+            self.generation_key, ResultRecord(status="success", log_location=str(path))
+        )
+        self.assertEqual(self.project.get_record(self.evaluation_key), completed)
+        self.assertIn(self.evaluation_key, self.project.get_logs("evaluation", status="success"))
+
+    def test_failed_generation_preserves_the_previous_evaluation_record(self):
+        self.save_generation()
+        completed = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, completed)
+        self.project.update_record(
+            self.generation_key,
+            ResultRecord(status="error", error_message="generation failed"),
+            keep_previous_log=True,
+        )
+        self.assertEqual(self.project.get_record(self.evaluation_key), completed)
+        self.assertIsNone(self.project.get_record(self.evaluation_key, init_eval_record_from_generations=True))
+
+
 if __name__ == "__main__":
     unittest.main()
