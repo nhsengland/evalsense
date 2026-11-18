@@ -493,6 +493,11 @@ class Pipeline:
                 elif score_log.status == "cancelled":
                     error_message = "Evaluation was cancelled."
                     logger.error("❌  Evaluation was cancelled.")
+                elif score_log.status == "success" and not self.project._matches_generation_source(
+                    experiment.generation_record, prev_record.source_generation
+                ):
+                    error_message = "Generation source changed during evaluation. Rerun evaluation."
+                    logger.error(error_message)
                 elif score_log.status == "success":
                     status = "success"
                     error_message = None
