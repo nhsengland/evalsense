@@ -178,8 +178,31 @@ class Project:
             record_key,
             init_eval_record_from_generations=init_eval_record_from_generations,
         )
+        outdated_evaluations = []
+        if type(record_key) is GenerationRecord and record_value.status == "success":
+            dependent_evaluations = [
+                (key, result)
+                for key, result in self.records.evaluation.items()
+                if key.generation_record == record_key and result.status == "success"
+            ]
+            if dependent_evaluations:
+                source = (
+                    GenerationSource.capture(record_value.log_location)
+                    if record_value.log_location
+                    and Path(record_value.log_location).is_file()
+                    else None
+                )
+                outdated_evaluations = [
+                    (key, result)
+                    for key, result in dependent_evaluations
+                    if source is None or result.source_generation != source
+                ]
         if type(record_key) is GenerationRecord:
             self.records.generation[record_key] = record_value
+            for key, result in outdated_evaluations:
+                self.records.evaluation[key] = result.model_copy(
+                    update={"status": "started"}
+                )
         elif type(record_key) is EvaluationRecord:
             self.records.evaluation[record_key] = record_value
         else:
