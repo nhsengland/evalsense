@@ -297,9 +297,10 @@ class Project:
             # Create a new evaluation log based on the generation log
             log_path = Path(generation_result.log_location)
             log_time = log_path.stem.split("_", 1)[0]
+            source_id = fingerprint(source)
             new_log_path = self.evaluation_log_path / (
                 f"{log_time}_evaluation-{fingerprint(record_key)}_"
-                f"{source.sha256}{log_path.suffix}"
+                f"{source_id}{log_path.suffix}"
             )
             self._copy_generation_log(source, new_log_path)
             new_record = ResultRecord(

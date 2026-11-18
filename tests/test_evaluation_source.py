@@ -1,6 +1,7 @@
 import hashlib
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -199,6 +200,57 @@ class EvaluationSourceTests(unittest.TestCase):
         self.assertEqual(first_new.source_generation, GenerationSource.capture(path))
         self.assertEqual(other_new.source_generation, first_new.source_generation)
         self.assertNotEqual(other_new.log_location, first_new.log_location)
+
+
+    def test_identical_files_in_different_attempts_have_separate_evaluation_logs(self):
+        first_path = self.save_generation("attempt-one/2026_task_same.json")
+        first = self.initialise()
+        second_path = self.project.generation_log_path / "attempt-two/2026_task_same.json"
+        second_path.parent.mkdir(parents=True)
+        shutil.copy(first_path, second_path)
+        self.project.update_record(
+            self.generation_key,
+            ResultRecord(status="success", log_location=str(second_path)),
+        )
+        second = self.initialise()
+        assert first.source_generation and second.source_generation
+        self.assertEqual(first.source_generation.sha256, second.source_generation.sha256)
+        self.assertNotEqual(first.source_generation, second.source_generation)
+        self.assertNotEqual(first.log_location, second.log_location)
+
+    def test_copy_failure_keeps_the_previous_record_and_complete_log(self):
+        self.save_generation()
+        first = self.initialise()
+        assert first.log_location
+        contents = Path(first.log_location).read_bytes()
+        self.save_generation(marker="replacement")
+        previous = self.project.get_record(self.evaluation_key)
+
+        def interrupted_copy(source, destination):
+            Path(destination).write_text("partial copy")
+            raise OSError("copy interrupted")
+
+        with patch("evalsense.workflow.project.shutil.copy", side_effect=interrupted_copy):
+            with self.assertRaisesRegex(OSError, "copy interrupted"):
+                self.initialise()
+        self.assertEqual(self.project.get_record(self.evaluation_key), previous)
+        self.assertEqual(Path(first.log_location).read_bytes(), contents)
+        self.assertEqual(list(self.project.evaluation_log_path.glob("*.tmp")), [])
+        self.assertEqual(
+            list(self.project.evaluation_log_path.glob("*.json")), [Path(first.log_location)]
+        )
+
+    def test_corrupt_copy_leaves_no_temporary_log_or_record(self):
+        self.save_generation()
+
+        def corrupt_copy(source, destination):
+            Path(destination).write_text("corrupt copy")
+
+        with patch("evalsense.workflow.project.shutil.copy", side_effect=corrupt_copy):
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                self.initialise()
+        self.assertNotIn(self.evaluation_key, self.project.records.evaluation)
+        self.assertEqual(list(self.project.evaluation_log_path.iterdir()), [])
 
 
 if __name__ == "__main__":
