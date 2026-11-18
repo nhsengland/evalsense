@@ -89,7 +89,9 @@ class EvaluationGenerationStatusTests(unittest.TestCase):
         self.score.assert_called_once()
         scored_path = Path(self.score.call_args.kwargs["log"].location)
         self.assertEqual(scored_path.parent, project.evaluation_log_path)
-        self.assertIn("next", scored_path.name)
+        evaluation = project.get_record(self.evaluate_key)
+        assert evaluation is not None and evaluation.source_generation is not None
+        self.assertEqual(evaluation.source_generation.log_location, str(new.resolve()))
         self.assertTrue(new.exists())
         self.assertFalse(old.exists())
 
