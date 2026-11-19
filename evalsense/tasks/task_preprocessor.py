@@ -5,7 +5,7 @@ import datasets
 from inspect_ai.dataset import Dataset, FieldSpec, RecordToSample, json_dataset
 
 from evalsense.datasets.dataset_manager import DatasetManager
-from evalsense.utils.huggingface import disable_dataset_progress_bars
+from evalsense.tasks._transport import TASK_DATA_FORMAT, write_task_data
 from evalsense.utils.files import to_safe_filename
 from evalsense.utils.cache import CacheIdentityError, fingerprint
 
@@ -77,7 +77,11 @@ class TaskPreprocessor:
     def cache_key(self) -> str:
         """Version custom preprocessing rather than guessing its implementation."""
         return fingerprint(
-            {"implementation": type(self), "function": self.preprocessing_function},
+            {
+                "implementation": type(self),
+                "function": self.preprocessing_function,
+                "transport": TASK_DATA_FORMAT,
+            },
             version=self.version,
         )
 
@@ -119,8 +123,7 @@ class TaskPreprocessor:
             preprocessed_hf_dataset = self.preprocessing_function(
                 hf_dataset, dataset_manager
             )
-            with disable_dataset_progress_bars():
-                preprocessed_hf_dataset.to_json(task_data_path, lines=True)
+            write_task_data(preprocessed_hf_dataset, task_data_path)
 
         dataset = json_dataset(str(task_data_path), sample_fields=field_spec)
         return dataset
