@@ -28,6 +28,23 @@ SCORE_FORMAT = "evalsense.g-eval.integer.v1"
 WEIGHTING_POLICY = "evalsense.g-eval.single-token.v1"
 
 
+def validate_weighting_settings(
+    logprobs: bool, top_logprobs: int, min_score: int, max_score: int
+) -> None:
+    """Reject a weighting request that cannot cover the configured rating scale."""
+    if type(logprobs) is not bool:
+        raise ValueError("logprobs must be a boolean.")
+    if logprobs:
+        if type(top_logprobs) is not int or top_logprobs < 1:
+            raise ValueError(
+                "Weighted ratings require top_logprobs to be a positive integer."
+            )
+        if top_logprobs < max_score - min_score + 1:
+            raise ValueError(
+                "top_logprobs must cover every rating on the configured scale."
+            )
+
+
 class GEvalScoreCalculator(ScoreCalculator):
     """G-Eval with complete, in-range integer responses.
 
@@ -61,6 +78,7 @@ class GEvalScoreCalculator(ScoreCalculator):
             debug (bool): Whether to report repeated errors in the log.
         """
         validate_score_range(min_score, max_score, normalise=normalise)
+        validate_weighting_settings(logprobs, top_logprobs, min_score, max_score)
         self.model = model
         self.prompt_template = prompt_template
         self.logprobs = logprobs
@@ -121,6 +139,9 @@ class GEvalScoreCalculator(ScoreCalculator):
                 is not an in-range integer. Malformed responses are never repaired.
         """
         validate_score_range(self.min_score, self.max_score, normalise=self.normalise)
+        validate_weighting_settings(
+            self.logprobs, self.top_logprobs, self.min_score, self.max_score
+        )
         logprobs_config = GenerateConfig(
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs if self.logprobs else None,
@@ -196,6 +217,7 @@ class GEvalScorerFactory(ScorerFactory):
             debug (bool): Whether to report repeated errors in the log.
         """
         validate_score_range(min_score, max_score, normalise=normalise)
+        validate_weighting_settings(logprobs, top_logprobs, min_score, max_score)
         self.name = name
         self.prompt_template = prompt_template
         if metrics is None:
