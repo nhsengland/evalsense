@@ -49,7 +49,8 @@ def validate_weighting_settings(
 class GEvalScoreCalculator(ScoreCalculator):
     """G-Eval with complete, in-range integer responses.
 
-    Reject malformed responses before optional weighting or normalisation.
+    Weighted mode requires one output token and complete rating evidence in the
+    returned alternatives. Failures never fall back to a sampled rating.
     Syntax validation does not establish judge accuracy or injection resistance.
     """
 
@@ -70,13 +71,17 @@ class GEvalScoreCalculator(ScoreCalculator):
         Args:
             model (Model): The model to use for evaluation.
             prompt_template (str): The prompt template with the scoring instructions.
-            logprobs (bool): Whether to use model log probabilities to compute weighted
-                evaluation score instead of a standard score.
-            top_logprobs (int): The number of top log probabilities to consider.
+            logprobs (bool): Use a one-token conditional mean over reported valid
+                rating alternatives. Every allowed rating must be present; missing
+                or inconsistent evidence raises ValueError. False uses the sampled
+                integer without a one-token limit.
+            top_logprobs (int): Positive integer alternative count, at least the
+                number of allowed ratings in weighted mode. Providers may impose
+                their own limit or omit low-probability ratings.
             min_score (int): The minimum valid score.
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
-            debug (bool): Whether to report repeated errors in the log.
+            debug (bool): Retained for compatibility. Weighting failures always raise.
         """
         validate_score_range(min_score, max_score, normalise=normalise)
         validate_weighting_settings(logprobs, top_logprobs, min_score, max_score)
@@ -136,8 +141,9 @@ class GEvalScoreCalculator(ScoreCalculator):
             Score: The calculated score.
 
         Raises:
-            ValueError: If the rating scale is invalid or the complete response
-                is not an in-range integer. Malformed responses are never repaired.
+            ValueError: If settings, the complete integer response or weighted
+                token evidence are invalid. Failed weighting never returns a
+                sampled score, and malformed responses are never repaired.
         """
         validate_score_range(self.min_score, self.max_score, normalise=self.normalise)
         validate_weighting_settings(
@@ -223,13 +229,17 @@ class GEvalScorerFactory(ScorerFactory):
             metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
                 The metrics to use for the evaluation. If `None`, the default metric
                 will be used (G-Eval with mean aggregation).
-            logprobs (bool): Whether to use model log probabilities to compute weighted
-                evaluation score instead of a standard score.
-            top_logprobs (int): The number of top log probabilities to consider.
+            logprobs (bool): Use a one-token conditional mean over reported valid
+                rating alternatives. Every allowed rating must be present; missing
+                or inconsistent evidence raises ValueError. False uses the sampled
+                integer without a one-token limit.
+            top_logprobs (int): Positive integer alternative count, at least the
+                number of allowed ratings in weighted mode. Providers may impose
+                their own limit or omit low-probability ratings.
             min_score (int): The minimum valid score.
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
-            debug (bool): Whether to report repeated errors in the log.
+            debug (bool): Retained for compatibility. Weighting failures always raise.
         """
         validate_score_range(min_score, max_score, normalise=normalise)
         validate_weighting_settings(logprobs, top_logprobs, min_score, max_score)
@@ -318,20 +328,26 @@ def get_g_eval_evaluator(
             Inspect AI sample/task state metadata. The template should instruct the
             judge model to return only one non-negative integer between min_score
             and max_score. Fractions, decimals, signs and explanatory text fail
-            validation. Outer whitespace and leading zeroes are accepted.
+            validation. Outer whitespace is accepted. Leading zeroes are accepted
+            only when logprobs=False; weighted mode requires canonical labels.
         model_config (ModelConfig): The model configuration.
-        logprobs (bool): Whether to use model log probabilities to compute weighted
-            evaluation score instead of a standard score.
-        top_logprobs (int): The number of top log probabilities to consider.
+        logprobs (bool): Use a one-token conditional mean over reported valid
+            rating alternatives, requiring evidence for every allowed rating.
+            Missing evidence raises ValueError without a sampled-score fallback.
+            False explicitly uses the sampled integer.
+        top_logprobs (int): Positive integer alternative count, at least the
+            number of allowed ratings in weighted mode. This budget does not
+            guarantee the provider returns every rating.
         min_score (int): The minimum valid score.
         max_score (int): The maximum valid score.
         normalise (bool): Whether to normalise the scores between 0 and 1.
-        debug (bool): Whether to report repeated errors in the log.
+        debug (bool): Retained for compatibility. Weighting failures always raise.
 
         version (str | None): Cache version for custom code or external resources.
 
     Returns:
-        Evaluator: The constructed G-Eval evaluator.
+        Evaluator: The constructed G-Eval evaluator. Cache identity includes the
+            estimator format and, for weighted mode, the weighting policy.
     """
     cache_parameters = {
         "method": "g_eval",
