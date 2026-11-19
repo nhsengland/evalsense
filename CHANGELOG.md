@@ -43,6 +43,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
 
 ### Documentation
+- Explain generation source provenance, rerun and rescore behaviour, and refreshing evaluations whose saved source is missing or outdated.
 - Describe metric provenance and migration. Keep historical logs, retain the lockfile and use frozen installation for the project environment. Recreate evaluators in a fresh process after changing packages. Model/tokenizer files, custom metric code, hardware and numerical nondeterminism still require separate controls; these pins do not guarantee bitwise-identical results.
 - Document the BERTScore length policy and XLNet tokenizer constraints in the component docstrings.
 

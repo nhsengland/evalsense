@@ -7,6 +7,65 @@ fingerprints of the solver configuration, preprocessing version, and sample fiel
 mapping. Evaluation records include the evaluator parameters and judge model
 configuration. Changing an evaluator does not invalidate reusable generations.
 
+## Generation sources
+
+A configuration key can identify several attempts made with the same settings.
+Each evaluation result also stores `source_generation`, a `GenerationSource`
+containing the resolved generation-log path and a SHA256 digest of the complete
+file. This identifies the saved JSON or `.eval` artifact, including its attempt
+metadata. Two attempts that produce the same text still have distinct source
+paths. Changing the file contents at an existing path also changes its source.
+
+The source reference is saved with successful and failed evaluations and survives
+reopening the project. Inspect it without requesting another evaluation.
+
+```python
+result = project.get_record(experiment.evaluation_record)
+if result is not None and result.source_generation is not None:
+    print(result.source_generation.log_location)
+    print(result.source_generation.sha256)
+```
+
+Source validation streams the complete generation file through SHA256. It avoids
+loading the whole file into memory, but reads it again for each cache validation
+and before accepting a successful score. Large logs and multiple evaluators add
+file-reading work. The digest does not establish whether the model output or
+experimental design is correct.
+
+## Rerunning experiments
+
+Choose the operation that matches the intended work.
+
+| Operation | Behaviour |
+| --- | --- |
+| `pipeline.run(force_rerun=True)` | Generate new outputs and evaluate that new generation. |
+| `pipeline.evaluate(force_rerun=True)` | Rescore the current successful generation without running generation again. |
+| `pipeline.evaluate()` | Reuse a successful evaluation only when its source still matches the current generation. Otherwise initialise from the current generation and score it. |
+
+Generation and evaluation can also run separately. The later evaluation refreshes
+its source even without a second force flag.
+
+```python
+pipeline.generate(force_rerun=True)
+pipeline.evaluate()
+```
+
+When a successful replacement generation is recorded, dependent successful
+evaluations with an older or missing source become `started`. They are excluded
+from `project.get_logs(type="evaluation", status="success")` until rescored. Their
+previous evaluation log and source remain accessible until the record is
+replaced. The project keeps one current record per configuration and does not
+provide an append-only history. Back up original results separately when they
+must be retained.
+
+Before recording scoring success, the pipeline checks the generation source
+again. If it has been removed or changed, the evaluation is recorded as an error.
+Call `pipeline.evaluate()` again to score the latest successful generation.
+This check does not provide full cross-process transaction guarantees, tracked
+in [#61](https://github.com/nhsengland/evalsense/issues/61), or address retention
+of earlier generation artifacts after a failed rerun, tracked in
+[#62](https://github.com/nhsengland/evalsense/issues/62).
+
 ## Versioning custom code
 
 Inspect-decorated built-in solvers and scorers supply construction parameters.
@@ -75,3 +134,10 @@ fallback. Valid fingerprints retain the existing task-cache paths.
 Legacy project records and logs remain readable, but old name-only cache entries are not reused by newly configured experiments. Keep a
 backup before using a project with older EvalSense releases, which do not know
 about these identity fields.
+
+Older evaluation metadata can lack `source_generation`. Loading or reading those
+records leaves them available without repairing their reported scores. When
+evaluation is requested, a missing or different source causes a fresh copy of
+the current successful generation to be scored. Its saved source can then be
+reused on subsequent calls. Recheck earlier reports explicitly before relying
+on them as measurements of the current generation.
