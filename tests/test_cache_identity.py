@@ -181,7 +181,7 @@ class CacheIdentityTests(unittest.TestCase):
             ("min_score", 0),
             ("max_score", 5),
             ("logprobs", False),
-            ("top_logprobs", 5),
+            ("top_logprobs", 15),
             ("normalise", False),
             ("metrics", [mean()]),
         ]:
