@@ -19,13 +19,14 @@ from evalsense.evaluation import (
 from evalsense.generation import ModelConfig
 from evalsense.utils.text import (
     extract_score,
-    extract_weighted_score,
+    extract_weighted_rating,
     format_template,
     validate_score_range,
 )
 
 SCORE_FORMAT = "evalsense.g-eval.integer.v1"
 WEIGHTING_POLICY = "evalsense.g-eval.single-token.v1"
+ESTIMATOR_FORMAT = "evalsense.g-eval.estimator.v1"
 
 
 def validate_weighting_settings(
@@ -160,26 +161,40 @@ class GEvalScoreCalculator(ScoreCalculator):
         output = await self.model.generate(llm_input, config=logprobs_config)
 
         raw_score = extract_score(output.completion, self.min_score, self.max_score)
+        weighted_rating = None
         if self.logprobs:
-            raw_score = extract_weighted_score(
+            weighted_rating = extract_weighted_rating(
                 output, min_score=self.min_score, max_score=self.max_score
             )
+            raw_score = weighted_rating.score
 
         if self.normalise:
             score = (raw_score - self.min_score) / (self.max_score - self.min_score)
         else:
             score = raw_score
 
-        return Score(
-            value=score,
-            answer=prediction,
-            metadata={
-                "prompt": llm_input,
-                "output_text": output.completion,
-                "raw_score": raw_score,
-                "score_format": SCORE_FORMAT,
-            },
-        )
+        score_metadata: dict[str, Any] = {
+            "prompt": llm_input,
+            "output_text": output.completion,
+            "raw_score": raw_score,
+            "score_format": SCORE_FORMAT,
+            "estimator_format": ESTIMATOR_FORMAT,
+            "estimator": "weighted_rating_tokens"
+            if self.logprobs
+            else "sampled_rating",
+        }
+        if weighted_rating is not None:
+            score_metadata.update(
+                weighting_policy=WEIGHTING_POLICY,
+                rating_probabilities={
+                    str(rating): probability
+                    for rating, probability in sorted(
+                        weighted_rating.probabilities.items()
+                    )
+                },
+                rating_probability_mass=weighted_rating.probability_mass,
+            )
+        return Score(value=score, answer=prediction, metadata=score_metadata)
 
 
 class GEvalScorerFactory(ScorerFactory):
@@ -321,6 +336,7 @@ def get_g_eval_evaluator(
     cache_parameters = {
         "method": "g_eval",
         "score_format": SCORE_FORMAT,
+        "estimator_format": ESTIMATOR_FORMAT,
         "quality_name": quality_name,
         "metrics": metrics,
         "prompt_template": prompt_template,

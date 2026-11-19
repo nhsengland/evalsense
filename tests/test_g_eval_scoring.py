@@ -51,7 +51,7 @@ class GEvalScoringTests(unittest.IsolatedAsyncioTestCase):
                 with (
                     self.subTest(text=text, logprobs=use_weights),
                     patch(
-                        "evalsense.evaluation.evaluators.g_eval.extract_weighted_score",
+                        "evalsense.evaluation.evaluators.g_eval.extract_weighted_rating",
                         return_value=10.0,
                     ) as weighting,
                 ):
