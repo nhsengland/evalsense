@@ -10,6 +10,7 @@ from inspect_ai.model import Model, ModelOutput
 from evalsense.evaluation.evaluators.g_eval import (
     GEvalScoreCalculator,
     SCORE_FORMAT,
+    WEIGHTING_POLICY,
     get_g_eval_evaluator,
 )
 from evalsense.generation import ModelConfig
@@ -42,6 +43,29 @@ class RatingPolicyTests(unittest.TestCase):
         self.assertNotEqual(old.evaluation_record, new.evaluation_record)
         self.assertNotEqual(previous.cache_key, current.cache_key)
         self.assertEqual(current.cache_key, evaluator().cache_key)
+
+    def test_weighted_policy_does_not_reuse_legacy_weighting_results(self):
+        current = get_g_eval_evaluator(
+            prompt_template="Rate {prediction}",
+            model_config=ModelConfig("mockllm/judge"),
+            logprobs=True,
+        )
+        assert current.cache_parameters
+        self.assertEqual(current.cache_parameters["weighting_policy"], WEIGHTING_POLICY)
+        legacy = replace(
+            current,
+            cache_parameters={
+                key: value
+                for key, value in current.cache_parameters.items()
+                if key != "weighting_policy"
+            },
+        )
+        self.assertNotEqual(current.cache_key, legacy.cache_key)
+        self.assertEqual(
+            experiment(evaluator=current).generation_record,
+            experiment(evaluator=legacy).generation_record,
+        )
+        self.assertNotIn("weighting_policy", evaluator().cache_parameters or {})
 
 
 class RatingPolicyMetadataTests(unittest.IsolatedAsyncioTestCase):
