@@ -51,7 +51,13 @@ class TaskPreprocessingFunction(Protocol):
 
 
 class TaskPreprocessor:
-    """A class preprocessing a dataset for a specific task."""
+    """Preprocess a dataset and preserve its supported JSON values in task data.
+
+    Stored Arrow values are written to JSONL without decimal-precision rounding.
+    Materialise transformations in the preprocessing function; display formats
+    and lazy transforms are not applied during serialisation. Unsupported values
+    must be converted before the record-to-sample mapper runs.
+    """
 
     def __init__(
         self,
@@ -106,6 +112,10 @@ class TaskPreprocessor:
 
         Returns:
             (Dataset): The preprocessed dataset.
+
+        Raises:
+            ValueError: A record contains a non-finite floating-point value.
+            TypeError: A record contains a value unsupported by the JSON transport.
         """
         tasks_path = Path(dataset_manager.version_path / "tasks")
         tasks_path.mkdir(parents=True, exist_ok=True)
