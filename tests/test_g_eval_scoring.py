@@ -13,7 +13,7 @@ from evalsense.evaluation.evaluators.g_eval import (
     get_g_eval_evaluator,
 )
 from evalsense.generation import ModelConfig
-from test_g_eval_weighted_ratings import weighted_output
+from test_g_eval_weighted_ratings import rating_options, weighted_output
 
 
 def task_state() -> TaskState:
@@ -86,7 +86,7 @@ class GEvalScoringTests(unittest.IsolatedAsyncioTestCase):
     async def test_valid_weighted_ratings_retain_fractional_expectations(self):
         model = Mock(spec=Model)
         model.generate = AsyncMock(
-            return_value=weighted_output("8", "8", [("8", 0.25), ("10", 0.75)])
+            return_value=weighted_output("8", "8", rating_options({8: 0.25, 10: 0.75}))
         )
         result = await scorer_for(cast(Model, model), logprobs=True)(
             task_state(), Target("reference")
@@ -114,3 +114,16 @@ class GEvalScoringTests(unittest.IsolatedAsyncioTestCase):
         result = await run(task_state(), Target("reference"))
         assert result is not None
         self.assertAlmostEqual(cast(float, result.value), 7 / 9)
+
+    async def test_missing_weighting_evidence_does_not_fall_back_to_the_sample(self):
+        model = Mock(spec=Model)
+        model.generate = AsyncMock(
+            return_value=ModelOutput.from_content("fixture", "9")
+        )
+        with self.assertRaisesRegex(ValueError, "exactly one output token"):
+            await scorer_for(cast(Model, model), logprobs=True)(
+                task_state(), Target("reference")
+            )
+        config = model.generate.call_args.kwargs["config"]
+        self.assertEqual(config.max_tokens, 1)
+        self.assertEqual(config.num_choices, 1)
