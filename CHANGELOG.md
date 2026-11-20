@@ -69,7 +69,7 @@ documented formats; check failed evaluations alongside completed scores.
 Retries and partial-result recovery remain a separate design decision.
 
 ### Miscellaneous
-- None
+- Add a baseline correctness suite and CI matrix for numerical metrics, statistical analysis, cache reuse and judge failure handling. The test runner rejects empty and entirely skipped runs.
 
 ## v0.1.6
 
