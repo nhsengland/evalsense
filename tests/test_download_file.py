@@ -1,3 +1,4 @@
+import hashlib
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -92,3 +93,78 @@ class DownloadFileTests(unittest.TestCase):
 
         self.assertEqual(self.target.read_bytes(), b"abcdef")
         self.assertNotIn("Range", self.get.call_args.kwargs["headers"])
+
+    def test_download_checks_known_size_before_replacing_target(self):
+        self.target.write_bytes(b"old")
+        for body in (b"abcde", b"abcdefg"):
+            with self.subTest(body=body):
+                self.get.return_value = response(200, body)
+
+                with self.assertRaisesRegex(RuntimeError, "could not be verified"):
+                    self.download(force_download=True)
+
+                self.assertEqual(self.target.read_bytes(), b"old")
+
+    def test_get_length_checks_download_when_head_omits_size(self):
+        del self.head.return_value["Content-Length"]
+        self.target.write_bytes(b"")
+        self.get.return_value = response(200, b"abc", {"Content-Length": "6"})
+
+        with self.assertRaisesRegex(RuntimeError, "could not be verified"):
+            self.download()
+
+        self.assertEqual(self.target.read_bytes(), b"")
+
+    def test_conflicting_response_lengths_leave_target_untouched(self):
+        self.target.write_bytes(b"old")
+        self.get.return_value = response(200, b"abc", {"Content-Length": "3"})
+
+        with self.assertRaisesRegex(RuntimeError, "Content-Length"):
+            self.download(force_download=True)
+
+        self.assertEqual(self.target.read_bytes(), b"old")
+
+    def test_range_total_checks_download_when_head_omits_size(self):
+        del self.head.return_value["Content-Length"]
+        self.part.write_bytes(b"abc")
+        self.get.return_value = response(206, b"de", {"Content-Range": "bytes 3-5/6"})
+
+        with self.assertRaisesRegex(RuntimeError, "could not be verified"):
+            self.download()
+
+        self.assertFalse(self.target.exists())
+
+    def test_zero_byte_length_is_checked(self):
+        self.head.return_value["Content-Length"] = "0"
+        self.get.return_value = response(200, b"x")
+
+        with self.assertRaisesRegex(RuntimeError, "could not be verified"):
+            self.download()
+
+        self.assertFalse(self.target.exists())
+
+    def test_missing_byte_count_requires_hash(self):
+        self.head.return_value.clear()
+        self.get.return_value = response(200, b"abcdef")
+        self.target.write_bytes(b"old")
+
+        with self.assertRaisesRegex(
+            RuntimeError, "no decoded byte count or expected hash"
+        ):
+            self.download()
+
+        self.assertEqual(self.target.read_bytes(), b"old")
+
+    def test_hash_verifies_decoded_file_when_length_is_unknown(self):
+        for headers in ({}, {"Content-Encoding": "gzip", "Content-Length": "26"}):
+            with self.subTest(headers=headers):
+                self.head.return_value.clear()
+                self.head.return_value.update(headers)
+                self.get.return_value = response(200, b"abcdef", headers)
+
+                self.download(
+                    force_download=True,
+                    expected_hash=hashlib.sha256(b"abcdef").hexdigest(),
+                )
+
+                self.assertEqual(self.target.read_bytes(), b"abcdef")
