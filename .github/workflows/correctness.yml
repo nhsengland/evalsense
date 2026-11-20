@@ -5,7 +5,9 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.12", "3.13"]
         dependencies: [locked]
@@ -14,6 +16,7 @@ jobs:
             dependencies: minimum
     env:
       MPLBACKEND: Agg
+      HF_HOME: ${{ github.workspace }}/.cache/evalsense-test-metrics
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -24,8 +27,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install base dependencies
         run: uv sync --frozen --no-dev --python "${{ matrix.python-version }}"
-      - name: Check minimum supported Inspect and Polars
+      - name: Check minimum supported evaluation dependencies
         if: matrix.dependencies == 'minimum'
-        run: uv pip install 'inspect-ai==0.3.87' 'polars==1.22.0' 'evaluate==0.4.3' 'datasets==3.2.0'
-      - name: Run regression tests
-        run: uv run --no-sync python -m unittest discover -s tests -v
+        run: uv pip install 'inspect-ai==0.3.87' 'polars==1.22.0' 'evaluate==0.4.3' 'datasets==3.2.0' 'numpy==2.0.0' 'scipy==1.15.3'
+      - name: Prepare verified metric fixtures
+        run: uv run --no-sync python tests/metric_fixtures.py
+      - name: Run correctness suite
+        run: uv run --no-sync python scripts/run_correctness_tests.py
