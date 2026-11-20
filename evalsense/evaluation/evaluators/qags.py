@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import unicodedata
 from typing import Any, Literal, Protocol, override
 
 from inspect_ai.model import GenerateConfig, Model
@@ -20,16 +21,78 @@ from evalsense.evaluation import (
 from evalsense.generation import ModelConfig
 from evalsense.logging import get_logger
 from evalsense.utils.text import (
-    extract_lines,
-    extract_ternary_answer,
     extract_weighted_binary_answer,
+    parse_ternary_answer,
+    strip_list_prefix,
 )
 
 logger = get_logger(__name__)
 
 
+QAGS_DERIVED_PROTOCOL = "evalsense.qags-derived.v2"
+
+
+class QagsValidationError(ValueError):
+    """Generated questions or answers cannot support a valid score."""
+
+
+def _parse_answer(text: str, *, binary_only: bool = False) -> bool | None:
+    """Parse one complete answer, keeping explicit unknown separate from failure."""
+    try:
+        return parse_ternary_answer(text, binary_only=binary_only)
+    except ValueError as error:
+        raise QagsValidationError(str(error)) from None
+
+
+def _validate_answers(
+    questions: list[str], prediction_answers: list[str], reference_answers: list[str]
+) -> None:
+    """Reject incomplete QA batches before zip or averaging can lose evidence."""
+    if not questions:
+        raise QagsValidationError(
+            "No valid questions were generated; no score is available."
+        )
+    if len(prediction_answers) != len(questions) or len(reference_answers) != len(
+        questions
+    ):
+        raise QagsValidationError(
+            "Each question must have one prediction and one reference answer."
+        )
+    for source, answers in (
+        ("prediction", prediction_answers),
+        ("reference", reference_answers),
+    ):
+        for index, answer in enumerate(answers):
+            if not answer.strip():
+                raise QagsValidationError(f"Empty {source} answer at question {index}.")
+
+
+def _parse_answers(answers: list[str], source: str) -> list[bool | None]:
+    parsed: list[bool | None] = []
+    for index, answer in enumerate(answers):
+        try:
+            parsed.append(_parse_answer(answer))
+        except QagsValidationError as error:
+            # Keep potentially sensitive source text out of the exception message.
+            raise QagsValidationError(
+                f"Invalid {source} answer at question {index}: {error}"
+            ) from None
+    return parsed
+
+
 class QagsConfig(Protocol):
-    """A protocol for configuring QAGS evaluation."""
+    """Configuration for EvalSense's QAGS QA agreement metric.
+
+    EvalSense adapts [Wang et al. (2020)](https://aclanthology.org/2020.acl-main.450/)
+    by generating questions from both texts and supporting ternary, exact-match
+    and LLM-judge comparisons. It does not use the original answer-conditioned
+    question filtering. The [EvalSense paper](https://aclanthology.org/2026.eacl-demo.33/)
+    reports a clinical-note case study and meta-evaluation of the ternary and
+    judge variants. Suitability still depends on the task, prompts and judge.
+
+    Prompts choose whether the comparison uses a reference note or source text;
+    agreement with a reference note does not independently check its source.
+    """
 
     answer_comparison_mode: Literal["ternary", "exact", "judge"]
     logprobs: bool
@@ -104,8 +167,14 @@ class QagsConfig(Protocol):
         """
         Constructs the prompt for generating the questions for the model output.
 
-        The prompt should instruct the model to generate each question on
-        a separate line.
+        The prompt should instruct the model to generate one question per line,
+        ending in exactly one question mark and containing a letter or digit.
+        Recognised list prefixes are removed using ``strip_list_prefix``;
+        Unicode is normalised to NFC and surrounding whitespace is trimmed.
+        Text-identical questions are scored once across both sources in their
+        first-occurrence order. Case, internal whitespace, decimals and signed
+        numerical values are preserved. Filtering checks syntax, not relevance.
+        An empty retained set raises QagsValidationError before any QA calls.
 
         Args:
             source (Literal["prediction", "reference"]): The source to use for
@@ -147,7 +216,10 @@ class QagsConfig(Protocol):
                 the model output or the reference output/input when asking
                 the model to answer the question. When `answer_comparison_mode`
                 is set to "ternary", the prompt should instruct the model to
-                answer the question with "yes", "no", or "unknown". Otherwise,
+                answer with only "yes", "no", or "unknown". The complete-answer
+                parser also accepts true/false, "I don't know", and a single
+                balanced quote, emphasis or inline-code wrapper. Explanations,
+                multiple labels and nested wrappers fail validation. Otherwise,
                 the model should be instructed to give an answer only without
                 any further comments.
             prediction (str, optional): The model output to evaluate.
@@ -203,7 +275,45 @@ class QagsConfig(Protocol):
 
 
 class QagsScoreCalculator(ScoreCalculator):
-    """QAGS score calculator."""
+    """QAGS score calculator with strict answer validation.
+
+    Each unique question has equal weight within a document. Both texts must
+    supply exactly one nonempty answer per question in every comparison mode.
+    Raw question outputs, retained questions and their source(s), answer outputs,
+    and counts of candidate, invalid, duplicate and retained question lines are
+    recorded in score metadata. Deduplication is textual, not semantic.
+
+    Ternary and judge-comparison labels use ``parse_ternary_answer`` from
+    ``evalsense.utils.text``. It validates the whole response, allowing one
+    balanced formatting wrapper and optional terminal punctuation. Explicit
+    unknown remains distinct from malformed text; judge comparisons must be
+    binary. Errors are translated to QagsValidationError without echoing text.
+
+    Ternary Accuracy is the fraction of equal labels, including unknown/unknown.
+    Such agreement is not factual evidence. Coverage and Groundedness are the
+    number of yes/yes matches divided by reference yes answers and prediction
+    yes answers, respectively, or zero when the corresponding denominator is
+    empty. These positive-answer ratios depend on question polarity and do not
+    measure all correctly preserved negative facts (see issue #57).
+
+    Exact mode averages case-insensitive, whitespace-trimmed text matches;
+    formatting wrappers are not stripped from free-text answers. Judge mode
+    averages binary comparisons or the existing probability-weighted values.
+    Weighting failures retain the existing logged binary fallback. Judge
+    calibration and log-probability handling are unchanged.
+
+    Invalid or incomplete answers raise QagsValidationError. They are neither
+    counted as unknown nor dropped from the question denominator. There are no
+    automatic format retries. In the current pipeline, a scoring exception marks
+    the affected evaluation as failed; other evaluations may continue. Report
+    failures alongside completed scores.
+
+    Successful scores include ``evaluation_protocol="evalsense.qags-derived.v2"``,
+    comparison mode, question-weighting policy and invalid-answer policy. The
+    factory defaults to mean aggregation across document scores. Changing the
+    validation or question set changes the evaluated protocol; regression tests
+    check implementation behavior, not clinical validity.
+    """
 
     _symbol_dict: dict[bool | None, str] = {
         True: "✅",
@@ -227,6 +337,10 @@ class QagsScoreCalculator(ScoreCalculator):
             name (str): The name of the score calculator. Defaults to "QAGS".
             debug (bool): Whether to report repeated errors in the log.
         """
+        if config.answer_comparison_mode not in ("ternary", "exact", "judge"):
+            raise ValueError(
+                "answer_comparison_mode must be 'ternary', 'exact', or 'judge'."
+            )
         self.model = model
         self.config = config
         self.name = name
@@ -303,10 +417,6 @@ class QagsScoreCalculator(ScoreCalculator):
         prediction_questions_output = await self.model.generate(
             prediction_questions_prompt, config=self.generate_config
         )
-        prediction_questions = extract_lines(
-            prediction_questions_output.completion,
-            include_filter_fun=lambda line: line.endswith("?"),
-        )
 
         # Questions for reference outputs
         reference_questions_prompt = self.config.get_question_generation_prompt(
@@ -319,12 +429,45 @@ class QagsScoreCalculator(ScoreCalculator):
         reference_questions_output = await self.model.generate(
             reference_questions_prompt, config=self.generate_config
         )
-        reference_questions = extract_lines(
-            reference_questions_output.completion,
-            include_filter_fun=lambda line: line.endswith("?"),
-        )
+        questions: list[str] = []
+        sources: list[list[str]] = []
+        seen: dict[str, int] = {}
+        invalid_count = duplicate_count = candidate_count = 0
+        for source, text in (
+            ("prediction", prediction_questions_output.completion),
+            ("reference", reference_questions_output.completion),
+        ):
+            for line in text.splitlines():
+                if not line.strip():
+                    continue
+                candidate_count += 1
+                question = unicodedata.normalize("NFC", strip_list_prefix(line))
+                if (
+                    not question.endswith("?")
+                    or question.count("?") != 1
+                    or not any(char.isalnum() for char in question[:-1])
+                ):
+                    invalid_count += 1
+                    continue
+                # Case and internal whitespace can be significant in units,
+                # identifiers or quoted text. Only deduplicate identical questions.
+                key = question
+                if key in seen:
+                    duplicate_count += 1
+                    if source not in sources[seen[key]]:
+                        sources[seen[key]].append(source)
+                    continue
+                seen[key] = len(questions)
+                questions.append(question)
+                sources.append([source])
 
-        questions = prediction_questions + reference_questions
+        score_metadata["question_sources"] = sources
+        score_metadata["question_filtering"] = {
+            "candidate_lines": candidate_count,
+            "invalid_lines": invalid_count,
+            "duplicate_questions": duplicate_count,
+            "retained_questions": len(questions),
+        }
 
         score_metadata["questions"] = questions
         score_metadata["prediction_questions_prompt"] = prediction_questions_prompt
@@ -336,6 +479,10 @@ class QagsScoreCalculator(ScoreCalculator):
             reference_questions_output.completion
         )
 
+        if not questions:
+            raise QagsValidationError(
+                "No valid questions were generated; no score is available."
+            )
         return questions
 
     async def _generate_answers(
@@ -435,14 +582,9 @@ class QagsScoreCalculator(ScoreCalculator):
         Returns:
             Score: The Inspect AI Score object with the calculated result.
         """
-        prediction_answers = [
-            extract_ternary_answer(answer, binary_only=False, unknown_on_mismatch=True)
-            for answer in raw_prediction_answers
-        ]
-        reference_answers = [
-            extract_ternary_answer(answer, binary_only=False, unknown_on_mismatch=True)
-            for answer in raw_reference_answers
-        ]
+        _validate_answers(questions, raw_prediction_answers, raw_reference_answers)
+        prediction_answers = _parse_answers(raw_prediction_answers, "prediction")
+        reference_answers = _parse_answers(raw_reference_answers, "reference")
 
         ref_positive = sum([ra is True for ra in reference_answers])
         pred_positive = sum([pa is True for pa in prediction_answers])
@@ -531,6 +673,7 @@ class QagsScoreCalculator(ScoreCalculator):
         Returns:
             Score: The Inspect AI Score object with the calculated result.
         """
+        _validate_answers(questions, raw_prediction_answers, raw_reference_answers)
         prediction_answers = [pa.strip().lower() for pa in raw_prediction_answers]
         reference_answers = [ra.strip().lower() for ra in raw_reference_answers]
         total_correct = sum(
@@ -607,11 +750,10 @@ class QagsScoreCalculator(ScoreCalculator):
         Returns:
             Score: The Inspect AI Score object with the calculated result.
         """
+        _validate_answers(questions, raw_prediction_answers, raw_reference_answers)
         answer_comparisons: list[float] = []
-        for question, prediction_answer, reference_answer in zip(
-            questions,
-            raw_prediction_answers,
-            raw_reference_answers,
+        for index, (question, prediction_answer, reference_answer) in enumerate(
+            zip(questions, raw_prediction_answers, raw_reference_answers, strict=True)
         ):
             answer_comparison_prompt = self.config.get_answer_comparison_prompt(
                 question=question,
@@ -625,13 +767,16 @@ class QagsScoreCalculator(ScoreCalculator):
             answer_comparison_output = await self.model.generate(
                 answer_comparison_prompt, config=self.generate_config
             )
-            answer_comparison = float(
-                extract_ternary_answer(
-                    answer_comparison_output.completion,
-                    binary_only=True,
-                    unknown_on_mismatch=False,
+            try:
+                parsed_comparison = _parse_answer(
+                    answer_comparison_output.completion, binary_only=True
                 )
-            )
+            except QagsValidationError as error:
+                raise QagsValidationError(
+                    f"Invalid comparison at question {index}: {error}"
+                ) from None
+            # Unknown has already been rejected by binary_only=True.
+            answer_comparison = float(parsed_comparison is True)
             if self.config.logprobs:
                 try:
                     answer_comparison = extract_weighted_binary_answer(
@@ -736,7 +881,12 @@ class QagsScoreCalculator(ScoreCalculator):
             Score: The Inspect AI Score object with the calculated result.
         """
 
-        score_metadata = {}
+        score_metadata: dict[str, Any] = {
+            "evaluation_protocol": QAGS_DERIVED_PROTOCOL,
+            "answer_comparison_mode": self.config.answer_comparison_mode,
+            "question_weighting": "uniform_unique_questions",
+            "invalid_answer_policy": "fail_sample",
+        }
 
         all_questions = await self._generate_questions(
             prediction=prediction,
@@ -791,7 +941,7 @@ class QagsScoreCalculator(ScoreCalculator):
 
 
 class QagsScorerFactory(ScorerFactory):
-    """Scorer factory for QAGS."""
+    """Scorer factory for the QAGS QA agreement metric."""
 
     def __init__(
         self,
@@ -808,7 +958,7 @@ class QagsScorerFactory(ScorerFactory):
             config (QagsConfig): The configuration for the QAGS scorer.
             metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
                 The metrics to use for the evaluation. If `None`, the default metric
-                will be used (G-Eval).
+                will be used for the configured answer comparison mode.
         """
         self.name = name
         self.config = config
@@ -870,7 +1020,12 @@ def get_qags_evaluator(
     version: str | None = None,
 ) -> Evaluator:
     """
-    Constructs a QAGS evaluator that can be used in EvalSense evaluation pipeline.
+    Constructs a QAGS evaluator for EvalSense.
+
+    The configured prompts select the two comparison texts and question types.
+    See QagsConfig for the method and QagsScoreCalculator for score definitions,
+    accepted formats and failure behavior. The protocol is recorded in score
+    metadata. Migration requirements are in the changelog.
 
     Args:
         config (QagsConfig): The configuration for the QAGS evaluator.
@@ -879,7 +1034,8 @@ def get_qags_evaluator(
             If `None`, the name from the model configuration will be used.
         metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
             The metrics to use for the evaluation. If `None`, the default metrics
-            will be used (QAGS precision, recall and F1).
+            will be used (coverage, groundedness and accuracy in ternary mode;
+            answer agreement in exact and judge modes).
         model_config (ModelConfig): The configuration of the model to be used
             for evaluation.
 

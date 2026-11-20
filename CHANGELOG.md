@@ -7,6 +7,8 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+- QAGS keeps its public name while changing answer validation and generated-question handling. Malformed answers, empty question sets and incomplete answer batches now raise `QagsValidationError` rather than producing scores; duplicate generated questions count once. Existing scores are not directly comparable: use a new evaluator version or name, or a fresh project, and preserve historical logs.
+
 - Built-in BLEU, ROUGE and BERTScore evaluations now have implementation-aware cache identities. Historical entries remain readable but are not reused. The standard analysers reject mixed or unrecorded implementations under the same labels; analyse legacy results separately.
 - The BLEU evaluator now records unsmoothed sentence BLEU-4 instead of unigram precision. The default scorer is `Sentence BLEU`; the aggregate is `<evaluator name> (corpus)`.
 
@@ -18,10 +20,12 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Per-sample BERTScore now rejects `idf=True` and IDF dictionaries. Only `idf=False` is supported by the current backend.
 
 ### Enhancements
+- Accept one balanced quote, Markdown emphasis or inline-code wrapper around a complete QAGS answer. Recognise unspaced question-list prefixes before letters while preserving decimals and signed values. Generic strict parsing is available in `evalsense.utils.text`; legacy extraction utilities remain unchanged.
 - Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Prevent unparseable ternary QAGS answers from being scored as matching unknowns, and validate judge comparison responses as complete binary answers.
 - Pin Evaluate metric scripts to full commits, check their loaded content hashes (including cached fallbacks), and record Python/runtime package versions in scores and project records. BERTScore reloads and corpus BLEU use the same pinned definition.
 - Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
@@ -31,6 +35,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
 
 ### Documentation
+- Describe QAGS's EvalSense-specific adaptation, failure behaviour and limitations in component docstrings and the Guide, alongside links to the original paper and EvalSense's own case study. Derive notebook column selections and labels from configured evaluator names.
 - Describe metric provenance and migration. Keep historical logs, retain the lockfile and use frozen installation for the project environment. Recreate evaluators in a fresh process after changing packages. Model/tokenizer files, custom metric code, hardware and numerical nondeterminism still require separate controls; these pins do not guarantee bitwise-identical results.
 - Document the BERTScore length policy and XLNet tokenizer constraints in the component docstrings.
 
@@ -41,6 +46,25 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Distinguish intended perturbations from independently checked severity in meta-evaluation results and the example notebook. Document conditional uncertainty and sample-manifest requirements.
 
   Existing logs are unchanged. Update analyser calls to pass the planned `expected_tiers` and the correct tier direction. Review all exclusion counts and `ci_status`; old two-column tables and pooled averages are not directly comparable. The web UI requires the original tier IDs when loading meta-evaluation results. Independent severity review remains an external step; the analyser can require review flags but does not create or verify them.
+
+#### QAGS migration
+
+The public evaluator name remains `QAGS` to match the EvalSense demo paper.
+The implementation adapts the original method: it generates questions from
+both texts, supports ternary, exact-match and judge comparisons, and does not
+perform the original answer-conditioned question filtering. Its documented
+validation and deduplication changes affect which questions contribute to a
+score. The internal protocol identifier `evalsense.qags-derived.v2` in score
+metadata identifies this distinct implementation and does not rename the
+public evaluator.
+
+Keep prior logs as historical results. Even with unchanged public names, do
+not pool prior QAGS scores with new scores as if they used the same protocol.
+Use a new evaluator name, a fresh project, or an explicit version change for
+new results, then rerun affected notebook cells. Existing notebook outputs are
+not recomputed by this change. Prompts should request complete answers in the
+documented formats; check failed evaluations alongside completed scores.
+Retries and partial-result recovery remain a separate design decision.
 
 ### Miscellaneous
 - None

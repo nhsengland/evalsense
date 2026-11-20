@@ -201,7 +201,7 @@
     "name": "QAGS",
     "type": "method",
     "category": "automated",
-    "description_short": "Evaluates factual consistency by comparing answers to questions generated from a background text and the model output, using an LLM.",
+    "description_short": "Uses questions and answers to help assess factual consistency and missing information in generated text.",
     "description_long_file": "qags.mdx",
     "link_implementation": "https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.QagsScoreCalculator",
     "link_name": "QagsScoreCalculator",
@@ -212,21 +212,22 @@
       { "id": "hallucination", "coverage": "Very Good" },
       { "id": "omissions", "coverage": "Very Good" }
     ],
-    "output_values": "An aggregate score reflecting accuracy of the answers, typically between 0 and 1. Higher values are better. When using binary questions, can also report more fine-grained measures like coverage (share of facts from reference/context covered in model output) or groundedness (share of facts in model output supported by reference/context)",
+    "output_values": "Mean answer agreement between 0 and 1; higher values indicate more agreement. Ternary mode also reports coverage and groundedness based on matching yes answers. Scores depend on question wording, and matching unknowns do not establish factual support.",
     "advantages": [
-      "Assesses factual consistency and information coverage.",
+      "Can help locate factual disagreements and missing information for review.",
       "Good interpretability due to question-answer format and ability to highlight mismatches in answers.",
       "Can only use weak references, such as background text/information.",
       "Flexible modes of operation (ternary, exact match, LLM-judged answers).",
-      "Robust to paraphrasing if the evaluation model is strong."
+      "Judge mode can compare differently worded answers, subject to judge reliability."
     ],
     "disadvantages": [
       "Performance heavily depends on the quality of the used LLM.",
+      "Results depend on question quality, prompts and the task; check performance on representative examples.",
       "Very computationally expensive due to a large number of LLM inferences."
     ],
     "references": [
       {
-        "name": "Wang et al., 2020",
+        "name": "Wang et al., 2020 (original QAGS)",
         "url": "https://aclanthology.org/2020.acl-main.450/",
         "bib_record": "@inproceedings{wang-etal-2020-qags,\n  title     = {Asking and Answering Questions to Evaluate the Factual Consistency of Summaries},\n  author    = {Wang, Alex  and\n               Cho, Kyunghyun  and\n               Lewis, Mike},\n  editor    = {Jurafsky, Dan  and\n               Chai, Joyce  and\n               Schluter, Natalie  and\n               Tetreault, Joel},\n  booktitle = {Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics},\n  month     = {jul},\n  year      = {2020},\n  address   = {Online},\n  publisher = {Association for Computational Linguistics},\n  url       = {https://aclanthology.org/2020.acl-main.450/},\n  doi       = {10.18653/v1/2020.acl-main.450},\n  pages     = {5008--5020}\n}"
       }
