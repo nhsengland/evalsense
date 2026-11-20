@@ -132,7 +132,7 @@ const config: Config = {
           ],
         },
       ],
-      copyright: `<a href="https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/" style="color:#5fb1ff">© Crown copyright</a> ${new Date().getFullYear()} NHS England. Available under the terms of the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color:#5fb1ff">Open Government Licence v3.0</a>.`,
+      copyright: `<a href="https://www.nationalarchives.gov.uk/information-management/re-using-public-sector-information/uk-government-licensing-framework/crown-copyright/" style="color:#5fb1ff">© Crown copyright</a> ${new Date().getFullYear()} NHS England. Website content: <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" style="color:#5fb1ff">Open Government Licence v3.0</a>. EvalSense software: <a href="https://github.com/nhsengland/evalsense/blob/main/LICENCE" style="color:#5fb1ff">MIT Licence</a>.`,
     },
     prism: {
       theme: prismThemes.github,
