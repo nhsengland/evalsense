@@ -55,11 +55,10 @@ def load_project(project_name: str, is_meta_eval: bool, expected_meta_tiers: str
                 project, return_plot=True, figsize=(9, 7)
             )
             plot = correlation_results.figure
-            assert plot, "Correlation plot cannot be None"
     except Exception as e:
         raise gr.Error(f"Error loading results: {type(e).__name__}: {e}")
 
-    return summary_results, plot if plot is not None else gr.update(visible=False)
+    return summary_results, gr.update(value=plot, visible=plot is not None)
 
 
 def results_tab(state: gr.State):
@@ -115,10 +114,6 @@ def results_tab(state: gr.State):
         metric_correlation = gr.Plot(label="Metric Correlation", format="png")
 
         load_button.click(
-            inputs=[is_meta_eval_input],
-            outputs=[metric_correlation],
-            fn=lambda is_meta: gr.update(visible=not is_meta),
-        ).then(
             fn=load_project,
             inputs=[project_name_input, is_meta_eval_input, expected_meta_tiers_input],
             outputs=[results_df, metric_correlation],

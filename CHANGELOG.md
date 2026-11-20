@@ -33,6 +33,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 - Prevent incomplete two-tier and undefined meta-evaluation correlations from silently inflating the reported mean. Report failed/missing logs and unestimable intervals.
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
+- Show the standard evaluation summary in the web UI when logs contain aggregate metrics only.
 
 ### Documentation
 - Describe QAGS's EvalSense-specific adaptation, failure behaviour and limitations in component docstrings and the Guide, alongside links to the original paper and EvalSense's own case study. Derive notebook column selections and labels from configured evaluator names.
