@@ -46,6 +46,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Distinguish intended perturbations from independently checked severity in meta-evaluation results and the example notebook. Document conditional uncertainty and sample-manifest requirements.
 
   Existing logs are unchanged. Update analyser calls to pass the planned `expected_tiers` and the correct tier direction. Review all exclusion counts and `ci_status`; old two-column tables and pooled averages are not directly comparable. The web UI requires the original tier IDs when loading meta-evaluation results. Independent severity review remains an external step; the analyser can require review flags but does not create or verify them.
+- Document how to recheck older meta-evaluation rankings from the original evaluation logs.
 
 #### QAGS migration
 
