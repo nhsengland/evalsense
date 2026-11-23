@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from collections.abc import Callable
 import unicodedata
 from typing import Any, Literal, Protocol, override
 
@@ -17,6 +18,12 @@ from evalsense.evaluation import (
     Evaluator,
     ScoreCalculator,
     ScorerFactory,
+)
+from evalsense.evaluation.judge_prompt import (
+    JudgeInputScreen,
+    JudgeRequest,
+    PROTOCOL,
+    generate_judge,
 )
 from evalsense.generation import ModelConfig
 from evalsense.logging import get_logger
@@ -163,7 +170,7 @@ class QagsConfig(Protocol):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> JudgeRequest:
         """
         Constructs the prompt for generating the questions for the model output.
 
@@ -191,7 +198,8 @@ class QagsConfig(Protocol):
                 state metadata. Optional.
 
         Returns:
-            str: The generated prompt.
+            JudgeRequest: A caller-defined JudgePrompt (system and user messages)
+                or a legacy single user string.
         """
         ...
 
@@ -205,7 +213,7 @@ class QagsConfig(Protocol):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> JudgeRequest:
         """
         Constructs the prompt for generating the answer to a single question.
 
@@ -230,7 +238,8 @@ class QagsConfig(Protocol):
                 state metadata. Optional.
 
         Returns:
-            str: The generated prompt.
+            JudgeRequest: A caller-defined JudgePrompt (system and user messages)
+                or a legacy single user string.
         """
         ...
 
@@ -244,7 +253,7 @@ class QagsConfig(Protocol):
         prediction: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> str:
+    ) -> JudgeRequest:
         """
         Constructs the prompt for comparing answers to the generated questions.
 
@@ -262,7 +271,8 @@ class QagsConfig(Protocol):
                 state metadata. Optional.
 
         Returns:
-            str: The generated prompt.
+            JudgeRequest: A caller-defined JudgePrompt (system and user messages)
+                or a legacy single user string.
         """
         if self.answer_comparison_mode == "judge":
             raise NotImplementedError(
@@ -272,6 +282,48 @@ class QagsConfig(Protocol):
         assert False, (
             "Should not attempt to generate comparison prompt in non-judge mode."
         )
+
+
+class QagsPromptConfig(QagsConfig):
+    """QAGS configuration using caller-supplied builders for each judge stage.
+
+    Builders receive the same keyword arguments as the corresponding QagsConfig
+    methods and return JudgePrompt or a legacy string. Supply a comparison
+    builder for judge mode. Version custom builders for cache reuse.
+    """
+
+    def __init__(
+        self,
+        answer_comparison_mode: Literal["ternary", "exact", "judge"],
+        *,
+        question_prompt_builder: Callable[..., JudgeRequest],
+        answer_prompt_builder: Callable[..., JudgeRequest],
+        comparison_prompt_builder: Callable[..., JudgeRequest] | None = None,
+        logprobs: bool = True,
+        top_logprobs: int = 20,
+        ci: float = 0.1,
+        debug: bool = False,
+    ):
+        super().__init__(answer_comparison_mode, logprobs, top_logprobs, ci, debug)
+        if answer_comparison_mode == "judge" and comparison_prompt_builder is None:
+            raise ValueError("Judge mode requires a comparison prompt builder.")
+        self.question_prompt_builder = question_prompt_builder
+        self.answer_prompt_builder = answer_prompt_builder
+        self.comparison_prompt_builder = comparison_prompt_builder
+
+    @override
+    def get_question_generation_prompt(self, **kwargs: Any) -> JudgeRequest:
+        return self.question_prompt_builder(**kwargs)
+
+    @override
+    def get_answer_generation_prompt(self, **kwargs: Any) -> JudgeRequest:
+        return self.answer_prompt_builder(**kwargs)
+
+    @override
+    def get_answer_comparison_prompt(self, **kwargs: Any) -> JudgeRequest:
+        if self.comparison_prompt_builder is None:
+            raise ValueError("No comparison prompt builder was configured.")
+        return self.comparison_prompt_builder(**kwargs)
 
 
 class QagsScoreCalculator(ScoreCalculator):
@@ -327,6 +379,8 @@ class QagsScoreCalculator(ScoreCalculator):
         config: QagsConfig,
         name: str = "QAGS",
         debug: bool = False,
+        *,
+        input_screen: JudgeInputScreen | None = None,
     ):
         """
         Initializes the QAGS score calculator.
@@ -345,6 +399,7 @@ class QagsScoreCalculator(ScoreCalculator):
         self.config = config
         self.name = name
         self.warned_weighted_answer = False
+        self.input_screen = input_screen
 
     @property
     def generate_config(self) -> GenerateConfig:
@@ -414,8 +469,14 @@ class QagsScoreCalculator(ScoreCalculator):
         # We don't actually need the logprobs until comparing the answers,
         # but the vLLM provider uses the config from the first sample in the batch
         # so we need to use consistent config for all samples.
-        prediction_questions_output = await self.model.generate(
-            prediction_questions_prompt, config=self.generate_config
+        (
+            prediction_questions_output,
+            prediction_questions_messages,
+        ) = await generate_judge(
+            self.model,
+            prediction_questions_prompt,
+            self.generate_config,
+            input_screen=self.input_screen,
         )
 
         # Questions for reference outputs
@@ -426,8 +487,11 @@ class QagsScoreCalculator(ScoreCalculator):
             reference=reference,
             metadata=metadata,
         )
-        reference_questions_output = await self.model.generate(
-            reference_questions_prompt, config=self.generate_config
+        reference_questions_output, reference_questions_messages = await generate_judge(
+            self.model,
+            reference_questions_prompt,
+            self.generate_config,
+            input_screen=self.input_screen,
         )
         questions: list[str] = []
         sources: list[list[str]] = []
@@ -470,8 +534,8 @@ class QagsScoreCalculator(ScoreCalculator):
         }
 
         score_metadata["questions"] = questions
-        score_metadata["prediction_questions_prompt"] = prediction_questions_prompt
-        score_metadata["reference_questions_prompt"] = reference_questions_prompt
+        score_metadata["prediction_questions_prompt"] = prediction_questions_messages
+        score_metadata["reference_questions_prompt"] = reference_questions_messages
         score_metadata["raw_prediction_questions"] = (
             prediction_questions_output.completion
         )
@@ -528,8 +592,11 @@ class QagsScoreCalculator(ScoreCalculator):
                 reference=reference,
                 metadata=metadata,
             )
-            prediction_answer_output = await self.model.generate(
-                prediction_answer_prompt, config=self.generate_config
+            prediction_answer_output, prediction_answer_messages = await generate_judge(
+                self.model,
+                prediction_answer_prompt,
+                self.generate_config,
+                input_screen=self.input_screen,
             )
             prediction_answers.append(prediction_answer_output.completion)
 
@@ -541,8 +608,11 @@ class QagsScoreCalculator(ScoreCalculator):
                 reference=reference,
                 metadata=metadata,
             )
-            reference_answer_output = await self.model.generate(
-                reference_answer_prompt, config=self.generate_config
+            reference_answer_output, reference_answer_messages = await generate_judge(
+                self.model,
+                reference_answer_prompt,
+                self.generate_config,
+                input_screen=self.input_screen,
             )
             reference_answers.append(reference_answer_output.completion)
 
@@ -552,8 +622,10 @@ class QagsScoreCalculator(ScoreCalculator):
             score_metadata["raw_reference_answers"].append(
                 reference_answer_output.completion
             )
-            score_metadata["prediction_answer_prompts"].append(prediction_answer_prompt)
-            score_metadata["reference_answer_prompts"].append(reference_answer_prompt)
+            score_metadata["prediction_answer_prompts"].append(
+                prediction_answer_messages
+            )
+            score_metadata["reference_answer_prompts"].append(reference_answer_messages)
 
         return prediction_answers, reference_answers
 
@@ -752,6 +824,7 @@ class QagsScoreCalculator(ScoreCalculator):
         """
         _validate_answers(questions, raw_prediction_answers, raw_reference_answers)
         answer_comparisons: list[float] = []
+        score_metadata["answer_comparison_prompts"] = []
         for index, (question, prediction_answer, reference_answer) in enumerate(
             zip(questions, raw_prediction_answers, raw_reference_answers, strict=True)
         ):
@@ -764,8 +837,11 @@ class QagsScoreCalculator(ScoreCalculator):
                 reference=reference,
                 metadata=metadata,
             )
-            answer_comparison_output = await self.model.generate(
-                answer_comparison_prompt, config=self.generate_config
+            answer_comparison_output, answer_comparison_messages = await generate_judge(
+                self.model,
+                answer_comparison_prompt,
+                self.generate_config,
+                input_screen=self.input_screen,
             )
             try:
                 parsed_comparison = _parse_answer(
@@ -799,6 +875,9 @@ class QagsScoreCalculator(ScoreCalculator):
 
                         logger.error(error_message)
             answer_comparisons.append(answer_comparison)
+            score_metadata["answer_comparison_prompts"].append(
+                answer_comparison_messages
+            )
 
         def to_match_symbol(answer_comparison: float) -> str:
             if answer_comparison > 1 - self.config.ci:
@@ -883,6 +962,8 @@ class QagsScoreCalculator(ScoreCalculator):
 
         score_metadata: dict[str, Any] = {
             "evaluation_protocol": QAGS_DERIVED_PROTOCOL,
+            "judge_input_protocol": PROTOCOL,
+            "judge_input_screening": self.input_screen is not None,
             "answer_comparison_mode": self.config.answer_comparison_mode,
             "question_weighting": "uniform_unique_questions",
             "invalid_answer_policy": "fail_sample",
@@ -950,6 +1031,8 @@ class QagsScorerFactory(ScorerFactory):
         metrics: list[Metric | dict[str, list[Metric]]]
         | dict[str, list[Metric]]
         | None = None,
+        *,
+        input_screen: JudgeInputScreen | None = None,
     ):
         """
         Initialize the QAGS scorer factory.
@@ -962,6 +1045,7 @@ class QagsScorerFactory(ScorerFactory):
         """
         self.name = name
         self.config = config
+        self.input_screen = input_screen
         if metrics is None:
             if self.config.answer_comparison_mode == "ternary":
                 metrics = [
@@ -993,6 +1077,7 @@ class QagsScorerFactory(ScorerFactory):
                 model=model,
                 config=self.config,
                 name=self.name,
+                input_screen=self.input_screen,
             )
 
             async def score(state: TaskState, target: Target):
@@ -1018,6 +1103,7 @@ def get_qags_evaluator(
     | None = None,
     model_config: ModelConfig,
     version: str | None = None,
+    input_screen: JudgeInputScreen | None = None,
 ) -> Evaluator:
     """
     Constructs a QAGS evaluator for EvalSense.
@@ -1039,13 +1125,18 @@ def get_qags_evaluator(
         model_config (ModelConfig): The configuration of the model to be used
             for evaluation.
 
-        version (str | None): Cache version for custom code or external resources.
+        version (str | None): Cache version for custom code or external resources,
+            including custom prompt builders and screens.
+        input_screen (JudgeInputScreen | None): Optional predicate applied to each
+            rendered user message. True allows it, False rejects it. No default screen.
 
     Returns:
         Evaluator: The constructed QAGS evaluator.
     """
     cache_parameters = {
         "method": "qags",
+        "judge_input_protocol": PROTOCOL,
+        "input_screen": input_screen,
         "config": {"implementation": type(config), "parameters": vars(config)},
         "metrics": metrics,
     }
@@ -1058,6 +1149,7 @@ def get_qags_evaluator(
             name=metric_name,
             config=config,
             metrics=metrics,
+            input_screen=input_screen,
         ),
         model_config=model_config,
     )

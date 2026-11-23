@@ -7,6 +7,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+- G-Eval now requires a complete integer response within its rating scale before weighting. G-Eval and QAGS record a new judge-input protocol in cache identities; use fresh evaluation identities when comparing results and retain historical logs.
 - QAGS keeps its public name while changing answer validation and generated-question handling. Malformed answers, empty question sets and incomplete answer batches now raise `QagsValidationError` rather than producing scores; duplicate generated questions count once. Existing scores are not directly comparable: use a new evaluator version or name, or a fresh project, and preserve historical logs.
 
 - Built-in BLEU, ROUGE and BERTScore evaluations now have implementation-aware cache identities. Historical entries remain readable but are not reused. The standard analysers reject mixed or unrecorded implementations under the same labels; analyse legacy results separately.
@@ -20,6 +21,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Per-sample BERTScore now rejects `idf=True` and IDF dictionaries. Only `idf=False` is supported by the current backend.
 
 ### Enhancements
+- G-Eval accepts an optional caller-defined system prompt alongside its user template. QAGS prompt builders may return a pair of caller-defined messages, and can be passed through QagsPromptConfig. Both evaluators accept optional custom input-screening functions and provide an opt-in instruction-phrase screen. Existing single-message prompts remain supported.
 - Accept one balanced quote, Markdown emphasis or inline-code wrapper around a complete QAGS answer. Recognise unspaced question-list prefixes before letters while preserving decimals and signed values. Generic strict parsing is available in `evalsense.utils.text`; legacy extraction utilities remain unchanged.
 - Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.

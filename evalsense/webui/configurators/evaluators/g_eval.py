@@ -3,7 +3,7 @@ from typing import override
 import gradio as gr
 from inspect_ai.model import GenerateConfigArgs
 
-from evalsense.evaluation import Evaluator
+from evalsense.evaluation import Evaluator, screen_instruction_phrases
 from evalsense.evaluation.evaluators import get_g_eval_evaluator
 from evalsense.generation.model_config import ModelConfig
 from evalsense.webui.configurators.evaluator_configurator import (
@@ -49,9 +49,27 @@ class GEvalConfigurator(EvaluatorConfigurator):
             {
                 "input_name": "prompt_template",
                 "component": gr.TextArea(
-                    label="Prompt Template",
-                    info="The prompt template to use for evaluation. The supplied template should be a Python f-string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. The template should instruct the judge model to respond with a numerical score between the specified `min_score` and `max_score`.",
+                    label="User Prompt Template",
+                    info="The complete user message template. The supplied template should be a Python format string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. The template should instruct the judge model to respond with a numerical score between the specified `min_score` and `max_score`.",
                     max_lines=15,
+                ),
+                "parser": None,
+            },
+            {
+                "input_name": "system_prompt",
+                "component": gr.TextArea(
+                    label="System Prompt (optional)",
+                    info="Complete trusted instructions. No text is added or interpolated. Leave empty for the original single-message prompt.",
+                    max_lines=15,
+                ),
+                "parser": None,
+            },
+            {
+                "input_name": "screen_instructions",
+                "component": gr.Checkbox(
+                    label="Screen instruction-like input",
+                    info="Optional English-language heuristic. Can reject quotations and miss attacks.",
+                    value=False,
                 ),
                 "parser": None,
             },
@@ -129,7 +147,7 @@ class GEvalConfigurator(EvaluatorConfigurator):
     @override
     def instantiate_evaluator(self, **kwargs) -> Evaluator:
         """
-        Instantiates the BERTScore evaluator according to the specified configuration.
+        Instantiates the G-Eval evaluator according to the specified configuration.
 
         Args:
             **kwargs (dict): The keyword arguments specifying evaluator configuration.
@@ -146,4 +164,7 @@ class GEvalConfigurator(EvaluatorConfigurator):
             generation_args=GenerateConfigArgs(**generation_args),
         )
 
+        kwargs["system_prompt"] = kwargs.get("system_prompt") or None
+        if kwargs.pop("screen_instructions", False):
+            kwargs["input_screen"] = screen_instruction_phrases
         return get_g_eval_evaluator(**kwargs, model_config=model_config)

@@ -18,6 +18,14 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
   Reviewing the questions and answers helps explain individual scores.
 </Typography>
 
+<Typography variant="body2" gutterBottom>
+  Each question, answer and comparison prompt can be provided as separate system
+  and user messages using the caller-defined JudgePrompt. Keep generated
+  questions, answers and source text in the user message. Optional screening
+  runs on the rendered user message before each model call. These measures
+  reduce some injection risks but do not establish model-level resistance.
+</Typography>
+
 <Typography variant="subtitle1" gutterBottom>
   Evaluation modes
 </Typography>

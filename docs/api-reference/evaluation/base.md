@@ -32,3 +32,8 @@ These manifests are not a complete environment lock. Retain `uv.lock`, use
 `uv sync --frozen`, and restart after dependency changes. Pretrained model weights,
 tokenizer assets, custom aggregators, hardware and nondeterministic execution are
 outside the script/version check. Preserve immutable model snapshots separately.
+
+
+::: evalsense.evaluation.judge_prompt.JudgePrompt
+
+::: evalsense.evaluation.judge_prompt.screen_instruction_phrases

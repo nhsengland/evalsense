@@ -16,9 +16,17 @@ from evalsense.evaluation import (
     ScoreCalculator,
     ScorerFactory,
 )
+from evalsense.evaluation.judge_prompt import (
+    JudgeInputError,
+    JudgeInputScreen,
+    JudgePrompt,
+    PROTOCOL,
+    generate_judge,
+    validate_rating,
+)
 from evalsense.generation import ModelConfig
 from evalsense.logging import get_logger
-from evalsense.utils.text import extract_score, extract_weighted_score, format_template
+from evalsense.utils.text import extract_weighted_score, format_template
 
 logger = get_logger(__name__)
 
@@ -36,6 +44,9 @@ class GEvalScoreCalculator(ScoreCalculator):
         max_score: int = 10,
         normalise: bool = True,
         debug: bool = False,
+        *,
+        system_prompt: str | None = None,
+        input_screen: JudgeInputScreen | None = None,
     ):
         """
         Initializes the G-Eval score calculator.
@@ -50,9 +61,15 @@ class GEvalScoreCalculator(ScoreCalculator):
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
+            system_prompt (str | None): Complete trusted system message. None retains
+                the legacy single user prompt. The system text is never formatted.
+            input_screen (JudgeInputScreen | None): Optional predicate applied to
+                the rendered user prompt. True allows it; False rejects it.
         """
         self.model = model
         self.prompt_template = prompt_template
+        self.system_prompt = system_prompt
+        self.input_screen = input_screen
         self.logprobs = logprobs
         self.top_logprobs = top_logprobs
         self.min_score = min_score
@@ -69,7 +86,7 @@ class GEvalScoreCalculator(ScoreCalculator):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Score:
         """This method is not supported for G-Eval and will raise an error when called.
 
@@ -92,7 +109,7 @@ class GEvalScoreCalculator(ScoreCalculator):
         input: str | None = None,
         reference: str | None = None,
         metadata: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Score:
         """Calculates the G-Eval score asynchronously.
 
@@ -113,16 +130,25 @@ class GEvalScoreCalculator(ScoreCalculator):
         )
         if metadata is None:
             metadata = {}
-        llm_input = format_template(
+        if metadata.keys() & {"prediction", "reference", "input"}:
+            raise JudgeInputError("Metadata cannot override reserved judge fields.")
+        user_prompt = format_template(
             self.prompt_template,
             prediction=prediction,
             reference=reference,
             input=input,
             **metadata,
         )
-        output = await self.model.generate(llm_input, config=logprobs_config)
+        prompt = (
+            user_prompt
+            if self.system_prompt is None
+            else JudgePrompt(self.system_prompt, user_prompt)
+        )
+        output, llm_input = await generate_judge(
+            self.model, prompt, logprobs_config, input_screen=self.input_screen
+        )
 
-        raw_score = extract_score(output.completion, self.min_score, self.max_score)
+        raw_score = validate_rating(output, self.min_score, self.max_score)
         if self.logprobs:
             try:
                 raw_score = extract_weighted_score(
@@ -156,6 +182,8 @@ class GEvalScoreCalculator(ScoreCalculator):
             answer=prediction,
             metadata={
                 "prompt": llm_input,
+                "judge_input_protocol": PROTOCOL,
+                "judge_input_screening": self.input_screen is not None,
                 "output_text": output.completion,
                 "raw_score": raw_score,
             },
@@ -178,6 +206,9 @@ class GEvalScorerFactory(ScorerFactory):
         max_score: int = 10,
         normalise: bool = True,
         debug: bool = False,
+        *,
+        system_prompt: str | None = None,
+        input_screen: JudgeInputScreen | None = None,
     ):
         """
         Initialize the G-Eval scorer factory.
@@ -195,9 +226,15 @@ class GEvalScorerFactory(ScorerFactory):
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
+            system_prompt (str | None): Complete trusted system message. None retains
+                the legacy single user prompt. The system text is never formatted.
+            input_screen (JudgeInputScreen | None): Optional predicate applied to
+                the rendered user prompt. True allows it; False rejects it.
         """
         self.name = name
         self.prompt_template = prompt_template
+        self.system_prompt = system_prompt
+        self.input_screen = input_screen
         if metrics is None:
             metrics = [mean()]
         self.metrics = metrics
@@ -225,6 +262,8 @@ class GEvalScorerFactory(ScorerFactory):
             g_eval_calculator = GEvalScoreCalculator(
                 model=model,
                 prompt_template=self.prompt_template,
+                system_prompt=self.system_prompt,
+                input_screen=self.input_screen,
                 logprobs=self.logprobs,
                 top_logprobs=self.top_logprobs,
                 min_score=self.min_score,
@@ -263,6 +302,8 @@ def get_g_eval_evaluator(
     normalise: bool = True,
     debug: bool = False,
     version: str | None = None,
+    system_prompt: str | None = None,
+    input_screen: JudgeInputScreen | None = None,
 ) -> Evaluator:
     """
     Constructs a G-Eval evaluator that can be used in EvalSense evaluation pipeline.
@@ -290,7 +331,14 @@ def get_g_eval_evaluator(
         normalise (bool): Whether to normalise the scores between 0 and 1.
         debug (bool): Whether to report repeated errors in the log.
 
-        version (str | None): Cache version for custom code or external resources.
+        version (str | None): Cache version for custom code or external resources,
+            including custom input screens.
+        system_prompt (str | None): Complete trusted system message, never interpolated.
+            When supplied, prompt_template is the complete user-message template.
+            None retains the legacy single user message.
+        input_screen (JudgeInputScreen | None): Optional predicate on the rendered user
+            message. True allows, False rejects. No screening is performed by default.
+            Supply and bump version for custom screening code.
 
     Returns:
         Evaluator: The constructed G-Eval evaluator.
@@ -300,6 +348,9 @@ def get_g_eval_evaluator(
         "quality_name": quality_name,
         "metrics": metrics,
         "prompt_template": prompt_template,
+        "system_prompt": system_prompt,
+        "input_screen": input_screen,
+        "judge_input_protocol": PROTOCOL,
         "logprobs": logprobs,
         "top_logprobs": top_logprobs,
         "min_score": min_score,
@@ -316,6 +367,8 @@ def get_g_eval_evaluator(
             name=metric_name,
             metrics=metrics,
             prompt_template=prompt_template,
+            system_prompt=system_prompt,
+            input_screen=input_screen,
             logprobs=logprobs,
             top_logprobs=top_logprobs,
             min_score=min_score,
