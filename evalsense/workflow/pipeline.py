@@ -181,7 +181,6 @@ class Pipeline:
                 Defaults to empty dictionary when None.
         """
         prev_record = self.project.get_record(experiment.generation_record)
-        interrupted = False
 
         # Inspect AI logs can only include serialisible task arguments, so we
         # need to use a closure to pass the dataset and solvers to the task.
@@ -204,11 +203,12 @@ class Pipeline:
         # We need to create the task even when resuming from a previous log,
         # otherwise Inspect will not be able to resolve it.
         inspect_task = create_task(to_safe_filename(experiment.generation_record.label))
-        if prev_record is None or prev_record.log_location is None or force_rerun:
+        start_new = prev_record is None or prev_record.log_location is None or force_rerun
+        if start_new:
             self.project.update_record(experiment.generation_record, ResultRecord())
 
-            # Try generating the model outputs.
-            try:
+        try:
+            if start_new:
                 eval_logs = eval(
                     tasks=inspect_task,
                     model=self._active_model,
@@ -216,25 +216,26 @@ class Pipeline:
                     score=False,
                     **(eval_kwargs or dict()),
                 )
-            except BaseException as e:
-                eval_logs = self.project.get_incomplete_logs(type="generation")
-                interrupted = isinstance(e, KeyboardInterrupt)
-        else:
-            logger.info(
-                f"🔁  Retrying generation using log: {prev_record.log_location}"
-            )
-            prev_log = read_eval_log(prev_record.log_location)
-
-            # Retry generation using the previous log
-            try:
+            else:
+                assert prev_record is not None and prev_record.log_location is not None
+                logger.info(f"Retrying generation using log: {prev_record.log_location}")
+                prev_log = read_eval_log(prev_record.log_location)
                 eval_logs = eval_retry(
                     tasks=prev_log,
                     log_dir=str(self.project.generation_log_path),
                     **(eval_retry_kwargs or dict()),
                 )
-            except BaseException as e:
-                eval_logs = self.project.get_incomplete_logs(type="generation")
-                interrupted = isinstance(e, KeyboardInterrupt)
+        except (Exception, KeyboardInterrupt) as exc:
+            message = str(exc) or type(exc).__name__
+            self.project.update_record(
+                experiment.generation_record,
+                ResultRecord(status="error", error_message=message),
+                keep_previous_log=True,
+            )
+            logger.error(f"Generation failed: {message}")
+            if isinstance(exc, KeyboardInterrupt):
+                raise
+            return
 
         # Check generation status and update the project record
         status = "error"
@@ -277,11 +278,6 @@ class Pipeline:
                 status=status, error_message=error_message, log_location=log_location
             ),
         )
-
-        # If user interrupted the generation, raise KeyboardInterrupt
-        if interrupted:
-            logger.critical("🛑  Execution was interrupted.")
-            raise KeyboardInterrupt()
 
     def generate(
         self,

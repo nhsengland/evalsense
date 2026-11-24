@@ -25,6 +25,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Record the original generation or retry error when Inspect raises. Untracked project logs can no longer mark the failed call as successful.
 - Prevent unparseable ternary QAGS answers from being scored as matching unknowns, and validate judge comparison responses as complete binary answers.
 - Restart dataset downloads from byte zero when a server ignores a range request or returns an invalid byte range. Check the completed file size before replacing the dataset file. Downloads without a comparable byte count require a configured hash.
 - Resume interrupted downloads from the last written byte when the server confirms a matching strong ETag. Restart older partial downloads without a validator. Discard partial files that fail verification.
