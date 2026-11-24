@@ -141,10 +141,16 @@ class Project:
         Args:
             record (ResultRecord | None): The record associated with the log file.
         """
-        if record is not None and record.log_location is not None:
-            log_path = Path(record.log_location)
-            if log_path.exists():
-                log_path.unlink()
+        if record is None or record.log_location is None:
+            return
+        log_path = Path(record.log_location)
+        for records in (self.records.generation, self.records.evaluation):
+            if any(
+                other.log_location and Path(other.log_location).resolve() == log_path.resolve()
+                for other in records.values()
+            ):
+                return
+        log_path.unlink(missing_ok=True)
 
     def update_record(
         self,
@@ -170,6 +176,12 @@ class Project:
             record_key,
             init_eval_record_from_generations=init_eval_record_from_generations,
         )
+        if type(record_key) is GenerationRecord:
+            self.records.generation[record_key] = record_value
+        elif type(record_key) is EvaluationRecord:
+            self.records.evaluation[record_key] = record_value
+        else:
+            raise TypeError(f"Invalid record type: {type(record_key)}")
         if (
             not keep_previous_log
             and current_record is not None
@@ -177,13 +189,6 @@ class Project:
             and current_record.log_location != record_value.log_location
         ):
             self._remove_log_file(current_record)
-
-        if type(record_key) is GenerationRecord:
-            self.records.generation[record_key] = record_value
-        elif type(record_key) is EvaluationRecord:
-            self.records.evaluation[record_key] = record_value
-        else:
-            raise TypeError(f"Invalid record type: {type(record_key)}")
         self._save()
 
     def remove_record(
@@ -448,26 +453,22 @@ class Project:
         """
         if type == "generation":
             log_path = self.generation_log_path
-            known_logs = [
-                v.log_location
-                for v in self.records.generation.values()
-                if v.log_location
-            ]
         elif type == "evaluation":
             log_path = self.evaluation_log_path
-            known_logs = [
-                v.log_location
-                for v in self.records.evaluation.values()
-                if v.log_location
-            ]
         else:
             raise ValueError(f"Invalid log type: {type}")
 
+        known_logs = {
+            Path(record.log_location).resolve()
+            for records in (self.records.generation, self.records.evaluation)
+            for record in records.values()
+            if record.log_location is not None
+        }
         incomplete_logs = []
         extensions = [".json", ".eval"]
         for ext in extensions:
             for log_file in log_path.glob(f"*{ext}"):
-                if str(log_file) not in known_logs:
+                if log_file.resolve() not in known_logs:
                     loaded_log = read_eval_log(str(log_file))
                     incomplete_logs.append(loaded_log)
         return incomplete_logs
