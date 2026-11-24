@@ -1,4 +1,5 @@
 from typing import Any, cast
+from uuid import uuid4
 
 from inspect_ai import Task, eval, eval_retry, score, task
 from inspect_ai.dataset import Dataset
@@ -16,6 +17,7 @@ from evalsense.evaluation import (
 )
 from evalsense.logging import get_logger
 from evalsense.generation import ModelConfig
+from evalsense.utils.cache import fingerprint
 from evalsense.utils.files import to_safe_filename
 from evalsense.workflow.project import Project
 
@@ -180,7 +182,11 @@ class Pipeline:
                 to pass to the Inspect eval function for retrying failed tasks.
                 Defaults to empty dictionary when None.
         """
-        prev_record = self.project.get_record(experiment.generation_record)
+        record_key = experiment.generation_record
+        generation_id = fingerprint(record_key)
+        attempt_dir = self.project.generation_log_path / generation_id / uuid4().hex
+        attempt_dir.mkdir(parents=True)
+        prev_record = self.project.get_record(record_key)
 
         # Inspect AI logs can only include serialisible task arguments, so we
         # need to use a closure to pass the dataset and solvers to the task.
@@ -198,21 +204,22 @@ class Pipeline:
                 dataset=inspect_dataset,
                 solver=experiment.generation_steps.steps,
                 name=task_name,
+                metadata={"evalsense_generation_id": generation_id},
             )
 
         # We need to create the task even when resuming from a previous log,
         # otherwise Inspect will not be able to resolve it.
-        inspect_task = create_task(to_safe_filename(experiment.generation_record.label))
+        inspect_task = create_task(to_safe_filename(record_key.label))
         start_new = prev_record is None or prev_record.log_location is None or force_rerun
         if start_new:
-            self.project.update_record(experiment.generation_record, ResultRecord())
+            self.project.update_record(record_key, ResultRecord())
 
         try:
             if start_new:
                 eval_logs = eval(
                     tasks=inspect_task,
                     model=self._active_model,
-                    log_dir=str(self.project.generation_log_path),
+                    log_dir=str(attempt_dir),
                     score=False,
                     **(eval_kwargs or dict()),
                 )
@@ -222,13 +229,13 @@ class Pipeline:
                 prev_log = read_eval_log(prev_record.log_location)
                 eval_logs = eval_retry(
                     tasks=prev_log,
-                    log_dir=str(self.project.generation_log_path),
+                    log_dir=str(attempt_dir),
                     **(eval_retry_kwargs or dict()),
                 )
         except (Exception, KeyboardInterrupt) as exc:
             message = str(exc) or type(exc).__name__
             self.project.update_record(
-                experiment.generation_record,
+                record_key,
                 ResultRecord(status="error", error_message=message),
                 keep_previous_log=True,
             )
@@ -269,11 +276,11 @@ class Pipeline:
                 status = "success"
                 error_message = None
                 logger.info(
-                    f"✅  Generation for {experiment.generation_record.label} "
+                    f"✅  Generation for {record_key.label} "
                     "completed successfully."
                 )
         self.project.update_record(
-            experiment.generation_record,
+            record_key,
             ResultRecord(
                 status=status, error_message=error_message, log_location=log_location
             ),
