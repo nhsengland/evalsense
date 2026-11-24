@@ -1,6 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from uuid import UUID
+from uuid import UUID, uuid4
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +12,7 @@ from evalsense.datasets.managers.huggingface import HuggingFaceDatasetManager
 from evalsense.evaluation import ExperimentConfig, ResultRecord
 from evalsense.generation import GenerationSteps, ModelConfig
 from evalsense.utils.cache import fingerprint
+from evalsense.utils.files import to_safe_filename
 from evalsense.workflow import Pipeline, Project
 
 
@@ -33,12 +34,22 @@ class GenerationFailureTests(unittest.TestCase):
     def generate(self):
         self.pipeline._generate_on_dataset(self.experiment, self.dataset, False, {}, {})
 
-    def write_log(self, name):
-        path = self.project.generation_log_path / name
+    def write_log(self, name, *, owned=False):
+        directory = self.project.generation_log_path
+        metadata = None
+        task_name = "other"
+        if owned:
+            identity = fingerprint(self.key)
+            directory = directory / identity / uuid4().hex
+            directory.mkdir(parents=True)
+            metadata = {"evalsense_generation_id": identity}
+            task_name = to_safe_filename(self.key.label)
+        path = directory / name
         log = EvalLog(
-            status="success",
+            status="error" if owned else "success",
             eval=EvalSpec(
-                created="2026-01-01T00:00:00Z", task="other", model="mockllm/model",
+                created="2026-01-01T00:00:00Z", task=task_name, model="mockllm/model",
+                metadata=metadata,
                 dataset=EvalDataset(), config=EvalConfig(),
             ),
         )
@@ -57,7 +68,7 @@ class GenerationFailureTests(unittest.TestCase):
         self.assertTrue(other.exists())
 
     def test_interrupted_retry_records_error_and_propagates_interrupt(self):
-        previous = self.write_log("previous.json")
+        previous = self.write_log("previous.json", owned=True)
         self.project.update_record(
             self.key, ResultRecord(status="error", log_location=str(previous))
         )
@@ -116,3 +127,17 @@ class GenerationFailureTests(unittest.TestCase):
         assert record is not None
         self.assertEqual(record.status, "error")
         self.assertIsNone(record.log_location)
+
+    def test_unverified_saved_log_starts_fresh(self):
+        old = self.write_log("legacy.json")
+        self.project.update_record(
+            self.key, ResultRecord(status="error", log_location=str(old))
+        )
+        with (
+            patch("evalsense.workflow.pipeline.eval", return_value=[]) as run,
+            patch("evalsense.workflow.pipeline.eval_retry") as retry,
+        ):
+            self.generate()
+        run.assert_called_once()
+        retry.assert_not_called()
+        self.assertTrue(old.exists())
