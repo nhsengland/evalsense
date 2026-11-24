@@ -384,6 +384,26 @@ class Project:
 
         return dict(sorted(results.items()))
 
+    def _owns_generation_log(
+        self, log: EvalLog, attempt_dir: Path, task_name: str, generation_id: str
+    ) -> bool:
+        """Check both the output location and the identity recorded by Inspect."""
+        path = Path(log.location).absolute()
+        attempt = attempt_dir.absolute()
+        generation_root = self.generation_log_path.absolute()
+        return (
+            attempt.parent == generation_root / generation_id
+            and path.parent == attempt
+            and path.suffix in {".eval", ".json"}
+            and path.is_file()
+            and not any(
+                item.is_symlink()
+                for item in (path, attempt, attempt.parent, generation_root)
+            )
+            and log.eval.task == task_name
+            and (log.eval.metadata or {}).get("evalsense_generation_id") == generation_id
+        )
+
     def _recover_generation_log(
         self, attempt_dir: Path, task_name: str, generation_id: str
     ) -> EvalLog | None:
@@ -410,11 +430,7 @@ class Project:
             logger.warning(f"Could not recover a generation log from {attempt_dir}: {exc}")
             return None
 
-        if (
-            Path(log.location) == log_file
-            and log.eval.task == task_name
-            and (log.eval.metadata or {}).get("evalsense_generation_id") == generation_id
-        ):
+        if self._owns_generation_log(log, attempt_dir, task_name, generation_id):
             return log
         return None
 

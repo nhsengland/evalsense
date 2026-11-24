@@ -255,15 +255,15 @@ class Pipeline:
         status = "error"
         error_message = "Unknown error"
         log_location = None
-        if not eval_logs:
-            error_message = "No log returned from an experiment."
-            logger.error("❌  Generation failed: no log returned from an experiment.")
+        if len(eval_logs) != 1:
+            error_message = f"Expected one generation log, received {len(eval_logs)}."
+            logger.error(error_message)
+        elif not self.project._owns_generation_log(
+            eval_logs[0], attempt_dir, inspect_task.name, generation_id
+        ):
+            error_message = "Returned generation log does not belong to this attempt."
+            logger.error(error_message)
         else:
-            if len(eval_logs) > 1:
-                logger.warning(
-                    f"⚠️  Unexpected number of eval logs ({len(eval_logs)} > 1), "
-                    "results may be ignored."
-                )
             eval_log = eval_logs[0]
             log_location = eval_log.location
 
