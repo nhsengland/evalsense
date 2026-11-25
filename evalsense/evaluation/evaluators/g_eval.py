@@ -17,7 +17,6 @@ from evalsense.evaluation import (
     ScorerFactory,
 )
 from evalsense.generation import ModelConfig
-from evalsense.logging import get_logger
 from evalsense.utils.text import (
     extract_score,
     extract_weighted_score,
@@ -25,9 +24,8 @@ from evalsense.utils.text import (
     validate_score_range,
 )
 
-logger = get_logger(__name__)
-
 SCORE_FORMAT = "evalsense.g-eval.integer.v1"
+WEIGHTING_POLICY = "evalsense.g-eval.single-token.v1"
 
 
 class GEvalScoreCalculator(ScoreCalculator):
@@ -71,7 +69,6 @@ class GEvalScoreCalculator(ScoreCalculator):
         self.max_score = max_score
         self.normalise = normalise
         self.debug = debug
-        self.warned_weighted_score = False
 
     @override
     def calculate(
@@ -126,7 +123,9 @@ class GEvalScoreCalculator(ScoreCalculator):
         validate_score_range(self.min_score, self.max_score, normalise=self.normalise)
         logprobs_config = GenerateConfig(
             logprobs=self.logprobs,
-            top_logprobs=self.top_logprobs,
+            top_logprobs=self.top_logprobs if self.logprobs else None,
+            max_tokens=1 if self.logprobs else None,
+            num_choices=1 if self.logprobs else None,
         )
         if metadata is None:
             metadata = {}
@@ -141,27 +140,9 @@ class GEvalScoreCalculator(ScoreCalculator):
 
         raw_score = extract_score(output.completion, self.min_score, self.max_score)
         if self.logprobs:
-            try:
-                raw_score = extract_weighted_score(
-                    output, min_score=self.min_score, max_score=self.max_score
-                )
-            except ValueError as e:
-                if not self.warned_weighted_score or self.debug:
-                    self.warned_weighted_score = True
-
-                    error_message = (
-                        f"❌  Cannot compute weighted evaluation score: {e} "
-                        "Falling back to standard score."
-                    )
-
-                    if not self.debug:
-                        error_message += (
-                            " Further errors will be suppressed "
-                            + "(set debug=True to see all errors)."
-                        )
-                    error_message += f" Offending output: {output.completion}"
-
-                    logger.error(error_message)
+            raw_score = extract_weighted_score(
+                output, min_score=self.min_score, max_score=self.max_score
+            )
 
         if self.normalise:
             score = (raw_score - self.min_score) / (self.max_score - self.min_score)
@@ -328,6 +309,8 @@ def get_g_eval_evaluator(
         "normalise": normalise,
         "debug": debug,
     }
+    if logprobs:
+        cache_parameters["weighting_policy"] = WEIGHTING_POLICY
     metric_name = f"{name} ({quality_name}, {model_name or model_config.name})"
     return Evaluator(
         version=version,
