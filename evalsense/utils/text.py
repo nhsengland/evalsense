@@ -276,12 +276,10 @@ def _eval_weighted_options[T](
         probabilities[parsed_option] += score_probability
         total_probability += score_probability
 
-    assert total_probability > 0, "Total probability should be greater than zero."
-    # Allow for probability slightly exceeding 1 due to floating point errors
-    assert total_probability <= 1 + 1e-5, (
-        "Total probability should be less than or close to one, but was "
-        f"{total_probability}. Computed score probabilities: {probabilities}"
-    )
+    if not 0 < total_probability <= 1 + 1e-5:
+        raise ValueError(
+            "Valid answer probabilities must have positive finite mass no greater than one."
+        )
 
     # Normalise the option probabilities
     for option in probabilities:
@@ -341,17 +339,16 @@ def extract_weighted_score(
     target_score = extract_score(output.completion, min_score, max_score)
 
     def normalise_token(token: str) -> str:
-        return token.strip().replace("▁", "").replace("_", "")
+        return token.strip().removeprefix("▁").strip()
 
     def match_target_token(token: str) -> bool:
-        return token == str(target_score)
+        try:
+            return extract_score(token, min_score, max_score) == target_score
+        except ValueError:
+            return False
 
     def token_parsing_function(token: str) -> int:
-        score = int(token)
-        if min_score <= score <= max_score:
-            return score
-        else:
-            raise ValueError
+        return extract_score(token, min_score, max_score)
 
     probabilities = _eval_weighted_options(
         output,
