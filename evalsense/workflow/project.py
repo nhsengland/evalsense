@@ -120,7 +120,6 @@ class Project:
 
         with open(metadata_file, "r", encoding="utf-8") as f:
             self.records = ProjectRecords.model_validate_json(f.read())
-        self.cleanup_incomplete_logs()
 
     def _save(self) -> None:
         """Saves the project metadata to disk."""
