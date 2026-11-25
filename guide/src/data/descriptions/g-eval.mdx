@@ -90,6 +90,15 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
 
 </Typography>
 
+<Typography variant="body2" gutterBottom>
+  For untrusted evaluated content, provide a complete trusted system prompt
+  separately from the user template that renders the evidence. No instructions
+  are added automatically. Optional input screening can reject known instruction
+  phrases or apply a custom rule; it can also produce false positives and negatives.
+  Role separation does not guarantee injection resistance. The response must be
+  a complete integer in the configured scale.
+</Typography>
+
 <Typography variant="subtitle1" gutterBottom>
   Example G-Eval Prompt
 </Typography>

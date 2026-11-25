@@ -7,6 +7,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+- G-Eval now requires a complete integer response within its rating scale before weighting. G-Eval and QAGS record a new judge-input protocol in cache identities; use fresh evaluation identities when comparing results and retain historical logs.
 - QAGS keeps its public name while changing answer validation and generated-question handling. Malformed answers, empty question sets and incomplete answer batches now raise `QagsValidationError` rather than producing scores; duplicate generated questions count once. Existing scores are not directly comparable: use a new evaluator version or name, or a fresh project, and preserve historical logs.
 
 - Built-in BLEU, ROUGE and BERTScore evaluations now have implementation-aware cache identities. Historical entries remain readable but are not reused. The standard analysers reject mixed or unrecorded implementations under the same labels; analyse legacy results separately.
@@ -20,6 +21,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Per-sample BERTScore now rejects `idf=True` and IDF dictionaries. Only `idf=False` is supported by the current backend.
 
 ### Enhancements
+- G-Eval accepts an optional caller-defined system prompt alongside its user template. QAGS prompt builders may return a pair of caller-defined messages, and can be passed through QagsPromptConfig. Both evaluators accept optional custom input-screening functions and provide an opt-in instruction-phrase screen. Existing single-message prompts remain supported.
 - Record the source generation log path and SHA256 in evaluation results, including failed scores. Older metadata remains readable.
 - Record the G-Eval integer-response protocol in score metadata and evaluator cache identities so new evaluations do not reuse scores parsed under the previous policy.
 - Show the dataset version and optional experiment name next to the generation ID in summary tables.

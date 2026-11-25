@@ -20,6 +20,7 @@ from evalsense.evaluation.evaluators.rouge import (
 )
 from evalsense.evaluation.evaluators.qags import (
     QagsConfig,
+    QagsPromptConfig,
     QagsValidationError,
     QagsScoreCalculator,
     QagsScorerFactory,
@@ -40,6 +41,7 @@ __all__ = [
     "RougeScoreCalculator",
     "get_rouge_evaluator",
     "QagsConfig",
+    "QagsPromptConfig",
     "QagsValidationError",
     "QagsScoreCalculator",
     "QagsScorerFactory",
