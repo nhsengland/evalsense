@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+import hashlib
+import json
 from functools import total_ordering
 from typing import Literal
 
@@ -58,6 +60,15 @@ class GenerationRecord(BaseModel, frozen=True):
     experiment_name: str | None = None
     generator_fingerprint: str = ""
     task_fingerprint: str = ""
+
+    @property
+    def generation_id(self) -> str:
+        """Stable summary row ID for the stored generation configuration."""
+        fields = self.model_dump(
+            mode="json", include=set(GenerationRecord.model_fields)
+        )
+        encoded = json.dumps(fields, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     def get_evaluation_record(
         self,

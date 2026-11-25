@@ -18,8 +18,8 @@ const FeatureList: FeatureItem[] = [
     Svg: LibrarySvg,
     description: (
       <>
-        Python library for systematic evaluation of large language models on
-        open-ended generation tasks.
+        Run reproducible evaluations across models and domain-specific tasks
+        using configurable metrics, experiment records and structured logs.
       </>
     ),
   },
@@ -28,8 +28,8 @@ const FeatureList: FeatureItem[] = [
     Svg: InteractiveGuideSvg,
     description: (
       <>
-        Interactive guide helping you select the right evaluation methods for
-        your use-case.
+        Choose evaluation methods based on your task, quality requirements and
+        risks, with an interactive decision guide.
       </>
     ),
   },
@@ -38,8 +38,8 @@ const FeatureList: FeatureItem[] = [
     Svg: EvaluationMethodSvg,
     description: (
       <>
-        Extensive catalogue of evaluation methods, including descriptions,
-        supported tasks, and more.
+        Compare evaluation methods, supported tasks, strengths, limitations and
+        available implementations.
       </>
     ),
   },

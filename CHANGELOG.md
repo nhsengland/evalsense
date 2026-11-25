@@ -7,6 +7,8 @@ Instructions on how to update this Changelog are available in the `Updating the 
 ## Unreleased
 
 ### Breaking changes
+- QAGS keeps its public name while changing answer validation and generated-question handling. Malformed answers, empty question sets and incomplete answer batches now raise `QagsValidationError` rather than producing scores; duplicate generated questions count once. Existing scores are not directly comparable: use a new evaluator version or name, or a fresh project, and preserve historical logs.
+
 - Built-in BLEU, ROUGE and BERTScore evaluations now have implementation-aware cache identities. Historical entries remain readable but are not reused. The standard analysers reject mixed or unrecorded implementations under the same labels; analyse legacy results separately.
 - The BLEU evaluator now records unsmoothed sentence BLEU-4 instead of unigram precision. The default scorer is `Sentence BLEU`; the aggregate is `<evaluator name> (corpus)`.
 
@@ -19,6 +21,8 @@ Instructions on how to update this Changelog are available in the `Updating the 
 
 ### Enhancements
 - Record the G-Eval integer-response protocol in score metadata and evaluator cache identities so new evaluations do not reuse scores parsed under the previous policy.
+- Show the dataset version and optional experiment name next to the generation ID in summary tables.
+- Accept one balanced quote, Markdown emphasis or inline-code wrapper around a complete QAGS answer. Recognise unspaced question-list prefixes before letters while preserving decimals and signed values. Generic strict parsing is available in `evalsense.utils.text`; legacy extraction utilities remain unchanged.
 - Include declared configuration and component versions in generation, preprocessing and evaluation cache identities, with separate evaluator log files.
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
@@ -27,29 +31,70 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Reject malformed G-Eval rating tokens without deleting internal characters. Invalid probability mass raises a validation error rather than relying on assertions. Complete multi-token rating probabilities remain tracked in #68.
 - Reject invalid G-Eval rating scales before requesting a judge response, including zero-width normalisation and non-integer endpoints.
 - Require a complete in-range integer rating instead of extracting numeric fragments from G-Eval responses. Previously scored results are unchanged; use a new evaluator version when re-scoring them.
+- Keep distinct generation configurations on separate rows in tabular summaries. The new `generation_id` column identifies the stored configuration.
+- Build evaluation logs only from successful generations, including when reopening an older project or forcing a scoring run.
+- Retry from a saved log only when it belongs to the current experiment. Start a fresh run for older logs that cannot establish ownership.
+- Keep a shared log until the last generation or evaluation record pointing to it is removed.
+- Require a single matching generation log before accepting the result returned by Inspect.
+- After generation fails, keep a diagnostic log only when the attempt directory contains one readable log with matching task and experiment metadata.
+- Store each generation attempt in its own log directory and include its experiment fingerprint in Inspect task metadata.
+- Record the original generation or retry error when Inspect raises. Untracked project logs can no longer mark the failed call as successful.
+- Prevent unparseable ternary QAGS answers from being scored as matching unknowns, and validate judge comparison responses as complete binary answers.
+- Restart dataset downloads from byte zero when a server ignores a range request or returns an invalid byte range. Check the completed file size before replacing the dataset file. Downloads without a comparable byte count require a configured hash.
+- Resume interrupted downloads from the last written byte when the server confirms a matching strong ETag. Restart older partial downloads without a validator. Discard partial files that fail verification.
 - Pin Evaluate metric scripts to full commits, check their loaded content hashes (including cached fallbacks), and record Python/runtime package versions in scores and project records. BERTScore reloads and corpus BLEU use the same pinned definition.
+- Preserve integer counts in sparse summary tables and return identity columns when no aggregate metrics are available.
 - Use all four modified n-gram precisions and the brevity penalty in BLEU sample-level analyses.
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
+- Reject duplicate summary cells, including repeated equal values.
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
+- Distinguish identically labelled aggregates from different evaluators, scorers and reducers in summary tables.
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 - Prevent incomplete two-tier and undefined meta-evaluation correlations from silently inflating the reported mean. Report failed/missing logs and unestimable intervals.
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
+- Show the standard evaluation summary in the web UI when logs contain aggregate metrics only. If correlations fail validation, keep the summary visible and report the reason.
 
 ### Documentation
 - Document the complete G-Eval integer-response contract, validation failures, cache migration and the remaining weighted-rating limitations.
+- Document the intended perturbation tiers and their stored IDs in the meta-evaluation notebook.
+- Describe QAGS's EvalSense-specific adaptation, failure behaviour and limitations in component docstrings and the Guide, alongside links to the original paper and EvalSense's own case study. Derive notebook column selections and labels from configured evaluator names.
 - Describe metric provenance and migration. Keep historical logs, retain the lockfile and use frozen installation for the project environment. Recreate evaluators in a fresh process after changing packages. Model/tokenizer files, custom metric code, hardware and numerical nondeterminism still require separate controls; these pins do not guarantee bitwise-identical results.
 - Document the BERTScore length policy and XLNet tokenizer constraints in the component docstrings.
 
   Existing cached results are not repaired or revalidated. Use a fresh project or a new evaluator name when applying this policy to previously scored data; with versioned components, also update their version. Preserve original logs as historical results. The pipeline records length-check failures instead of successful prefix-only scores.
+- Explain how to trace a tabular summary row to its stored generation settings.
 - Add result-management guidance, notebook cache notes and fingerprint field documentation.
+- Add a worked example of positive and negative evaluator correlations to the meta-evaluation notebook.
 - Restore correlation analyser argument documentation and consolidate pairing, count and label guidance in the API docstrings.
+- Show generation IDs alongside model names in both score tables in the Experiments notebook.
 - Document authentication setup and the configuration boundary. Existing files, logs and backups are not scrubbed: rotate any previously exposed credentials and handle those artifacts separately. Secrets embedded in arbitrary prompts, innocuous field values or custom provider logs remain the caller's responsibility.
+- Clarify the scope of the meta-evaluation example in the README and documentation homepage.
 - Distinguish intended perturbations from independently checked severity in meta-evaluation results and the example notebook. Document conditional uncertainty and sample-manifest requirements.
 
   Existing logs are unchanged. Update analyser calls to pass the planned `expected_tiers` and the correct tier direction. Review all exclusion counts and `ci_status`; old two-column tables and pooled averages are not directly comparable. The web UI requires the original tier IDs when loading meta-evaluation results. Independent severity review remains an external step; the analyser can require review flags but does not create or verify them.
+- Document how to recheck older meta-evaluation rankings from the original evaluation logs.
+
+#### QAGS migration
+
+The public evaluator name remains `QAGS` to match the EvalSense demo paper.
+The implementation adapts the original method: it generates questions from
+both texts, supports ternary, exact-match and judge comparisons, and does not
+perform the original answer-conditioned question filtering. Its documented
+validation and deduplication changes affect which questions contribute to a
+score. The internal protocol identifier `evalsense.qags-derived.v2` in score
+metadata identifies this distinct implementation and does not rename the
+public evaluator.
+
+Keep prior logs as historical results. Even with unchanged public names, do
+not pool prior QAGS scores with new scores as if they used the same protocol.
+Use a new evaluator name, a fresh project, or an explicit version change for
+new results, then rerun affected notebook cells. Existing notebook outputs are
+not recomputed by this change. Prompts should request complete answers in the
+documented formats; check failed evaluations alongside completed scores.
+Retries and partial-result recovery remain a separate design decision.
 
 ### Miscellaneous
-- None
+- Add a baseline correctness suite and CI matrix for numerical metrics, statistical analysis, cache reuse and judge failure handling. The test runner rejects empty and entirely skipped runs.
 
 ## v0.1.6
 
