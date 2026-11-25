@@ -13,9 +13,23 @@ from evalsense.workflow import Project, ResultAnalyser
 
 from evalsense.workflow.analysers._provenance import check_metric_implementations
 
+
+def _to_pandas(df: pl.DataFrame) -> pd.DataFrame:
+    # NumPy-backed pandas columns coerce integers with missing values to floats.
+    return pd.DataFrame(
+        {
+            col.name: col.to_pandas(
+                use_pyarrow_extension_array=col.dtype.is_integer()
+                and col.null_count() > 0
+            )
+            for col in df
+        }
+    )
+
+
 OUTPUT_FORMATTERS = {
     "polars": lambda df: df,
-    "pandas": lambda df: df.to_pandas(),
+    "pandas": _to_pandas,
 }
 
 
@@ -93,55 +107,53 @@ class TabularResultAnalyser[T: pl.DataFrame | pd.DataFrame](ResultAnalyser[T]):
         eval_logs = project.get_logs(type="evaluation", status="success")
         check_metric_implementations(eval_logs)
 
-        result_data = []
+        rows: dict[str, dict[str, str | int | float | None]] = {}
         columns: dict[str, tuple[str, str]] = {}
-        seen: set[tuple[str, str]] = set()
         for eval_record, log in eval_logs.items():
-            if not log.results:
+            if not log.results or not any(
+                score.metrics for score in log.results.scores
+            ):
                 continue
 
             generation_id = eval_record.generation_id
+            row = rows.setdefault(
+                generation_id,
+                {
+                    "dataset": eval_record.dataset_record.name,
+                    "splits": ", ".join(eval_record.dataset_record.splits),
+                    "task": eval_record.task_name,
+                    "generator": eval_record.generator_name,
+                    "model": eval_record.model_record.name,
+                    "generation_id": generation_id,
+                    "dataset_version": eval_record.dataset_record.version,
+                    "experiment_name": eval_record.experiment_name,
+                },
+            )
             for score in log.results.scores:
                 for metric_name, metric in score.metrics.items():
-                    label = f"{score.name}/{metric_name}"
                     key = _metric_id(eval_record, score, metric_name, metric)
-                    columns[key] = (label, eval_record.evaluator_name)
-                    cell = (generation_id, key)
-                    if cell in seen:
+                    label = f"{score.name}/{metric_name}"
+                    if key in row:
                         raise ValueError(
                             f"Duplicate summary metric {label!r} for generation {generation_id}."
                         )
-                    seen.add(cell)
+                    columns[key] = (label, eval_record.evaluator_name)
+                    row[key] = metric.value
 
-                    result_data.append(
-                        {
-                            "dataset": eval_record.dataset_record.name,
-                            "splits": ", ".join(eval_record.dataset_record.splits),
-                            "task": eval_record.task_name,
-                            "generator": eval_record.generator_name,
-                            "model": eval_record.model_record.name,
-                            "generation_id": generation_id,
-                            "dataset_version": eval_record.dataset_record.version,
-                            "experiment_name": eval_record.experiment_name,
-                            "metric": key,
-                            "value": metric.value,
-                        }
-                    )
-
-        df = pl.DataFrame(result_data, schema_overrides={"experiment_name": pl.String})
-        df = df.pivot(
-            on="metric",
-            index=[
-                "dataset",
-                "splits",
-                "task",
-                "generator",
-                "model",
-                "generation_id",
-                "dataset_version",
-                "experiment_name",
-            ],
-            values="value",
+        index = [
+            "dataset",
+            "splits",
+            "task",
+            "generator",
+            "model",
+            "generation_id",
+            "dataset_version",
+            "experiment_name",
+        ]
+        df = pl.DataFrame(
+            list(rows.values()),
+            schema={**dict.fromkeys(index, pl.String), **dict.fromkeys(columns)},
+            infer_schema_length=None,
         ).rename(_metric_labels(columns))
         if self.output_format in OUTPUT_FORMATTERS:
             return cast(T, OUTPUT_FORMATTERS[self.output_format](df))
