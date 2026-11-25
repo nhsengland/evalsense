@@ -47,7 +47,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 - Prevent incomplete two-tier and undefined meta-evaluation correlations from silently inflating the reported mean. Report failed/missing logs and unestimable intervals.
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
-- Show the standard evaluation summary in the web UI when logs contain aggregate metrics only.
+- Show the standard evaluation summary in the web UI when logs contain aggregate metrics only. If correlations fail validation, keep the summary visible and report the reason.
 
 ### Documentation
 - Document the intended perturbation tiers and their stored IDs in the meta-evaluation notebook.

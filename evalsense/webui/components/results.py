@@ -51,10 +51,13 @@ def load_project(project_name: str, is_meta_eval: bool, expected_meta_tiers: str
             correlation_analyser = MetricCorrelationAnalyser[
                 CorrelationResults[pd.DataFrame]
             ](output_format="pandas")
-            correlation_results = correlation_analyser(
-                project, return_plot=True, figsize=(9, 7)
-            )
-            plot = correlation_results.figure
+            try:
+                plot = correlation_analyser(
+                    project, return_plot=True, figsize=(9, 7)
+                ).figure
+            except ValueError as exc:
+                gr.Warning(f"Correlation plot unavailable: {exc}")
+                plot = None
     except Exception as e:
         raise gr.Error(f"Error loading results: {type(e).__name__}: {e}")
 
