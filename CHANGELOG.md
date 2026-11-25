@@ -56,6 +56,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Document the BERTScore length policy and XLNet tokenizer constraints in the component docstrings.
 
   Existing cached results are not repaired or revalidated. Use a fresh project or a new evaluator name when applying this policy to previously scored data; with versioned components, also update their version. Preserve original logs as historical results. The pipeline records length-check failures instead of successful prefix-only scores.
+- Explain how to trace a tabular summary row to its stored generation settings.
 - Add result-management guidance, notebook cache notes and fingerprint field documentation.
 - Add a worked example of positive and negative evaluator correlations to the meta-evaluation notebook.
 - Restore correlation analyser argument documentation and consolidate pairing, count and label guidance in the API docstrings.
