@@ -28,6 +28,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Mark previous successful evaluations as needing scoring after their generation is replaced. Preserve their source references and exclude them from successful result summaries.
 - Keep distinct generation attempts in separate evaluation logs, including byte-identical files in different attempt directories.
 - Refresh evaluations when their source generation changes, including forced reruns and older results without recorded provenance.
 - Reject fractional or non-finite G-Eval scale inputs in the web UI instead of silently truncating them to integers.
