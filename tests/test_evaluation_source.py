@@ -134,5 +134,72 @@ class EvaluationSourceTests(unittest.TestCase):
         self.assertEqual(Project(self.project.name).records.evaluation, {})
 
 
+    def test_new_generation_refreshes_an_existing_success(self):
+        first_path = self.save_generation()
+        first = self.initialise()
+        self.project.update_record(
+            self.evaluation_key, first.model_copy(update={"status": "success"})
+        )
+        second_path = self.save_generation("2026_task_second.json", "second")
+        refreshed = self.initialise()
+        self.assertEqual(refreshed.status, "started")
+        self.assertEqual(refreshed.source_generation, GenerationSource.capture(second_path))
+        self.assertNotEqual(refreshed.source_generation, first.source_generation)
+        log = self.project.get_log(self.evaluation_key)
+        assert log is not None
+        self.assertEqual(log.eval.metadata, {"marker": "second"})
+        self.assertNotEqual(str(first_path), str(second_path))
+
+    def test_replaced_source_at_the_same_path_is_refreshed(self):
+        path = self.save_generation()
+        first = self.initialise()
+        self.save_generation(marker="replacement")
+        refreshed = self.initialise()
+        self.assertEqual(refreshed.source_generation, GenerationSource.capture(path))
+        self.assertNotEqual(refreshed.source_generation, first.source_generation)
+        log = self.project.get_log(self.evaluation_key)
+        assert log is not None
+        self.assertEqual(log.eval.metadata, {"marker": "replacement"})
+
+    def test_unchanged_source_reuses_success_without_copying(self):
+        self.save_generation()
+        first = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, first)
+        with patch("evalsense.workflow.project.shutil.copy") as copy:
+            self.assertEqual(self.initialise(), first)
+        copy.assert_not_called()
+
+    def test_legacy_success_is_refreshed_once(self):
+        path = self.save_generation()
+        legacy = self.initialise().model_copy(
+            update={"status": "success", "source_generation": None}
+        )
+        self.project.update_record(self.evaluation_key, legacy)
+        self.project = Project(self.project.name)
+        self.assertEqual(self.project.get_record(self.evaluation_key), legacy)
+        refreshed = self.initialise()
+        self.assertEqual(refreshed.status, "started")
+        self.assertEqual(refreshed.source_generation, GenerationSource.capture(path))
+        completed = refreshed.model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, completed)
+        self.project = Project(self.project.name)
+        self.assertEqual(self.initialise(), completed)
+
+    def test_each_evaluator_refreshes_its_own_copy(self):
+        self.save_generation()
+        self.initialise()
+        other_key = self.evaluation_key.model_copy(update={"evaluator_name": "other"})
+        other = self.project.get_record(other_key, init_eval_record_from_generations=True)
+        assert other is not None
+        path = self.save_generation("2026_task_second.json", "second")
+        first_new = self.initialise()
+        self.assertEqual(self.project.get_record(other_key), other)
+        other_new = self.project.get_record(other_key, init_eval_record_from_generations=True)
+        assert other_new is not None
+        self.assertEqual(first_new.source_generation, GenerationSource.capture(path))
+        self.assertEqual(other_new.source_generation, first_new.source_generation)
+        self.assertNotEqual(other_new.log_location, first_new.log_location)
+
+
 if __name__ == "__main__":
     unittest.main()
