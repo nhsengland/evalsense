@@ -43,6 +43,12 @@ class ExperimentsNotebookTests(unittest.TestCase):
             "pl": pl,
             "summary_results": summary,
             "bleu_evaluator": SimpleNamespace(name="BLEU"),
+            "llama_ternary_reference_based_qags_evaluator": SimpleNamespace(
+                name="Ternary Ref. QAGS (Llama 3.1)"
+            ),
+            "llama_judge_reference_based_qags_evaluator": SimpleNamespace(
+                name="Judge Ref. QAGS (Llama 3.1)"
+            ),
         }
         for cell in displays:
             with self.subTest(cell=cell):
