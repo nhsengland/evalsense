@@ -54,6 +54,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Add result-management guidance, notebook cache notes and fingerprint field documentation.
 - Add a worked example of positive and negative evaluator correlations to the meta-evaluation notebook.
 - Restore correlation analyser argument documentation and consolidate pairing, count and label guidance in the API docstrings.
+- Show generation IDs alongside model names in both score tables in the Experiments notebook.
 - Document authentication setup and the configuration boundary. Existing files, logs and backups are not scrubbed: rotate any previously exposed credentials and handle those artifacts separately. Secrets embedded in arbitrary prompts, innocuous field values or custom provider logs remain the caller's responsibility.
 - Clarify the scope of the meta-evaluation example in the README and documentation homepage.
 - Distinguish intended perturbations from independently checked severity in meta-evaluation results and the example notebook. Document conditional uncertainty and sample-manifest requirements.
