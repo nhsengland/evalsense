@@ -27,20 +27,32 @@ def response(token: str, probabilities: list[tuple[str, float]]) -> ModelOutput:
     return output
 
 
-RATINGS = [("1", 0.1), ("3", 0.2), ("5", 0.3), ("not-a-rating", 0.4)]
+RATINGS = [
+    ("1", 0.1),
+    ("2", 0.05),
+    ("3", 0.2),
+    ("4", 0.05),
+    ("5", 0.3),
+    ("not-a-rating", 0.3),
+]
 
 
 class JudgeNumericalTests(unittest.TestCase):
     def test_weighted_rating_renormalises_valid_probability_mass(self):
-        # (1*0.1 + 3*0.2 + 5*0.3) / 0.6 = 11/3.
+        # (1*0.1 + 2*0.05 + 3*0.2 + 4*0.05 + 5*0.3) / 0.7 = 25/7.
         self.assertAlmostEqual(
-            extract_weighted_score(response("3", RATINGS), 1, 5), 11 / 3
+            extract_weighted_score(response("3", RATINGS), 1, 5), 25 / 7
         )
 
     def test_candidate_order_does_not_change_weighted_rating(self):
         self.assertAlmostEqual(
-            extract_weighted_score(response("3", list(reversed(RATINGS))), 1, 5), 11 / 3
+            extract_weighted_score(response("3", list(reversed(RATINGS))), 1, 5), 25 / 7
         )
+
+    def test_incomplete_rating_distribution_is_rejected(self):
+        incomplete = [item for item in RATINGS if item[0] not in ("2", "4")]
+        with self.assertRaisesRegex(ValueError, "complete single-token alternative"):
+            extract_weighted_score(response("3", incomplete), 1, 5)
 
     def test_binary_synonyms_share_probability_mass(self):
         # Yes and true jointly have 0.3 mass, no has 0.3. Other mass is excluded.
@@ -63,7 +75,7 @@ class JudgeBoundaryTests(unittest.IsolatedAsyncioTestCase):
         score = await GEvalScoreCalculator(
             cast(Model, fake), "Rate {prediction}", min_score=1, max_score=5
         ).calculate_async(prediction="synthetic candidate")
-        self.assertAlmostEqual(cast(float, score.value), 2 / 3)
+        self.assertAlmostEqual(cast(float, score.value), 9 / 14)
         fake.generate.assert_awaited_once()
 
     async def test_unweighted_scale_endpoints_are_zero_and_one(self):

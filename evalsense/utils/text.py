@@ -1,4 +1,5 @@
 from collections import defaultdict
+import math
 import regex
 from typing import Callable, Literal, overload
 
@@ -325,37 +326,106 @@ def extract_weighted_binary_answer(output: ModelOutput) -> float:
 def extract_weighted_score(
     output: ModelOutput, min_score: int = 1, max_score: int = 10
 ) -> float:
-    """
-    Extract a weighted evaluation score from the model output.
+    """Average complete rating tokens from a one-token judge request.
 
-    Args:
-        output (ModelOutput): The model output containing logprobs.
-        min_score (int): The minimum valid score. Defaults to 1.
-        max_score (int): The maximum valid score. Defaults to 10.
+    Every allowed rating must occur in the returned alternatives. The result is
+    conditional on the valid rating tokens in that table, whose probabilities
+    are renormalised. It is not a full-sequence probability estimate.
 
-    Returns:
-        float: The weighted score.
+    Callers must request at most one output token. Missing ratings, multi-token
+    responses and inconsistent probability evidence raise ValueError.
     """
+    if len(output.choices) != 1:
+        raise ValueError("Weighted ratings require exactly one judge response.")
     target_score = extract_score(output.completion, min_score, max_score)
+    if output.completion.strip() != str(target_score):
+        raise ValueError(
+            "Weighted ratings require canonical integer labels without leading zeroes."
+        )
+    logprobs = output.choices[0].logprobs
+    if logprobs is None or len(logprobs.content) != 1:
+        raise ValueError(
+            "Weighted ratings require exactly one output token with logprobs. "
+            "Use logprobs=False for an explicit sampled rating."
+        )
+    token = logprobs.content[0]
+    if not math.isfinite(token.logprob) or token.logprob > 0:
+        raise ValueError(
+            "The sampled rating token must have a finite non-positive log probability."
+        )
 
-    def normalise_token(token: str) -> str:
-        return token.strip().removeprefix("▁").strip()
+    def rating_label(text: str) -> int:
+        label = text.strip().removeprefix("▁").strip()
+        value = extract_score(label, min_score, max_score)
+        if label != str(value):
+            raise ValueError(
+                "Weighted rating tokens must use canonical integer labels."
+            )
+        return value
 
-    def match_target_token(token: str) -> bool:
+    try:
+        matches_response = rating_label(token.token) == target_score
+    except ValueError:
+        matches_response = False
+    if not matches_response:
+        raise ValueError(
+            "The single weighted rating token does not match the complete response."
+        )
+    if not token.top_logprobs:
+        raise ValueError("Top logprobs are required for weighted ratings.")
+
+    probabilities: dict[int, float] = defaultdict(float)
+    seen: set[str] = set()
+    sampled_logprob: float | None = None
+    total_mass = 0.0
+    for alternative in token.top_logprobs:
+        if alternative.token in seen:
+            raise ValueError("Weighted rating alternatives contain a duplicate token.")
+        seen.add(alternative.token)
+        logprob = alternative.logprob
+        if math.isnan(logprob) or logprob > 0:
+            raise ValueError(
+                "Weighted rating log probabilities must be non-positive and not NaN."
+            )
+        mass = math.exp(logprob)
+        total_mass += mass
+        if alternative.token == token.token:
+            sampled_logprob = logprob
         try:
-            return extract_score(token, min_score, max_score) == target_score
+            rating = rating_label(alternative.token)
         except ValueError:
-            return False
+            continue
+        probabilities[rating] += mass
 
-    def token_parsing_function(token: str) -> int:
-        return extract_score(token, min_score, max_score)
-
-    probabilities = _eval_weighted_options(
-        output,
-        normalise_token,
-        match_target_token,
-        token_parsing_function,
+    if sampled_logprob is None or not math.isclose(
+        sampled_logprob, token.logprob, rel_tol=1e-6, abs_tol=1e-6
+    ):
+        raise ValueError(
+            "The sampled token must have matching logprobs in the alternatives."
+        )
+    if total_mass > 1 + 1e-5:
+        raise ValueError(
+            "Reported token probabilities must have mass no greater than one."
+        )
+    if len(probabilities) != max_score - min_score + 1:
+        missing = []
+        for rating in range(min_score, max_score + 1):
+            if rating not in probabilities:
+                missing.append(str(rating))
+                if len(missing) == 5:
+                    break
+        raise ValueError(
+            "Weighted ratings require a complete single-token alternative for every "
+            f"rating on the scale. Missing ratings include {', '.join(missing)}. "
+            "Multi-token labels and incomplete top_logprobs are unsupported. "
+            "Increase top_logprobs where supported, or use logprobs=False "
+            "for an explicit sampled rating."
+        )
+    rating_mass = math.fsum(probabilities.values())
+    if not 0 < rating_mass <= 1 + 1e-5:
+        raise ValueError(
+            "Valid rating probabilities must have positive finite mass no greater than one."
+        )
+    return math.fsum(
+        rating * (mass / rating_mass) for rating, mass in probabilities.items()
     )
-
-    # Calculate the weighted score
-    return sum([score * prob for score, prob in probabilities.items()])
