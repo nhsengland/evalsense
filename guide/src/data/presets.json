@@ -2,7 +2,7 @@
   {
     "id": "preset-discharge-summarisation",
     "name": "Discharge Summarisation",
-    "description": "Generating discharge summaries from a corpus of medical notes documenting a patient's hospital stay.",
+    "description": "Assessing discharge summaries against source medical notes when no reference summary is available.",
     "guideState": {
       "activeStepId": "suggestions",
       "answers": {
@@ -29,7 +29,7 @@
             "importance": 3
           },
           {
-            "id": "readability",
+            "id": "fluency",
             "importance": 3
           }
         ],
@@ -57,13 +57,85 @@
         ],
         "q_references": "no"
       },
-      "selectedMethodIds": [
-        "qags",
-        "g-eval",
-        "ood-performance",
-        "stratified-performance",
-        "word-count"
-      ]
+      "selectedMethodIds": ["qags", "g-eval"]
+    }
+  },
+  {
+    "id": "preset-reference-summarisation",
+    "name": "Reference-Based Summarisation",
+    "description": "Comparing generated summaries with a set of gold-standard reference summaries.",
+    "guideState": {
+      "activeStepId": "suggestions",
+      "answers": {
+        "q_task_type": "summarization",
+        "q_qualities": [
+          {
+            "id": "correctness",
+            "importance": 5
+          },
+          {
+            "id": "conciseness",
+            "importance": 4
+          },
+          {
+            "id": "fluency",
+            "importance": 3
+          }
+        ],
+        "q_risks": [
+          {
+            "id": "hallucination",
+            "importance": 5
+          },
+          {
+            "id": "omissions",
+            "importance": 5
+          }
+        ],
+        "q_references": "yes"
+      },
+      "selectedMethodIds": ["bertscore", "rouge-l", "g-eval"]
+    }
+  },
+  {
+    "id": "preset-open-ended-qa",
+    "name": "Open-Ended Question Answering",
+    "description": "Assessing answers for correctness, omissions and hallucinations without gold-standard reference answers.",
+    "guideState": {
+      "activeStepId": "suggestions",
+      "answers": {
+        "q_task_type": "open-ended-qa",
+        "q_qualities": [
+          {
+            "id": "correctness",
+            "importance": 5
+          },
+          {
+            "id": "robustness",
+            "importance": 4
+          },
+          {
+            "id": "fluency",
+            "importance": 3
+          }
+        ],
+        "q_risks": [
+          {
+            "id": "hallucination",
+            "importance": 5
+          },
+          {
+            "id": "omissions",
+            "importance": 4
+          },
+          {
+            "id": "bias",
+            "importance": 3
+          }
+        ],
+        "q_references": "no"
+      },
+      "selectedMethodIds": ["qags", "g-eval"]
     }
   }
 ]
