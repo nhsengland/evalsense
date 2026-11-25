@@ -41,6 +41,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Validate prediction and reference token lengths, including special tokens, before BERTScore embedding computation.
 - Reject duplicate summary cells, including repeated equal values.
 - Pair metric correlations by generation, source run, sample and epoch; reject duplicate observations, preserve scorer identities and report finite-pair counts.
+- Distinguish identically labelled aggregates from different evaluators, scorers and reducers in summary tables.
 - Check model and judge options before records or model calls, including after mutation. UI validation errors no longer echo input; unsafe legacy UI configurations are hidden.
 - Prevent incomplete two-tier and undefined meta-evaluation correlations from silently inflating the reported mean. Report failed/missing logs and unestimable intervals.
 - Prevent BERTScore from fitting IDF weights to a single reference or silently ignoring a supplied IDF dictionary.
