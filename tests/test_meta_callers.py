@@ -11,42 +11,67 @@ import warnings
 
 import polars as pl
 
-from test_meta_evidence import complete, two_tier
+from evalsense.workflow.analysers import MetaResultAnalyser
+from test_meta_evidence import complete, project, two_tier
 
 
 class NotebookMetaTests(unittest.TestCase):
-    def test_notebook_passes_planned_tiers_and_direction(self):
+    def setUp(self):
         path = Path(__file__).resolve().parents[1] / "notebooks/Meta-Evaluation.ipynb"
-        notebook = json.loads(path.read_text())
-        cells = [
+        self.notebook = json.loads(path.read_text())
+        self.cells = [
             "".join(cell["source"])
-            for cell in notebook["cells"]
+            for cell in self.notebook["cells"]
             if cell["cell_type"] == "code"
         ]
-        calls = [cell for cell in cells if "corr_results = analyser(" in cell]
+        calls = [cell for cell in self.cells if "corr_results = analyser(" in cell]
         self.assertEqual(len(calls), 1)
+        self.analysis_cell = compile(calls[0], str(path), "exec")
+
+    def test_notebook_passes_planned_tiers_and_direction(self):
         fixture = Mock(return_value=pl.DataFrame())
         scope = {
             "analyser": fixture,
             "aci_project": object(),
             "tiered_perturbation_types": [[], [], [], []],
         }
-        exec(compile(calls[0], str(path), "exec"), scope)
+        exec(self.analysis_cell, scope)
         options = fixture.call_args.kwargs
         self.assertEqual(list(options["expected_tiers"]), [0, 1, 2, 3])
         self.assertIs(options["lower_tier_is_better"], True)
         self.assertEqual(options["seed"], 0)
-        for cell in cells:
+        for cell in self.cells:
             if not any(
                 line.lstrip().startswith(("%", "!")) for line in cell.splitlines()
             ):
                 ast.parse(cell)
 
+    def test_notebook_ranks_decreasing_scores_above_increasing_scores(self):
+        decreasing = complete({"note": [1.0, 0.5, 0.0]}, evaluator_name="decreasing")
+        increasing = complete({"note": [0.0, 0.5, 1.0]}, evaluator_name="increasing")
+        logs = decreasing.get_logs(type="evaluation") | increasing.get_logs(
+            type="evaluation"
+        )
+        scope = {
+            "aci_project": project(logs),
+            "tiered_perturbation_types": [[], [], []],
+            "analyser": MetaResultAnalyser[pl.DataFrame](output_format="polars"),
+        }
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", message=".*not been independently checked"
+            )
+            exec(self.analysis_cell, scope)
+        results = cast(pl.DataFrame, scope["corr_results"])
+        self.assertCountEqual(
+            results.select("evaluator", "avg_correlation").rows(),
+            [("decreasing", 1.0), ("increasing", -1.0)],
+        )
+
     def test_notebook_does_not_claim_intended_tiers_are_validated(self):
-        path = Path(__file__).resolve().parents[1] / "notebooks/Meta-Evaluation.ipynb"
         content = "\n".join(
             "".join(c["source"])
-            for c in json.loads(path.read_text())["cells"]
+            for c in self.notebook["cells"]
             if c["cell_type"] == "markdown"
         )
         self.assertIn("not independently checked", content)

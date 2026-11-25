@@ -3,45 +3,55 @@ import Link from "@mui/material/Link";
 import ReactMarkdown from "react-markdown";
 import LaTeX from "@site/src/components/LaTeX/LaTeX";
 
-<Typography variant="body2">
-QAGS (Question Answering and Generation for Summarisation) is an evaluation
-metric that assesses the factual consistency and information coverage of a
-generated text (e.g., a summary) by using question generation and question
-answering models. It operates in two main stages:
-
-1. **Question Generation (QG):** An LLM model generates a set of questions
-   based on the model output as well as some background or reference text
-   containing the ground-truth imformation.
-1. **Question Answering (QA):** For each generated question, an LLM
-   model attempts to provide an answer based on either the evaluated text
-   or the background/reference text. The answers are then compared against
-   each other to assess the factual correctness of the evaluated text.
-
+<Typography variant="body2" gutterBottom>
+  QAGS uses questions and answers to help assess factual consistency and
+  missing information in generated text, such as a summary or clinical note.
+  It generates questions from both the evaluated text and a comparison text,
+  answers each question using each text, and compares the answers. Disagreements
+  can point to contradictions, unsupported details or omissions for review.
 </Typography>
 
 <Typography variant="body2" gutterBottom>
-  While QAGS has originally been proposed for evaluation on summarisation tasks,
-  it can also be applied to other open-ended generation tasks where factual
-  correctness is important, such as question answering. It can also be used to
-  identify hallucinations (information in the generated text that is not
-  supported by the background/reference text) and omissions (information in the
-  background/reference text that is missing from the evaluated text).
+  The comparison text can be a source document or a reference answer, selected
+  through the prompts. Choose it carefully: agreement with a reference answer
+  does not establish that the answer is itself faithful to the original source.
+  Reviewing the questions and answers helps explain individual scores.
 </Typography>
 
 <Typography variant="subtitle1" gutterBottom>
-  Evaluation Modes
+  Evaluation modes
 </Typography>
 
-<Typography variant="body2">
-QAGS can be adapted to operate in different modes for evaluating the answers:
-- **Ternary Mode:** The QG model produces close-ended questions with only "yes", "no", or "unknown" as the permissible answers. This mode is particularly useful for assessing coverage (share of facts in the reference/background text that are also present in the evaluated text) and groundedness (share of facts in the evaluated text that are supported by the reference/background text). Compared to questions requiring more open-ended answers, this mode also makes it easier to compare the answers obtained for the evaluated text and the reference/background text.
-- **Exact Match Mode:** The generated questions are open-ended and the answers are expected to be exact matches. Unless the generated questions have very clear and unambiguous responses, this mode may be overly strict when comparing the answers. Using open-ended questions also makes it more difficult to assess properties like coverage and groundedness, making the output limited to an accuracy measure indicating the share of questions with matching responses. However, compared to ternary mode, the open-ended questions used in thsi mode may be more suitable for assessing factual consistency and correctness of the evaluated text.
-- **Judge Mode (LLM-based):** This mode is similar to the exact match mode, but uses an LLM to semantically compare the generated answers. This offers more flexibility compared to the exact match mode, but increases the required number of model generations.
+<Typography variant="body2" component="div">
+  <ReactMarkdown>{`
+- **Ternary mode:** Uses yes/no/unknown questions, making answer comparisons straightforward. It reports accuracy, coverage and groundedness. The last two focus on matching yes answers and depend on question wording; correctly preserved negative facts may not contribute.
+- **Exact match mode:** Compares open-ended answers as text. It is useful when an answer has a clear expected form, but can penalise equivalent wording.
+- **Judge mode:** Uses an LLM to compare open-ended answers by meaning. It is more flexible about wording but requires additional model calls and depends on the judge's reliability.
+  `}</ReactMarkdown>
+</Typography>
 
+<Typography variant="body2" gutterBottom>
+  This can be useful for checking factual content in summarisation and other
+  open-ended tasks. It requires many model calls, and results depend on the
+  questions, prompts and evaluator model. Matching unknown answers does not
+  establish factual support. Invalid answers fail evaluation rather than being
+  counted as agreement, so review failures alongside scores. These scores are
+  aids to evaluation, not verified fractions of facts or proof of clinical safety.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  EvalSense adapts <Link href="https://aclanthology.org/2020.acl-main.450/">QAGS</Link>
+  {" "}to bidirectional question generation and these comparison modes. The
+  {" "}<Link href="https://aclanthology.org/2026.eacl-demo.33/">EvalSense paper</Link>
+  {" "}reports its own clinical-note case study and perturbation-based
+  meta-evaluation of ternary and judge variants. Check performance on
+  representative examples for your task and configuration. The
+  {" "}<Link href="https://nhsengland.github.io/evalsense/docs/api-reference/evaluation/evaluators/#evalsense.evaluation.evaluators.QagsScoreCalculator">API documentation</Link>
+  {" "}covers score definitions and accepted input formats.
 </Typography>
 
 <Typography variant="subtitle1" gutterBottom>
-  Example
+  Worked example with fixed QA answers
 </Typography>
 
 <Typography variant="body2">

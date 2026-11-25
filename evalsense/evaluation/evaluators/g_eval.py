@@ -18,13 +18,24 @@ from evalsense.evaluation import (
 )
 from evalsense.generation import ModelConfig
 from evalsense.logging import get_logger
-from evalsense.utils.text import extract_score, extract_weighted_score, format_template
+from evalsense.utils.text import (
+    extract_score,
+    extract_weighted_score,
+    format_template,
+    validate_score_range,
+)
 
 logger = get_logger(__name__)
 
+SCORE_FORMAT = "evalsense.g-eval.integer.v1"
+
 
 class GEvalScoreCalculator(ScoreCalculator):
-    """G-Eval score calculator."""
+    """G-Eval with complete, in-range integer responses.
+
+    Reject malformed responses before optional weighting or normalisation.
+    Syntax validation does not establish judge accuracy or injection resistance.
+    """
 
     def __init__(
         self,
@@ -51,6 +62,7 @@ class GEvalScoreCalculator(ScoreCalculator):
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
         """
+        validate_score_range(min_score, max_score, normalise=normalise)
         self.model = model
         self.prompt_template = prompt_template
         self.logprobs = logprobs
@@ -106,7 +118,12 @@ class GEvalScoreCalculator(ScoreCalculator):
 
         Returns:
             Score: The calculated score.
+
+        Raises:
+            ValueError: If the rating scale is invalid or the complete response
+                is not an in-range integer. Malformed responses are never repaired.
         """
+        validate_score_range(self.min_score, self.max_score, normalise=self.normalise)
         logprobs_config = GenerateConfig(
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,
@@ -158,6 +175,7 @@ class GEvalScoreCalculator(ScoreCalculator):
                 "prompt": llm_input,
                 "output_text": output.completion,
                 "raw_score": raw_score,
+                "score_format": SCORE_FORMAT,
             },
         )
 
@@ -196,6 +214,7 @@ class GEvalScorerFactory(ScorerFactory):
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
         """
+        validate_score_range(min_score, max_score, normalise=normalise)
         self.name = name
         self.prompt_template = prompt_template
         if metrics is None:
@@ -279,8 +298,9 @@ def get_g_eval_evaluator(
             be a format string with {prediction} and (optionally) {reference} as
             placeholders, as well as any additional placeholders for entries in
             Inspect AI sample/task state metadata. The template should instruct the
-            judge model to respond with a numerical score between the specified
-            min_score and max_score.
+            judge model to return only one non-negative integer between min_score
+            and max_score. Fractions, decimals, signs and explanatory text fail
+            validation. Outer whitespace and leading zeroes are accepted.
         model_config (ModelConfig): The model configuration.
         logprobs (bool): Whether to use model log probabilities to compute weighted
             evaluation score instead of a standard score.
@@ -297,6 +317,7 @@ def get_g_eval_evaluator(
     """
     cache_parameters = {
         "method": "g_eval",
+        "score_format": SCORE_FORMAT,
         "quality_name": quality_name,
         "metrics": metrics,
         "prompt_template": prompt_template,

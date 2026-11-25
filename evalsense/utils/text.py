@@ -54,6 +54,74 @@ def extract_lines(
     return [line for line in lines if include_filter_fun(line)]
 
 
+def strip_list_prefix(text: str) -> str:
+    """Remove recognised list prefixes without stripping leading numerical values.
+
+    Prefixes are ``-``, ``*``, ``•``, ``1.``, ``1)`` or ``[1]``. They must be
+    followed by whitespace or, for unspaced lists, a letter. Ambiguous prefixes
+    before numbers or punctuation are retained: ``1.5 mg`` and ``-2 mg`` are not
+    list numbering. Leading/trailing whitespace is removed; internal text is kept.
+    """
+    prefix = r"(?:[-*•]|\d+[.)]|\[\d+\])"
+    return regex.sub(rf"^\s*(?:{prefix}\s+|{prefix}(?=\p{{L}}))+", "", text).strip()
+
+
+def parse_ternary_answer(text: str, *, binary_only: bool = False) -> bool | None:
+    """Parse a complete answer, allowing one balanced presentation wrapper.
+
+    Args:
+        text (str): A complete yes/no/true/false/unknown/"I don't know" label,
+            ignoring case and surrounding whitespace. A single quote pair
+            (straight or typographic), Markdown emphasis (*, **, _, __) or inline
+            backticks may wrap the label. One final period or exclamation mark
+            is allowed inside or outside the wrapper, but not both. Nested
+            wrappers, explanations, JSON and conflicting labels are rejected.
+        binary_only (bool): Reject explicit unknown answers when True.
+
+    Returns:
+        bool | None: True or False for a binary label, or None for an explicit
+            unknown. Invalid text never returns None.
+
+    Raises:
+        ValueError: If the complete response does not match the accepted format,
+            or an unknown label is used in binary-only mode. Messages omit text.
+    """
+    answer = " ".join(text.strip().casefold().split())
+    label_pattern = r"(yes|no|true|false|unknown|i don['’]t know)"
+    match = regex.fullmatch(label_pattern + r"[.!]?", answer)
+    if match is None:
+        outside_punctuation = answer.endswith((".", "!"))
+        wrapped = answer[:-1] if outside_punctuation else answer
+        for opening, closing in (
+            ('"', '"'),
+            ("'", "'"),
+            ("“", "”"),
+            ("‘", "’"),
+            ("**", "**"),
+            ("__", "__"),
+            ("*", "*"),
+            ("_", "_"),
+            ("`", "`"),
+        ):
+            if wrapped.startswith(opening) and wrapped.endswith(closing):
+                inner = wrapped[len(opening) : len(wrapped) - len(closing)].strip()
+                match = regex.fullmatch(
+                    label_pattern + ("" if outside_punctuation else r"[.!]?"), inner
+                )
+                if match is not None:
+                    break
+    if match is None:
+        raise ValueError("Expected a complete yes/no/unknown answer.")
+    label = match.group(1)
+    if label in ("yes", "true"):
+        return True
+    if label in ("no", "false"):
+        return False
+    if binary_only:
+        raise ValueError("A comparison must be yes/no, not unknown.")
+    return None
+
+
 @overload
 def extract_ternary_answer(
     text: str, binary_only: Literal[True], unknown_on_mismatch: Literal[False] = False
@@ -67,6 +135,9 @@ def extract_ternary_answer(
 ) -> bool | None:
     """
     Extract a ternary answer (True/False/Unknown) from the text.
+
+    This legacy helper searches within text and can return unknown on mismatch.
+    Use ``parse_ternary_answer`` for complete-response validation with distinct errors.
 
     Valid answers are 'yes', 'no', 'true', 'false', 'unknown', and 'I don't know'.
 
@@ -99,30 +170,49 @@ def extract_ternary_answer(
     raise ValueError(f"Unable to extract a binary answer from text: {text}.")
 
 
+def validate_score_range(
+    min_score: int, max_score: int, *, normalise: bool = False
+) -> None:
+    """Require non-negative integer endpoints and a usable normalisation span."""
+    if type(min_score) is not int or type(max_score) is not int:
+        raise ValueError(
+            "Rating scale endpoints must be integers, not booleans or floats."
+        )
+    if min_score < 0 or max_score < min_score:
+        raise ValueError("Rating scale must satisfy 0 <= min_score <= max_score.")
+    if type(normalise) is not bool:
+        raise ValueError("normalise must be a boolean.")
+    if normalise and min_score == max_score:
+        raise ValueError("Normalised ratings require min_score < max_score.")
+
+
 def extract_score(text: str, min_score: int = 1, max_score: int = 10) -> int:
-    """
-    Extract the first numerical score from text that falls between min_score and max_score.
+    """Parse one complete, in-range, non-negative decimal integer.
+
+    Outer whitespace and leading zeroes are accepted. Signs, fractions, decimals,
+    wrappers and explanatory text are rejected instead of searching for digits.
 
     Args:
-        text (str): The text to extract the score from.
+        text (str): The complete judge response.
         min_score (int): The minimum valid score. Defaults to 1.
         max_score (int): The maximum valid score. Defaults to 10.
 
     Returns:
-        float | None: The extracted score if found and valid, otherwise None.
+        int: The validated integer rating.
+
+    Raises:
+        ValueError: If the response is not a complete in-range integer.
     """
-    pattern = r"\b\d+\b"
-    matches = regex.findall(pattern, text)
-
-    for match in matches:
-        try:
-            score = int(match)
-            if min_score <= score <= max_score:
-                return score
-        except ValueError:
-            continue
-
-    raise ValueError(f"Unable to extract a valid score from text: {text}.")
+    validate_score_range(min_score, max_score)
+    if not isinstance(text, str) or not regex.fullmatch(r"[0-9]+", text.strip()):
+        raise ValueError("Expected one complete integer score without extra text.")
+    try:
+        score = int(text.strip())
+    except ValueError:
+        raise ValueError("Integer score exceeds the supported range.") from None
+    if not min_score <= score <= max_score:
+        raise ValueError("Integer score is outside the configured rating scale.")
+    return score
 
 
 def _eval_weighted_options[T](
@@ -186,12 +276,10 @@ def _eval_weighted_options[T](
         probabilities[parsed_option] += score_probability
         total_probability += score_probability
 
-    assert total_probability > 0, "Total probability should be greater than zero."
-    # Allow for probability slightly exceeding 1 due to floating point errors
-    assert total_probability <= 1 + 1e-5, (
-        "Total probability should be less than or close to one, but was "
-        f"{total_probability}. Computed score probabilities: {probabilities}"
-    )
+    if not 0 < total_probability <= 1 + 1e-5:
+        raise ValueError(
+            "Valid answer probabilities must have positive finite mass no greater than one."
+        )
 
     # Normalise the option probabilities
     for option in probabilities:
@@ -251,17 +339,16 @@ def extract_weighted_score(
     target_score = extract_score(output.completion, min_score, max_score)
 
     def normalise_token(token: str) -> str:
-        return token.strip().replace("▁", "").replace("_", "")
+        return token.strip().removeprefix("▁").strip()
 
     def match_target_token(token: str) -> bool:
-        return token == str(target_score)
+        try:
+            return extract_score(token, min_score, max_score) == target_score
+        except ValueError:
+            return False
 
     def token_parsing_function(token: str) -> int:
-        score = int(token)
-        if min_score <= score <= max_score:
-            return score
-        else:
-            raise ValueError
+        return extract_score(token, min_score, max_score)
 
     probabilities = _eval_weighted_options(
         output,

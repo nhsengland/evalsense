@@ -1,8 +1,10 @@
+from contextlib import contextmanager
 import hashlib
 from pathlib import Path
 import unicodedata
 import regex
 import requests
+from filelock import FileLock
 from requests.utils import CaseInsensitiveDict
 
 from tenacity import Retrying, stop_after_attempt, wait_exponential
@@ -49,8 +51,13 @@ def get_remote_file_headers(
             wait=wait_exponential(multiplier=1, min=2, max=32),
             reraise=True,
         ):
-            headers = {"User-Agent": USER_AGENT}
-            with attempt as _, requests.head(url, headers=headers) as response:
+            headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
+            with (
+                attempt as _,
+                requests.head(
+                    url, headers=headers, allow_redirects=True, timeout=10
+                ) as response,
+            ):
                 response.raise_for_status()
                 return response.headers
     except Exception as e:
@@ -123,6 +130,134 @@ def verify_file(
     return True
 
 
+def _identity_encoding(headers: CaseInsensitiveDict[str]) -> bool:
+    return headers.get("Content-Encoding", "").strip().lower() in ("", "identity")
+
+
+def _content_length(headers: CaseInsensitiveDict[str]) -> int | None:
+    # iter_content writes decoded bytes. An encoded length counts bytes on the wire.
+    if not _identity_encoding(headers) or "Transfer-Encoding" in headers:
+        return None
+    value = headers.get("Content-Length")
+    if value is None:
+        return None
+    if not value.isascii() or not value.isdecimal():
+        raise ValueError(f"Invalid Content-Length: {value!r}")
+    return int(value)
+
+
+def _full_download_size(
+    response: requests.Response, file_size: int | None
+) -> int | None:
+    length = _content_length(response.headers)
+    if file_size is not None and length is not None and file_size != length:
+        raise ValueError(
+            f"GET Content-Length {length} differs from HEAD length {file_size}"
+        )
+    return length if length is not None else file_size
+
+
+def _range_total(
+    headers: CaseInsensitiveDict[str], offset: int, file_size: int | None
+) -> int | None:
+    """Return the complete size if this range covers the entire requested suffix."""
+    match = regex.fullmatch(
+        r"bytes ([0-9]+)-([0-9]+)/([0-9]+|\*)",
+        headers.get("Content-Range", ""),
+        regex.I,
+    )
+    if match is None or not _identity_encoding(headers):
+        return None
+    try:
+        start, end = int(match[1]), int(match[2])
+        total = file_size if match[3] == "*" else int(match[3])
+        length = _content_length(headers)
+    except ValueError:
+        return None
+    if start != offset or start > end or end + 1 != total:
+        return None
+    if file_size is not None and total != file_size:
+        return None
+    if length is not None and length != end - start + 1:
+        return None
+    return total
+
+
+def _url_digest(url: str) -> str:
+    return hashlib.sha256(url.encode("utf-8")).hexdigest()
+
+
+def _strong_etag(value: str) -> bool:
+    return regex.fullmatch(r'"[\x21\x23-\x7e\x80-\xff]*"', value) is not None
+
+
+def _read_validator(path: Path, url: str) -> tuple[str, str] | None:
+    try:
+        source, location, tag = path.read_bytes().decode("latin-1").split("\n")
+    except (FileNotFoundError, ValueError):
+        return None
+    if source == _url_digest(url) and _strong_etag(tag):
+        return location, tag
+    return None
+
+
+def _save_validator(path: Path, url: str, response: requests.Response) -> None:
+    tag = response.headers.get("ETag", "")
+    if _strong_etag(tag) and _identity_encoding(response.headers):
+        location = _url_digest(response.url or url)
+        path.write_bytes(f"{_url_digest(url)}\n{location}\n{tag}".encode("latin-1"))
+    else:
+        path.unlink(missing_ok=True)
+
+
+@contextmanager
+def _download_response(
+    url: str, headers: dict[str, str], partial_path: Path | None, file_size: int | None
+):
+    """Open the requested suffix, falling back once to a full GET if needed."""
+    offset = 0
+    if partial_path is not None:
+        try:
+            offset = partial_path.stat().st_size
+        except FileNotFoundError:
+            pass
+        if file_size is not None and offset > file_size:
+            offset = 0
+    validator = (
+        _read_validator(partial_path.with_suffix(".part.etag"), url)
+        if offset and partial_path is not None
+        else None
+    )
+    for start in ((offset, 0) if validator else (0,)):
+        request_headers = headers
+        if start and validator:
+            _, tag = validator
+            request_headers = {**headers, "Range": f"bytes={start}-", "If-Range": tag}
+        with requests.get(
+            url, stream=True, headers=request_headers, timeout=10
+        ) as reply:
+            if start and reply.status_code == 416:
+                continue
+            reply.raise_for_status()
+            if reply.status_code == 200:
+                yield reply, 0, _full_download_size(reply, file_size)
+                return
+            if start and validator and reply.status_code == 206:
+                # The ETag is scoped to the final URL, including any redirects.
+                location, tag = validator
+                if (
+                    reply.headers.get("ETag") != tag
+                    or _url_digest(reply.url or url) != location
+                ):
+                    continue
+                total = _range_total(reply.headers, start, file_size)
+                if total is not None:
+                    yield reply, start, total
+                    return
+                continue
+            raise RuntimeError(f"Unexpected download status {reply.status_code}")
+
+
 def download_file(
     url: str,
     target_path: str | Path,
@@ -140,7 +275,7 @@ def download_file(
         url (str): The URL of the file to download.
         target_path (str | Path): The path to save the downloaded file.
         resume_download (bool, optional): Whether to resume a partially
-            downloaded file.
+            downloaded file when the server provides a strong ETag.
         force_download (bool, optional): Whether to force the download even
             if the file already exists.
         show_progress (bool, optional): Whether to show download progress.
@@ -164,38 +299,29 @@ def download_file(
 
     # Try to determine the size of the downloaded file and resume support
     remote_file_headers = get_remote_file_headers(url, max_attempts=max_attempts)
-    file_size = int(remote_file_headers.get("Content-Length", 0))
-    supports_resume = "Accept-Ranges" in remote_file_headers
-    content_encoding = remote_file_headers.get("Content-Encoding", "")
-    compression_encodings = ["gzip", "deflate", "br", "zstd"]
-    if any(encoding in content_encoding for encoding in compression_encodings):
-        supports_resume = False
+    file_size = _content_length(remote_file_headers)
+    supports_resume = (
+        remote_file_headers.get("Accept-Ranges", "").strip().lower() == "bytes"
+        and _identity_encoding(remote_file_headers)
+    )
 
-    # Return early if file already downloaded
-    if not force_download and verify_file(
-        target_path,
-        expected_size=file_size,
-        expected_hash=expected_hash,
-        hash_type=hash_type,
+    if (
+        not force_download
+        and (file_size is not None or expected_hash is not None)
+        and verify_file(
+            target_path,
+            expected_size=file_size,
+            expected_hash=expected_hash,
+            hash_type=hash_type,
+        )
     ):
         return
 
     # Check existing partial download
     temp_path = target_path.with_suffix(target_path.suffix + ".part")
-    already_downloaded_size = (
-        temp_path.stat().st_size
-        if temp_path.exists() and resume_download and supports_resume
-        else 0
-    )
-    if already_downloaded_size > file_size:
-        # Partial download is corrupted — larger file size than expected
-        already_downloaded_size = 0
-    headers = (
-        {"Range": f"bytes={already_downloaded_size}-"}
-        if already_downloaded_size > 0
-        else {}
-    )
-    headers["User-Agent"] = USER_AGENT
+    validator_path = temp_path.with_suffix(".part.etag")
+    partial_path = temp_path if resume_download and supports_resume else None
+    headers = {"User-Agent": USER_AGENT, "Accept-Encoding": "identity"}
 
     # Try to download the file
     try:
@@ -206,16 +332,23 @@ def download_file(
         ):
             with (
                 attempt as _,
-                requests.get(url, stream=True, headers=headers, timeout=10) as response,
+                FileLock(temp_path.with_suffix(".part.lock")),
+                _download_response(url, headers, partial_path, file_size) as (
+                    response,
+                    write_offset,
+                    expected_size,
+                ),
             ):
-                response.raise_for_status()
-
-                mode = "ab" if already_downloaded_size > 0 else "wb"
+                if expected_size is None and expected_hash is None:
+                    raise RuntimeError(
+                        "Cannot verify download: no decoded byte count or expected hash"
+                    )
+                mode = "ab" if write_offset else "wb"
                 with (
                     open(temp_path, mode) as file,
                     tqdm(
-                        total=file_size,
-                        initial=already_downloaded_size,
+                        total=expected_size,
+                        initial=write_offset,
                         unit="B",
                         unit_scale=True,
                         unit_divisor=1024,
@@ -224,18 +357,22 @@ def download_file(
                         leave=False,
                     ) as progress,
                 ):
+                    if not write_offset:
+                        _save_validator(validator_path, url, response)
                     for chunk in response.iter_content(chunk_size):
                         if chunk:
                             file.write(chunk)
                             file.flush()
                             progress.update(len(chunk))
 
+                validator_path.unlink(missing_ok=True)
                 if not verify_file(
                     temp_path,
+                    expected_size=expected_size,
                     expected_hash=expected_hash,
                     hash_type=hash_type,
                 ):
-                    # temp_path.unlink()
+                    temp_path.unlink()
                     raise RuntimeError(
                         f"Downloaded file {target_path} could not be verified."
                     )

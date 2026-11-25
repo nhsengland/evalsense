@@ -112,7 +112,7 @@ For examples illustrating the usage of EvalSense, please check the notebooks und
 
 - The [Demo notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Demo.ipynb) illustrates a basic application of EvalSense to the ACI-Bench dataset.
 - The [Experiments notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Experiments.ipynb) illustrates more thorough experiments on the same dataset, involving a larger number of evaluators and models.
-- The [Meta-Evaluation notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Meta-Evaluation.ipynb) focuses on meta-evaluation on synthetically perturbed data, where the goal is to identify the most reliable evaluation methods rather than the best-performing models.
+- The [Meta-Evaluation notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Meta-Evaluation.ipynb) compares evaluator scores for synthetically perturbed ACI-Bench notes. It reports how closely each evaluator follows the intended order of note quality across perturbation tiers. The assigned tiers represent intended severity and have not been independently verified.
 
 ### Web-Based UI
 

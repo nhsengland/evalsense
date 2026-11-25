@@ -37,6 +37,55 @@ function HomepageHeader() {
   );
 }
 
+function ProjectLeadership() {
+  return (
+    <section className="padding-vert--lg" aria-labelledby="project-leadership">
+      <div className="container">
+        <Heading as="h2" id="project-leadership" className="text--center">
+          Project leadership
+        </Heading>
+        <p className="text--center margin-bottom--lg">
+          EvalSense is owned and managed by NHS England&apos;s Data Science and
+          Applied AI team.
+        </p>
+        <div className="row">
+          <div className="col col--6">
+            <div className="padding-horiz--md">
+              <Heading as="h3">
+                <Link href="https://github.com/sylvesterkaczmarek">
+                  Sylvester Kaczmarek
+                </Link>
+              </Heading>
+              <p>
+                <strong>Scientific and Technical Lead</strong>
+              </p>
+              <p>
+                Leads current scientific and technical development and
+                maintenance, including evaluation correctness, reproducibility
+                and reliability.
+              </p>
+            </div>
+          </div>
+          <div className="col col--6">
+            <div className="padding-horiz--md">
+              <Heading as="h3">
+                <Link href="https://github.com/adamdejl">Adam Dejl</Link>
+              </Heading>
+              <p>
+                <strong>Creator</strong>
+              </p>
+              <p>
+                Created EvalSense through an NHS England PhD Data Science
+                internship.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   return (
@@ -44,6 +93,7 @@ export default function Home(): ReactNode {
       <HomepageHeader />
       <main>
         <HomepageFeatures />
+        <ProjectLeadership />
       </main>
     </Layout>
   );

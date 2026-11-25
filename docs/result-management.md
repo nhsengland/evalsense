@@ -141,3 +141,22 @@ evaluation is requested, a missing or different source causes a fresh copy of
 the current successful generation to be scored. Its saved source can then be
 reused on subsequent calls. Recheck earlier reports explicitly before relying
 on them as measurements of the current generation.
+
+## Rechecking earlier meta-evaluation rankings
+
+Earlier versions of the Meta-Evaluation notebook used the analyser default, which treated higher tier IDs as better quality. If you used those results to choose an evaluator, reopen the original project and recompute the correlations from its saved evaluation logs. This example uses the three tiers from the supplied notebook and assumes higher evaluator scores mean better quality.
+
+```python
+from evalsense.workflow import Project
+from evalsense.workflow.analysers import MetaResultAnalyser
+
+project = Project("ACI-Bench Perturbation")
+results = MetaResultAnalyser()(
+    project,
+    expected_tiers=[0, 1, 2],
+    lower_tier_is_better=True,
+)
+print(results.select("evaluator", "metric_name", "avg_correlation", "n_included"))
+```
+
+Use the original project name, storage location and planned tier IDs for your study. The analysis reads existing scores without running generation or scoring again. Before revising a comparison, check `n_excluded`, `failed_logs`, `unavailable_logs` and `ci_status` in the full result. Changes in which samples qualified can also affect the new ranking.
