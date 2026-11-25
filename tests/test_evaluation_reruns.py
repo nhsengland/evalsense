@@ -125,6 +125,9 @@ class EvaluationRerunTests(unittest.TestCase):
         evaluation_log = project.get_log(experiment.evaluation_record)
         assert generation_log is not None and generation_log.samples
         assert evaluation_log is not None and evaluation_log.samples
+        self.assertEqual(generation_log.eval.run_id, evaluation_log.eval.run_id)
+        self.assertEqual(generation_log.eval.task_id, evaluation_log.eval.task_id)
+        self.assertEqual(generation_log.eval.created, evaluation_log.eval.created)
         self.assertEqual(generation_log.samples[0].output.completion, output)
         self.assertEqual(evaluation_log.samples[0].output.completion, output)
         sample_scores = evaluation_log.samples[0].scores
@@ -191,6 +194,67 @@ class EvaluationRerunTests(unittest.TestCase):
                 self.assertEqual(fixture.generated, ["yes", "no"])
                 self.assertEqual(fixture.generation_path(), generation_path)
                 self.assertEqual(generation_path.read_bytes(), generation_bytes)
+
+
+    def assert_forced_sequence(self, first: str, second: str) -> None:
+        for log_format in ("json", "eval"):
+            with (
+                self.subTest(log_format=log_format),
+                self.fixture([first, second]) as fixture,
+            ):
+                generation_key = fixture.experiment.generation_record
+                evaluation_key = fixture.experiment.evaluation_record
+                fixture.run(log_format)
+                previous_source = self.assert_result(
+                    fixture, first, float(first == "yes")
+                )
+                fixture.reopen()
+                fixture.run(log_format, force=True)
+                source = self.assert_result(fixture, second, float(second == "yes"))
+                self.assertNotEqual(source, previous_source)
+                self.assertNotEqual(source.log_location, previous_source.log_location)
+                self.assertEqual(fixture.generation_path().suffix, "." + log_format)
+                self.assertEqual(fixture.experiment.generation_record, generation_key)
+                self.assertEqual(fixture.experiment.evaluation_record, evaluation_key)
+                self.assertEqual(fixture.generated, [first, second])
+                self.assertEqual(fixture.scored, [first, second])
+
+                fixture.reopen()
+                self.assertEqual(
+                    self.assert_result(fixture, second, float(second == "yes")), source
+                )
+
+    def test_forced_rerun_reports_deterioration_after_reopen(self):
+        self.assert_forced_sequence("yes", "no")
+
+    def test_forced_rerun_reports_improvement_after_reopen(self):
+        self.assert_forced_sequence("no", "yes")
+
+    def test_identical_outputs_still_record_the_new_generation_source(self):
+        self.assert_forced_sequence("yes", "yes")
+
+    def test_regeneration_refreshes_evaluation_without_forcing_scoring(self):
+        for log_format in ("json", "eval"):
+            with (
+                self.subTest(log_format=log_format),
+                self.fixture(["yes", "no"]) as fixture,
+            ):
+                fixture.run(log_format)
+                previous_source = self.assert_result(fixture, "yes", 1.0)
+                fixture.generate(log_format, force=True)
+                generation_path = fixture.generation_path()
+                generation_bytes = generation_path.read_bytes()
+                source = GenerationSource.capture(generation_path)
+                self.assertNotEqual(source, previous_source)
+
+                fixture.reopen()
+                fixture.evaluate()
+                self.assertEqual(self.assert_result(fixture, "no", 0.0), source)
+                self.assertEqual(fixture.generated, ["yes", "no"])
+                self.assertEqual(fixture.scored, ["yes", "no"])
+                self.assertEqual(generation_path.read_bytes(), generation_bytes)
+                fixture.reopen()
+                self.assertEqual(self.assert_result(fixture, "no", 0.0), source)
 
 
 if __name__ == "__main__":
