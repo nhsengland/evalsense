@@ -1,0 +1,143 @@
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from uuid import UUID, uuid4
+import unittest
+from unittest.mock import patch
+
+from inspect_ai.dataset import MemoryDataset, Sample
+from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec, read_eval_log, write_eval_log
+from inspect_ai.solver import generate
+
+from evalsense.datasets.managers.huggingface import HuggingFaceDatasetManager
+from evalsense.evaluation import ExperimentConfig, ResultRecord
+from evalsense.generation import GenerationSteps, ModelConfig
+from evalsense.utils.cache import fingerprint
+from evalsense.utils.files import to_safe_filename
+from evalsense.workflow import Pipeline, Project
+
+
+class GenerationFailureTests(unittest.TestCase):
+    def setUp(self):
+        storage = Path(self.enterContext(TemporaryDirectory()))
+        self.enterContext(patch("evalsense.workflow.project.PROJECTS_PATH", storage))
+        self.project = Project("fixture")
+        self.project.generation_log_path.mkdir()
+        self.experiment = ExperimentConfig(
+            HuggingFaceDatasetManager("fixture", version="1", splits=["test"]),
+            GenerationSteps("generate", generate()),
+            ModelConfig("mockllm/model"),
+        )
+        self.key = self.experiment.generation_record
+        self.pipeline = Pipeline(self.experiment, self.project)
+        self.dataset = MemoryDataset([Sample(input="sample")])
+
+    def generate(self):
+        self.pipeline._generate_on_dataset(self.experiment, self.dataset, False, {}, {})
+
+    def write_log(self, name, *, owned=False):
+        directory = self.project.generation_log_path
+        metadata = None
+        task_name = "other"
+        if owned:
+            identity = fingerprint(self.key)
+            directory = directory / identity / uuid4().hex
+            directory.mkdir(parents=True)
+            metadata = {"evalsense_generation_id": identity}
+            task_name = to_safe_filename(self.key.label)
+        path = directory / name
+        log = EvalLog(
+            status="error" if owned else "success",
+            eval=EvalSpec(
+                created="2026-01-01T00:00:00Z", task=task_name, model="mockllm/model",
+                metadata=metadata,
+                dataset=EvalDataset(), config=EvalConfig(),
+            ),
+        )
+        write_eval_log(log, location=str(path))
+        return path
+
+    def test_fresh_failure_preserves_error_with_unrelated_success_present(self):
+        other = self.write_log("other.json")
+        with patch("evalsense.workflow.pipeline.eval", side_effect=ValueError("failed")):
+            self.generate()
+
+        self.assertEqual(
+            self.project.get_record(self.key),
+            ResultRecord(status="error", error_message="failed"),
+        )
+        self.assertTrue(other.exists())
+
+    def test_interrupted_retry_records_error_and_propagates_interrupt(self):
+        previous = self.write_log("previous.json", owned=True)
+        self.project.update_record(
+            self.key, ResultRecord(status="error", log_location=str(previous))
+        )
+        interruption = KeyboardInterrupt("stop retry")
+        with (
+            patch("evalsense.workflow.pipeline.eval_retry", side_effect=interruption),
+            self.assertRaises(KeyboardInterrupt) as raised,
+        ):
+            self.generate()
+
+        self.assertIs(raised.exception, interruption)
+        self.assertEqual(
+            self.project.get_record(self.key),
+            ResultRecord(status="error", error_message="stop retry"),
+        )
+        self.assertTrue(previous.exists())
+
+    def test_new_attempts_separate_runs_with_the_same_display_name(self):
+        with patch("evalsense.workflow.pipeline.eval", return_value=[]) as run:
+            self.generate()
+            self.generate()
+            self.experiment.name = "another experiment"
+            self.generate()
+
+        first, retry, other = [Path(call.kwargs["log_dir"]) for call in run.call_args_list]
+        self.assertEqual(first.parent, retry.parent)
+        self.assertNotEqual(first, retry)
+        self.assertNotEqual(first.parent, other.parent)
+        self.assertEqual(other.parent.name, fingerprint(self.experiment.generation_record))
+        for call in run.call_args_list:
+            attempt = Path(call.kwargs["log_dir"])
+            self.assertTrue(attempt.is_dir())
+            self.assertEqual(UUID(attempt.name).version, 4)
+            self.assertEqual(
+                call.kwargs["tasks"].metadata["evalsense_generation_id"],
+                attempt.parent.name,
+            )
+
+    def test_multiple_returned_logs_cannot_choose_a_winner(self):
+        log = read_eval_log(str(self.write_log("other.json")))
+        with patch("evalsense.workflow.pipeline.eval", return_value=[log, log]):
+            self.generate()
+
+        record = self.project.get_record(self.key)
+        assert record is not None
+        self.assertEqual(record.status, "error")
+        self.assertIsNone(record.log_location)
+        self.assertIn("received 2", record.error_message or "")
+
+    def test_single_returned_log_from_another_attempt_is_rejected(self):
+        log = read_eval_log(str(self.write_log("other.json")))
+        with patch("evalsense.workflow.pipeline.eval", return_value=[log]):
+            self.generate()
+
+        record = self.project.get_record(self.key)
+        assert record is not None
+        self.assertEqual(record.status, "error")
+        self.assertIsNone(record.log_location)
+
+    def test_unverified_saved_log_starts_fresh(self):
+        old = self.write_log("legacy.json")
+        self.project.update_record(
+            self.key, ResultRecord(status="error", log_location=str(old))
+        )
+        with (
+            patch("evalsense.workflow.pipeline.eval", return_value=[]) as run,
+            patch("evalsense.workflow.pipeline.eval_retry") as retry,
+        ):
+            self.generate()
+        run.assert_called_once()
+        retry.assert_not_called()
+        self.assertTrue(old.exists())

@@ -78,13 +78,18 @@ export default function CataloguePage() {
           Evaluation Method Catalogue
         </Typography>
 
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Methods without an EvalSense implementation are included for
+          comparison and guidance.
+        </Typography>
+
         <CatalogueFilter filters={filters} onFilterChange={setFilters} />
 
         {filteredMethods.length > 0 ? (
           <Grid container spacing={3}>
             {filteredMethods.map((method) => (
               <Grid key={method.id} size={{ xs: 12, sm: 6, md: 4 }}>
-                <MethodCard method={method} />{" "}
+                <MethodCard method={method} showImplementationStatus />
               </Grid>
             ))}
           </Grid>
