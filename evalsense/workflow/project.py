@@ -169,10 +169,9 @@ class Project:
                 or evaluation record to update.
             record_value (ResultRecord): The generation or evaluation result.
             keep_previous_log (bool): Keep the previous file when replacing its record.
-            init_eval_record_from_generations (bool): Whether to initialise a new
-                evaluation record if the evaluation record does not exist. Defaults
-                to False. This is only applicable if the record_key is an
-                EvaluationRecord.
+            init_eval_record_from_generations (bool): Whether to initialise or
+                refresh an evaluation from its current successful generation.
+                Defaults to False. Applies only to EvaluationRecord keys.
         """
         current_record = self.get_record(
             record_key,
@@ -280,10 +279,9 @@ class Project:
         Args:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to retrieve.
-            init_eval_record_from_generations (bool): Whether to initialise a new
-                evaluation record if the evaluation record does not exist.
-                Defaults to False. This is only applicable if the record_key is
-                an EvaluationRecord.
+            init_eval_record_from_generations (bool): Whether to initialise or
+                refresh an evaluation from its current successful generation.
+                Defaults to False. Applies only to EvaluationRecord keys.
 
         Returns:
             ResultRecord | None: The generation or evaluation result, or None if
@@ -378,10 +376,9 @@ class Project:
         Args:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to retrieve.
-            init_eval_record_from_generations (bool): Whether to initialise a new
-                evaluation record if the evaluation record does not exist. Defaults
-                to False. This is only applicable if the record_key is an
-                EvaluationRecord.
+            init_eval_record_from_generations (bool): Whether to initialise or
+                refresh an evaluation from its current successful generation.
+                Defaults to False. Applies only to EvaluationRecord keys.
 
         Returns:
             EvalLog | None: The evaluation log, or None if a valid log does not

@@ -403,8 +403,9 @@ class Pipeline:
         Args:
             show_progress (bool, optional): Whether to show a progress bar.
                 Defaults to True.
-            force_rerun (bool, optional): Whether to force rerun the experiments.
-                Defaults to False.
+            force_rerun (bool, optional): Rescore the current successful
+                generation even when its evaluation is already complete. Does
+                not generate new outputs. Defaults to False.
             score_kwargs (dict[str, Any], optional): Additional arguments to pass
                 to the Inspect score function. Defaults to empty dictionary when
                 None.
@@ -547,8 +548,8 @@ class Pipeline:
         Args:
             show_progress (bool, optional): Whether to show a progress bar.
                 Defaults to True.
-            force_rerun (bool, optional): Whether to force rerun the experiments.
-                Defaults to False.
+            force_rerun (bool, optional): Generate new outputs and score that
+                new generation, replacing cached results. Defaults to False.
             force_reload (bool, optional): Whether to force reloading and
                 reprocessing the datasets. Defaults to False.
             eval_kwargs (dict[str, Any], optional): Additional arguments to pass

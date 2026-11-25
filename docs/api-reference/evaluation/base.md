@@ -5,6 +5,11 @@
 See [Result management](../../result-management.md) for cache identity,
 component versions and handling of existing results.
 
+`ResultRecord.source_generation` identifies the generation artifact used for an
+evaluation through its resolved path and complete-file SHA256 digest.
+`GenerationSource.capture(path)` captures that reference from a saved generation
+log. It is separate from the configuration identity in `GenerationRecord`.
+
 ## Metric implementation provenance
 
 The built-in BLEU, ROUGE and BERTScore evaluators pin their Evaluate scripts to

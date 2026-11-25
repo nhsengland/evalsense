@@ -60,6 +60,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Show the standard evaluation summary in the web UI when logs contain aggregate metrics only. If correlations fail validation, keep the summary visible and report the reason.
 
 ### Documentation
+- Explain generation source provenance, rerun and rescore behaviour, and refreshing evaluations whose saved source is missing or outdated.
 - Document the complete G-Eval integer-response contract, validation failures, cache migration and the remaining weighted-rating limitations.
 - Document the intended perturbation tiers and their stored IDs in the meta-evaluation notebook.
 - Describe QAGS's EvalSense-specific adaptation, failure behaviour and limitations in component docstrings and the Guide, alongside links to the original paper and EvalSense's own case study. Derive notebook column selections and labels from configured evaluator names.
