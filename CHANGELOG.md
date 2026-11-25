@@ -28,6 +28,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Preserve unregistered generation and evaluation logs when opening a project. Loading no longer deletes files that may be recoverable after an interrupted run.
 - Reject a successful evaluation if its generation was replaced or removed while scoring. Retain the attempted source for diagnosis and retry.
 - Mark previous successful evaluations as needing scoring after their generation is replaced. Preserve their source references and exclude them from successful result summaries.
 - Keep distinct generation attempts in separate evaluation logs, including byte-identical files in different attempt directories.
