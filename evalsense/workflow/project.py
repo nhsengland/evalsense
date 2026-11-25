@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+from tempfile import NamedTemporaryFile
 from typing import Literal, overload
 
 from inspect_ai.log import EvalLog, read_eval_log
@@ -9,6 +10,7 @@ from evalsense.constants import PROJECTS_PATH
 from evalsense.evaluation import (
     EvaluationRecord,
     GenerationRecord,
+    GenerationSource,
     RecordStatus,
     ResultRecord,
 )
@@ -292,27 +294,36 @@ class Project:
 
             # Create a new evaluation log based on the generation log
             log_path = Path(generation_result.log_location)
-            evaluator_name = record_key.evaluator_name
-            log_time, core_name, random_id = log_path.stem.split("_", 2)
-            if record_key.evaluator_fingerprint or record_key.evaluator_provenance_json:
-                # Both configuration and metric implementation participate in
-                # path identity; historical records retain their saved log paths.
-                core_name = f"evaluation-{fingerprint(record_key)}"
-            else:
-                core_name = f"{core_name}-{to_safe_filename(evaluator_name)}"
+            source = GenerationSource.capture(log_path)
+            log_time = log_path.stem.split("_", 1)[0]
             new_log_path = self.evaluation_log_path / (
-                f"{log_time}_{core_name}_{random_id}{log_path.suffix}"
+                f"{log_time}_evaluation-{fingerprint(record_key)}_"
+                f"{source.sha256}{log_path.suffix}"
             )
-            new_log_path.parent.mkdir(parents=True, exist_ok=True)
-            if not new_log_path.exists():
-                shutil.copy(log_path, new_log_path)
+            self._copy_generation_log(source, new_log_path)
             new_record = ResultRecord(
                 log_location=str(new_log_path),
+                source_generation=source,
             )
             self.update_record(record_key, new_record)
             return new_record
         else:
             raise TypeError(f"Invalid record type: {type(record_key)}")
+
+    def _copy_generation_log(self, source: GenerationSource, destination: Path) -> None:
+        """Publish a complete copy only after verifying its source bytes."""
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(
+            dir=destination.parent, prefix=".generation-", suffix=".tmp", delete=False
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+        try:
+            shutil.copy(source.log_location, temporary_path)
+            if GenerationSource.capture(temporary_path).sha256 != source.sha256:
+                raise ValueError("Evaluation copy does not match its generation source.")
+            temporary_path.replace(destination)
+        finally:
+            temporary_path.unlink(missing_ok=True)
 
     def get_log(
         self,

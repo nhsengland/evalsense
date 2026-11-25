@@ -506,6 +506,7 @@ class Pipeline:
                     status=status,
                     error_message=error_message,
                     log_location=log_location,
+                    source_generation=prev_record.source_generation,
                 ),
             )
 

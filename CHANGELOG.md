@@ -20,6 +20,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Per-sample BERTScore now rejects `idf=True` and IDF dictionaries. Only `idf=False` is supported by the current backend.
 
 ### Enhancements
+- Record the source generation log path and SHA256 in evaluation results, including failed scores. Older metadata remains readable.
 - Record the G-Eval integer-response protocol in score metadata and evaluator cache identities so new evaluations do not reuse scores parsed under the previous policy.
 - Show the dataset version and optional experiment name next to the generation ID in summary tables.
 - Accept one balanced quote, Markdown emphasis or inline-code wrapper around a complete QAGS answer. Recognise unspaced question-list prefixes before letters while preserving decimals and signed values. Generic strict parsing is available in `evalsense.utils.text`; legacy extraction utilities remain unchanged.
