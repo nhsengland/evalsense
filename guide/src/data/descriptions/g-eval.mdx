@@ -36,10 +36,34 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
 
 <Typography variant="body2" gutterBottom>
   EvalSense requires one complete non-negative integer within the configured
-  rating scale. Outer whitespace and leading zeroes are accepted. Fractions
-  such as <code>0/10</code>, decimals, signed values and explanatory text fail
-  validation before optional probability weighting. Valid response syntax does
-  not establish the accuracy of the judge or validate multi-token rating weights.
+  rating scale. Outer whitespace is accepted. Sampled ratings also allow leading
+  zeroes; weighted ratings require canonical labels without zero padding.
+  Fractions such as <code>0/10</code>, decimals, signed values and explanatory
+  text fail validation. Valid syntax does not establish the accuracy of the judge.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  Weighted mode requests one output token and requires every rating on the scale
+  to appear as a complete token in the returned probability alternatives.
+  <code>top_logprobs</code> must be a positive integer at least as large as the
+  number of ratings, but the provider must still return every rating. Missing
+  evidence or multi-token ratings cause an error, without falling back to a
+  sampled score. Increase the probability budget where supported, choose a
+  suitable smaller scale, or set <code>logprobs=False</code> to use sampled ratings.
+</Typography>
+
+<Typography variant="body2" gutterBottom>
+  The weighted score is a conditional mean over the reported valid rating tokens.
+  It is an approximation because top-k alternatives can omit other spellings;
+  full-sequence probabilities are not computed. For complete token evidence with
+  probabilities 0.30 for rating 9 and 0.70 for rating 10, and explicit zero mass
+  for every other rating on a 1–10 scale, the raw score is 9.7. If 10 is instead
+  split into tokens 1 and 0, weighted scoring fails instead of interpreting the
+  prefix probability as rating 1 and returning 3.4. Saved scores identify the
+  estimator; weighted scores also retain rating probabilities and accepted mass.
+  Both scoring modes include an estimator-format marker in saved scores and cache identities,
+  so earlier scores without this evidence are re-scored. Generated outputs remain
+  reusable and historical logs remain readable.
 </Typography>
 
 <Typography variant="subtitle1" gutterBottom>
@@ -59,10 +83,10 @@ import LaTeX from "@site/src/components/LaTeX/LaTeX";
     evaluated, the reference text (if available) or any additional contextual information.
 1. **LLM Evaluation**
     - An LLM judge is asked to assign a numerical score to the generated text based
-    on the instructions provided in the prompt. To reduce variance and effects of
-    randomness, it is typically recommended to compute this score using a weighted
-    average of scores according to the token probabilities outputted by the LLM,
-    if available.
+    on the instructions provided in the prompt. EvalSense can use the sampled
+    integer or a weighted mean of the reported rating-token probabilities. The
+    weighted mode requires complete single-token evidence for every allowed rating,
+    as described above.
 
 </Typography>
 
