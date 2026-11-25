@@ -26,6 +26,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Require a complete in-range integer rating instead of extracting numeric fragments from G-Eval responses. Previously scored results are unchanged; use a new evaluator version when re-scoring them.
 - Keep distinct generation configurations on separate rows in tabular summaries. The new `generation_id` column identifies the stored configuration.
 - Build evaluation logs only from successful generations, including when reopening an older project or forcing a scoring run.
 - Retry from a saved log only when it belongs to the current experiment. Start a fresh run for older logs that cannot establish ownership.
