@@ -55,6 +55,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Show the standard evaluation summary in the web UI when logs contain aggregate metrics only. If correlations fail validation, keep the summary visible and report the reason.
 
 ### Documentation
+- Document the complete G-Eval integer-response contract, validation failures, cache migration and the remaining weighted-rating limitations.
 - Document the intended perturbation tiers and their stored IDs in the meta-evaluation notebook.
 - Describe QAGS's EvalSense-specific adaptation, failure behaviour and limitations in component docstrings and the Guide, alongside links to the original paper and EvalSense's own case study. Derive notebook column selections and labels from configured evaluator names.
 - Describe metric provenance and migration. Keep historical logs, retain the lockfile and use frozen installation for the project environment. Recreate evaluators in a fresh process after changing packages. Model/tokenizer files, custom metric code, hardware and numerical nondeterminism still require separate controls; these pins do not guarantee bitwise-identical results.
