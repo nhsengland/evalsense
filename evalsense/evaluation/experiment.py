@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
+import hashlib
+import json
 from functools import total_ordering
+from pathlib import Path
 from typing import Literal
 
 from inspect_ai.dataset import FieldSpec, RecordToSample
@@ -21,6 +24,26 @@ type ExperimentDefinitions = (
 )
 
 
+class GenerationSource(BaseModel, frozen=True):
+    """The generation artifact used by an evaluation.
+
+    Attributes:
+        log_location (str): Resolved path of the source generation log.
+        sha256 (str): SHA256 of the complete source file before scoring.
+    """
+
+    log_location: str
+    sha256: str
+
+    @classmethod
+    def capture(cls, log_location: str | Path) -> "GenerationSource":
+        """Identify a saved generation artifact without depending on Inspect IDs."""
+        path = Path(log_location).resolve()
+        with path.open("rb") as stream:
+            digest = hashlib.file_digest(stream, "sha256").hexdigest()
+        return cls(log_location=str(path), sha256=digest)
+
+
 class ResultRecord(BaseModel, frozen=True):
     """A record indicating the result of generation or evaluation.
 
@@ -28,11 +51,14 @@ class ResultRecord(BaseModel, frozen=True):
         status (RecordStatus): The status of the record.
         error_message (str | None): The error message, if any.
         log_location (str | None): The location of the associated Inspect log file.
+        source_generation (GenerationSource | None): The generation artifact used
+            by an evaluation. None for generation results and older metadata.
     """
 
     status: RecordStatus = "started"
     error_message: str | None = None
     log_location: str | None = None
+    source_generation: GenerationSource | None = None
 
 
 @total_ordering
@@ -58,6 +84,15 @@ class GenerationRecord(BaseModel, frozen=True):
     experiment_name: str | None = None
     generator_fingerprint: str = ""
     task_fingerprint: str = ""
+
+    @property
+    def generation_id(self) -> str:
+        """Stable summary row ID for the stored generation configuration."""
+        fields = self.model_dump(
+            mode="json", include=set(GenerationRecord.model_fields)
+        )
+        encoded = json.dumps(fields, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
     def get_evaluation_record(
         self,

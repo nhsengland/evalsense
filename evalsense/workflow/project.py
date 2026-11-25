@@ -1,5 +1,6 @@
 from pathlib import Path
 import shutil
+from tempfile import NamedTemporaryFile
 from typing import Literal, overload
 
 from inspect_ai.log import EvalLog, read_eval_log
@@ -9,6 +10,7 @@ from evalsense.constants import PROJECTS_PATH
 from evalsense.evaluation import (
     EvaluationRecord,
     GenerationRecord,
+    GenerationSource,
     RecordStatus,
     ResultRecord,
 )
@@ -141,16 +143,23 @@ class Project:
         Args:
             record (ResultRecord | None): The record associated with the log file.
         """
-        if record is not None and record.log_location is not None:
-            log_path = Path(record.log_location)
-            if log_path.exists():
-                log_path.unlink()
+        if record is None or record.log_location is None:
+            return
+        log_path = Path(record.log_location)
+        for records in (self.records.generation, self.records.evaluation):
+            if any(
+                other.log_location and Path(other.log_location).resolve() == log_path.resolve()
+                for other in records.values()
+            ):
+                return
+        log_path.unlink(missing_ok=True)
 
     def update_record(
         self,
         record_key: GenerationRecord | EvaluationRecord,
         record_value: ResultRecord,
         *,
+        keep_previous_log: bool = False,
         init_eval_record_from_generations: bool = False,
     ):
         """Updates the generation or evaluation record with the specified result.
@@ -159,28 +168,51 @@ class Project:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to update.
             record_value (ResultRecord): The generation or evaluation result.
-            init_eval_record_from_generations (bool): Whether to initialise a new
-                evaluation record if the evaluation record does not exist. Defaults
-                to False. This is only applicable if the record_key is an
-                EvaluationRecord.
+            keep_previous_log (bool): Keep the previous file when replacing its record.
+            init_eval_record_from_generations (bool): Whether to initialise or
+                refresh an evaluation from its current successful generation.
+                Defaults to False. Applies only to EvaluationRecord keys.
         """
         current_record = self.get_record(
             record_key,
             init_eval_record_from_generations=init_eval_record_from_generations,
         )
-        if (
-            current_record is not None
-            and current_record.log_location is not None
-            and current_record.log_location != record_value.log_location
-        ):
-            self._remove_log_file(current_record)
-
+        outdated_evaluations = []
+        if type(record_key) is GenerationRecord and record_value.status == "success":
+            dependent_evaluations = [
+                (key, result)
+                for key, result in self.records.evaluation.items()
+                if key.generation_record == record_key and result.status == "success"
+            ]
+            if dependent_evaluations:
+                source = (
+                    GenerationSource.capture(record_value.log_location)
+                    if record_value.log_location
+                    and Path(record_value.log_location).is_file()
+                    else None
+                )
+                outdated_evaluations = [
+                    (key, result)
+                    for key, result in dependent_evaluations
+                    if source is None or result.source_generation != source
+                ]
         if type(record_key) is GenerationRecord:
             self.records.generation[record_key] = record_value
+            for key, result in outdated_evaluations:
+                self.records.evaluation[key] = result.model_copy(
+                    update={"status": "started"}
+                )
         elif type(record_key) is EvaluationRecord:
             self.records.evaluation[record_key] = record_value
         else:
             raise TypeError(f"Invalid record type: {type(record_key)}")
+        if (
+            not keep_previous_log
+            and current_record is not None
+            and current_record.log_location is not None
+            and current_record.log_location != record_value.log_location
+        ):
+            self._remove_log_file(current_record)
         self._save()
 
     def remove_record(
@@ -240,17 +272,16 @@ class Project:
     ) -> ResultRecord | None:
         """Returns the generation or evaluation record for the given key.
 
-        Note: Calling this method may initialise a new evaluation record from
-        the matching generation record if the evaluation record does not exist
-        yet and `init_eval_record_from_generations` is set to True.
+        With `init_eval_record_from_generations=True`, ensure the evaluation
+        uses the current successful generation. Missing or outdated source
+        provenance causes the evaluation to be initialised again.
 
         Args:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to retrieve.
-            init_eval_record_from_generations (bool): Whether to initialise a new
-                evaluation record if the evaluation record does not exist.
-                Defaults to False. This is only applicable if the record_key is
-                an EvaluationRecord.
+            init_eval_record_from_generations (bool): Whether to initialise or
+                refresh an evaluation from its current successful generation.
+                Defaults to False. Applies only to EvaluationRecord keys.
 
         Returns:
             ResultRecord | None: The generation or evaluation result, or None if
@@ -260,49 +291,79 @@ class Project:
             return self._retrieve_verify_record(record_key)
         elif type(record_key) is EvaluationRecord:
             retrieved_eval_record = self._retrieve_verify_record(record_key)
-            if (
-                retrieved_eval_record is not None
-                or not init_eval_record_from_generations
-            ):
+            if not init_eval_record_from_generations:
                 return retrieved_eval_record
 
             generation_result = self._retrieve_verify_record(
                 record_key.generation_record
             )
-            if generation_result is None:
-                return None
             if (
-                generation_result.status != "success"
+                generation_result is None
+                or generation_result.status != "success"
                 or generation_result.log_location is None
             ):
-                self.records.evaluation[record_key] = generation_result
-                self._save()
-                return generation_result
+                return None
+
+            source = GenerationSource.capture(generation_result.log_location)
+            if retrieved_eval_record is not None and retrieved_eval_record.log_location:
+                # Older projects could store a failed generation as an evaluation.
+                evaluation_path = Path(retrieved_eval_record.log_location)
+                if (
+                    retrieved_eval_record.source_generation == source
+                    and evaluation_path.resolve().parent == self.evaluation_log_path.resolve()
+                    and evaluation_path.resolve() != Path(generation_result.log_location).resolve()
+                ):
+                    return retrieved_eval_record
 
             # Create a new evaluation log based on the generation log
             log_path = Path(generation_result.log_location)
-            evaluator_name = record_key.evaluator_name
-            log_time, core_name, random_id = log_path.stem.split("_", 2)
-            if record_key.evaluator_fingerprint or record_key.evaluator_provenance_json:
-                # Both configuration and metric implementation participate in
-                # path identity; historical records retain their saved log paths.
-                core_name = f"evaluation-{fingerprint(record_key)}"
-            else:
-                core_name = f"{core_name}-{to_safe_filename(evaluator_name)}"
+            log_time = log_path.stem.split("_", 1)[0]
+            source_id = fingerprint(source)
             new_log_path = self.evaluation_log_path / (
-                f"{log_time}_{core_name}_{random_id}{log_path.suffix}"
+                f"{log_time}_evaluation-{fingerprint(record_key)}_"
+                f"{source_id}{log_path.suffix}"
             )
-            new_log_path.parent.mkdir(parents=True, exist_ok=True)
-            if not new_log_path.exists():
-                shutil.copy(log_path, new_log_path)
+            self._copy_generation_log(source, new_log_path)
             new_record = ResultRecord(
                 log_location=str(new_log_path),
+                source_generation=source,
             )
-            self.records.evaluation[record_key] = new_record
-            self._save()
+            self.update_record(record_key, new_record)
             return new_record
         else:
             raise TypeError(f"Invalid record type: {type(record_key)}")
+
+    def _matches_generation_source(
+        self, record_key: GenerationRecord, source: GenerationSource | None
+    ) -> bool:
+        """Check that scoring still refers to the current successful generation."""
+        current = self.get_record(record_key)
+        if (
+            source is None
+            or current is None
+            or current.status != "success"
+            or current.log_location is None
+        ):
+            return False
+        try:
+            return GenerationSource.capture(current.log_location) == source
+        except OSError:
+            return False
+
+    def _copy_generation_log(self, source: GenerationSource, destination: Path) -> None:
+        """Publish a complete copy only after verifying its source bytes."""
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with NamedTemporaryFile(
+            dir=destination.parent, prefix=".generation-", suffix=".tmp", delete=False
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+        try:
+            shutil.copy(source.log_location, temporary_path)
+            if GenerationSource.capture(temporary_path).sha256 != source.sha256:
+                raise ValueError("Evaluation copy does not match its generation source.")
+            temporary_path.replace(destination)
+        finally:
+            temporary_path.unlink(missing_ok=True)
 
     def get_log(
         self,
@@ -315,10 +376,9 @@ class Project:
         Args:
             record_key (GenerationRecord | EvaluationRecord): The generation
                 or evaluation record to retrieve.
-            init_eval_record_from_generations (bool): Whether to initialise a new
-                evaluation record if the evaluation record does not exist. Defaults
-                to False. This is only applicable if the record_key is an
-                EvaluationRecord.
+            init_eval_record_from_generations (bool): Whether to initialise or
+                refresh an evaluation from its current successful generation.
+                Defaults to False. Applies only to EvaluationRecord keys.
 
         Returns:
             EvalLog | None: The evaluation log, or None if a valid log does not
@@ -381,6 +441,56 @@ class Project:
 
         return dict(sorted(results.items()))
 
+    def _owns_generation_log(
+        self, log: EvalLog, attempt_dir: Path, task_name: str, generation_id: str
+    ) -> bool:
+        """Check both the output location and the identity recorded by Inspect."""
+        path = Path(log.location).absolute()
+        attempt = attempt_dir.absolute()
+        generation_root = self.generation_log_path.absolute()
+        return (
+            attempt.parent == generation_root / generation_id
+            and path.parent == attempt
+            and path.suffix in {".eval", ".json"}
+            and path.is_file()
+            and not any(
+                item.is_symlink()
+                for item in (path, attempt, attempt.parent, generation_root)
+            )
+            and log.eval.task == task_name
+            and (log.eval.metadata or {}).get("evalsense_generation_id") == generation_id
+        )
+
+    def _recover_generation_log(
+        self, attempt_dir: Path, task_name: str, generation_id: str
+    ) -> EvalLog | None:
+        """Read the single log belonging to the interrupted generation attempt."""
+        generation_dir = self.generation_log_path / generation_id
+        if attempt_dir.parent != generation_dir:
+            return None
+        try:
+            if any(
+                path.is_symlink()
+                for path in (self.generation_log_path, generation_dir, attempt_dir)
+            ):
+                return None
+            candidates = [
+                path for path in attempt_dir.iterdir() if path.suffix in {".eval", ".json"}
+            ]
+            if len(candidates) != 1:
+                return None
+            log_file = candidates[0].absolute()
+            if log_file.is_symlink() or not log_file.is_file():
+                return None
+            log = read_eval_log(str(log_file))
+        except Exception as exc:
+            logger.warning(f"Could not recover a generation log from {attempt_dir}: {exc}")
+            return None
+
+        if self._owns_generation_log(log, attempt_dir, task_name, generation_id):
+            return log
+        return None
+
     def get_incomplete_logs(
         self,
         type: Literal["generation", "evaluation"],
@@ -395,26 +505,22 @@ class Project:
         """
         if type == "generation":
             log_path = self.generation_log_path
-            known_logs = [
-                v.log_location
-                for v in self.records.generation.values()
-                if v.log_location
-            ]
         elif type == "evaluation":
             log_path = self.evaluation_log_path
-            known_logs = [
-                v.log_location
-                for v in self.records.evaluation.values()
-                if v.log_location
-            ]
         else:
             raise ValueError(f"Invalid log type: {type}")
 
+        known_logs = {
+            Path(record.log_location).resolve()
+            for records in (self.records.generation, self.records.evaluation)
+            for record in records.values()
+            if record.log_location is not None
+        }
         incomplete_logs = []
         extensions = [".json", ".eval"]
         for ext in extensions:
             for log_file in log_path.glob(f"*{ext}"):
-                if str(log_file) not in known_logs:
+                if log_file.resolve() not in known_logs:
                     loaded_log = read_eval_log(str(log_file))
                     incomplete_logs.append(loaded_log)
         return incomplete_logs

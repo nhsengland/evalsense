@@ -16,7 +16,7 @@ from inspect_ai.model import (
     ModelOutput,
 )
 
-from evalsense.utils.text import format_template
+from evalsense.utils.text import extract_score, format_template
 
 type JudgeInputScreen = Callable[[str], bool]
 type JudgeRequest = str | JudgePrompt
@@ -134,13 +134,7 @@ async def generate_judge(
 
 def validate_rating(output: ModelOutput, min_score: int, max_score: int) -> int:
     """Require one complete in-range integer before any probability weighting."""
-    text = output.completion.strip()
-    if re.fullmatch(r"[+-]?[0-9]+", text):
-        try:
-            rating = int(text)
-        except ValueError:
-            pass
-        else:
-            if min_score <= rating <= max_score:
-                return rating
-    raise JudgeOutputError("Judge must return one integer within the rating scale.")
+    try:
+        return extract_score(output.completion, min_score, max_score)
+    except ValueError as exc:
+        raise JudgeOutputError(str(exc)) from None

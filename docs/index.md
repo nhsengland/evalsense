@@ -52,7 +52,13 @@ For examples illustrating the usage of EvalSense, please check the notebooks und
 
 - The [Demo notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Demo.ipynb) illustrates a basic application of EvalSense to the ACI-Bench dataset.
 - The [Experiments notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Experiments.ipynb) illustrates more thorough experiments on the same dataset, involving a larger number of evaluators and models.
-- The [Meta-Evaluation notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Meta-Evaluation.ipynb) focuses on meta-evaluation on synthetically perturbed data, where the goal is to identify the most reliable evaluation methods rather than the best-performing models.
+- The [Meta-Evaluation notebook](https://github.com/nhsengland/evalsense/blob/main/notebooks/Meta-Evaluation.ipynb) compares evaluator scores for synthetically perturbed ACI-Bench notes. It reports how closely each evaluator follows the intended order of note quality across perturbation tiers. The assigned tiers represent intended severity and have not been independently verified.
+
+### Evaluation Presets
+
+[Evaluation presets](https://nhsengland.github.io/evalsense/presets) pre-fill the interactive guide with evaluation priorities and selected methods for common scenarios, including discharge summarisation, reference-based summarisation and open-ended question answering. They are starting points for method selection, not completed evaluations or executable benchmarks.
+
+The [method catalogue](https://nhsengland.github.io/evalsense/catalogue) includes methods for comparison and guidance that do not yet have an EvalSense implementation. Check a method's implementation status before using it in a library workflow.
 
 ### Web-Based UI
 
@@ -63,6 +69,10 @@ evalsense webui
 ```
 
 after installing the package and its dependencies. Note that you need to install EvalSense with the `webui` extra (`pip install "evalsense[webui]"`) or an extra that includes it before running this command.
+
+## Licensing
+
+The [EvalSense repository](https://github.com/nhsengland/evalsense) publishes its software under the [MIT Licence](https://github.com/nhsengland/evalsense/blob/main/LICENCE). For reuse of website content, see the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/) notice in the website footer.
 
 ## Acknowledgements
 

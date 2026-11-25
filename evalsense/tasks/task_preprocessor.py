@@ -5,7 +5,7 @@ import datasets
 from inspect_ai.dataset import Dataset, FieldSpec, RecordToSample, json_dataset
 
 from evalsense.datasets.dataset_manager import DatasetManager
-from evalsense.utils.huggingface import disable_dataset_progress_bars
+from evalsense.tasks._transport import TASK_DATA_FORMAT, write_task_data
 from evalsense.utils.files import to_safe_filename
 from evalsense.utils.cache import CacheIdentityError, fingerprint
 
@@ -51,7 +51,13 @@ class TaskPreprocessingFunction(Protocol):
 
 
 class TaskPreprocessor:
-    """A class preprocessing a dataset for a specific task."""
+    """Preprocess a dataset and preserve its supported JSON values in task data.
+
+    Stored Arrow values are written to JSONL without decimal-precision rounding.
+    Materialise transformations in the preprocessing function; display formats
+    and lazy transforms are not applied during serialisation. Unsupported values
+    must be converted before the record-to-sample mapper runs.
+    """
 
     def __init__(
         self,
@@ -77,7 +83,11 @@ class TaskPreprocessor:
     def cache_key(self) -> str:
         """Version custom preprocessing rather than guessing its implementation."""
         return fingerprint(
-            {"implementation": type(self), "function": self.preprocessing_function},
+            {
+                "implementation": type(self),
+                "function": self.preprocessing_function,
+                "transport": TASK_DATA_FORMAT,
+            },
             version=self.version,
         )
 
@@ -102,6 +112,10 @@ class TaskPreprocessor:
 
         Returns:
             (Dataset): The preprocessed dataset.
+
+        Raises:
+            ValueError: A record contains a non-finite floating-point value.
+            TypeError: A record contains a value unsupported by the JSON transport.
         """
         tasks_path = Path(dataset_manager.version_path / "tasks")
         tasks_path.mkdir(parents=True, exist_ok=True)
@@ -119,8 +133,7 @@ class TaskPreprocessor:
             preprocessed_hf_dataset = self.preprocessing_function(
                 hf_dataset, dataset_manager
             )
-            with disable_dataset_progress_bars():
-                preprocessed_hf_dataset.to_json(task_data_path, lines=True)
+            write_task_data(preprocessed_hf_dataset, task_data_path)
 
         dataset = json_dataset(str(task_data_path), sample_fields=field_spec)
         return dataset

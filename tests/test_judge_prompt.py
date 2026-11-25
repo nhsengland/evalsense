@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, Literal, cast
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -77,7 +77,7 @@ def compare(*, question, prediction_answer, reference_answer, **kwargs):
     )
 
 
-def qags(mode="judge"):
+def qags(mode: Literal["ternary", "exact", "judge"] = "judge"):
     return QagsPromptConfig(
         mode,
         question_prompt_builder=questions,
@@ -256,10 +256,19 @@ class GEvalTests(unittest.IsolatedAsyncioTestCase):
         cast(Any, fake.generate).assert_not_called()
 
     async def test_complete_rating_required_before_weighting(self):
-        for response in ("5 with an explanation", "0", "11", "1.0", "5 or 9", ""):
+        for response in (
+            "5 with an explanation",
+            "0",
+            "11",
+            "1.0",
+            "5 or 9",
+            "+5",
+            "-5",
+            "",
+        ):
             fake = model_with(response, "10")
             with patch(
-                "evalsense.evaluation.evaluators.g_eval.extract_weighted_score"
+                "evalsense.evaluation.evaluators.g_eval.extract_weighted_rating"
             ) as weight:
                 with (
                     self.subTest(response=response),
@@ -272,15 +281,44 @@ class GEvalTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(cast(Any, fake.generate).await_count, 1)
 
     async def test_weighted_arithmetic_preserved(self):
+        from math import log
+        from inspect_ai.model import Logprob, Logprobs, TopLogprob
+
         fake = model_with("3")
-        with patch(
-            "evalsense.evaluation.evaluators.g_eval.extract_weighted_score",
-            return_value=2.5,
-        ):
-            score = await GEvalScoreCalculator(
-                fake, "Rate {prediction}", min_score=1, max_score=5
-            ).calculate_async(prediction="plain")
-        self.assertEqual(score.value, 0.375)
+        output = ModelOutput.from_content(model="fixture", content="3")
+        output.choices[0].logprobs = Logprobs(
+            content=[
+                Logprob(
+                    token="3",
+                    logprob=log(0.2),
+                    top_logprobs=[
+                        TopLogprob(token=str(rating), logprob=log(probability))
+                        for rating, probability in enumerate(
+                            (0.35, 0.1, 0.2, 0.3, 0.05), start=1
+                        )
+                    ],
+                )
+            ]
+        )
+        cast(Any, fake.generate).side_effect = [output]
+        score = await GEvalScoreCalculator(
+            fake,
+            "Rate {prediction}",
+            min_score=1,
+            max_score=5,
+            system_prompt="Rubric",
+            input_screen=screen_instruction_phrases,
+        ).calculate_async(prediction="plain")
+        self.assertAlmostEqual(cast(float, score.value), 0.4)
+        assert score.metadata
+        self.assertEqual(score.metadata["estimator"], "weighted_rating_tokens")
+        self.assertEqual(score.metadata["judge_input_protocol"], PROTOCOL)
+        self.assertTrue(score.metadata["judge_input_screening"])
+        self.assertAlmostEqual(score.metadata["rating_probability_mass"], 1.0)
+        self.assertEqual(score.metadata["prompt"][0]["role"], "system")
+        config = cast(Any, fake.generate).call_args.kwargs["config"]
+        self.assertEqual(config.max_tokens, 1)
+        self.assertEqual(config.num_choices, 1)
 
     async def test_real_inspect_provider_receives_exact_messages(self):
         model = get_model(
@@ -386,14 +424,21 @@ class QagsTests(unittest.IsolatedAsyncioTestCase):
 
 class CacheTests(unittest.TestCase):
     def test_g_eval_prompt_and_screen_change_cache_identity(self):
-        base = dict(
-            prompt_template="{prediction}", model_config=ModelConfig("mockllm/judge")
+        model = ModelConfig("mockllm/judge")
+        legacy = get_g_eval_evaluator(
+            prompt_template="{prediction}", model_config=model
         )
-        legacy = get_g_eval_evaluator(**base)
-        split = get_g_eval_evaluator(**base, system_prompt="Rubric A")
-        changed = get_g_eval_evaluator(**base, system_prompt="Rubric B")
+        split = get_g_eval_evaluator(
+            prompt_template="{prediction}", model_config=model, system_prompt="Rubric A"
+        )
+        changed = get_g_eval_evaluator(
+            prompt_template="{prediction}", model_config=model, system_prompt="Rubric B"
+        )
         screened = get_g_eval_evaluator(
-            **base, system_prompt="Rubric A", input_screen=screen_instruction_phrases
+            prompt_template="{prediction}",
+            model_config=model,
+            system_prompt="Rubric A",
+            input_screen=screen_instruction_phrases,
         )
         self.assertEqual(
             len({e.cache_key for e in (legacy, split, changed, screened)}), 4

@@ -25,14 +25,41 @@ from evalsense.evaluation.judge_prompt import (
     validate_rating,
 )
 from evalsense.generation import ModelConfig
-from evalsense.logging import get_logger
-from evalsense.utils.text import extract_weighted_score, format_template
+from evalsense.utils.text import (
+    extract_weighted_rating,
+    format_template,
+    validate_score_range,
+)
 
-logger = get_logger(__name__)
+SCORE_FORMAT = "evalsense.g-eval.integer.v1"
+WEIGHTING_POLICY = "evalsense.g-eval.single-token.v1"
+ESTIMATOR_FORMAT = "evalsense.g-eval.estimator.v1"
+
+
+def validate_weighting_settings(
+    logprobs: bool, top_logprobs: int, min_score: int, max_score: int
+) -> None:
+    """Reject a weighting request that cannot cover the configured rating scale."""
+    if type(logprobs) is not bool:
+        raise ValueError("logprobs must be a boolean.")
+    if logprobs:
+        if type(top_logprobs) is not int or top_logprobs < 1:
+            raise ValueError(
+                "Weighted ratings require top_logprobs to be a positive integer."
+            )
+        if top_logprobs < max_score - min_score + 1:
+            raise ValueError(
+                "top_logprobs must cover every rating on the configured scale."
+            )
 
 
 class GEvalScoreCalculator(ScoreCalculator):
-    """G-Eval score calculator."""
+    """G-Eval with complete, in-range integer responses.
+
+    Weighted mode requires one output token and complete rating evidence in the
+    returned alternatives. Failures never fall back to a sampled rating.
+    Syntax validation does not establish judge accuracy or injection resistance.
+    """
 
     def __init__(
         self,
@@ -54,18 +81,24 @@ class GEvalScoreCalculator(ScoreCalculator):
         Args:
             model (Model): The model to use for evaluation.
             prompt_template (str): The prompt template with the scoring instructions.
-            logprobs (bool): Whether to use model log probabilities to compute weighted
-                evaluation score instead of a standard score.
-            top_logprobs (int): The number of top log probabilities to consider.
+            logprobs (bool): Use a one-token conditional mean over reported valid
+                rating alternatives. Every allowed rating must be present; missing
+                or inconsistent evidence raises ValueError. False uses the sampled
+                integer without a one-token limit.
+            top_logprobs (int): Positive integer alternative count, at least the
+                number of allowed ratings in weighted mode. Providers may impose
+                their own limit or omit low-probability ratings.
             min_score (int): The minimum valid score.
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
-            debug (bool): Whether to report repeated errors in the log.
+            debug (bool): Retained for compatibility. Weighting failures always raise.
             system_prompt (str | None): Complete trusted system message. None retains
                 the legacy single user prompt. The system text is never formatted.
             input_screen (JudgeInputScreen | None): Optional predicate applied to
                 the rendered user prompt. True allows it; False rejects it.
         """
+        validate_score_range(min_score, max_score, normalise=normalise)
+        validate_weighting_settings(logprobs, top_logprobs, min_score, max_score)
         self.model = model
         self.prompt_template = prompt_template
         self.system_prompt = system_prompt
@@ -76,7 +109,6 @@ class GEvalScoreCalculator(ScoreCalculator):
         self.max_score = max_score
         self.normalise = normalise
         self.debug = debug
-        self.warned_weighted_score = False
 
     @override
     def calculate(
@@ -123,10 +155,21 @@ class GEvalScoreCalculator(ScoreCalculator):
 
         Returns:
             Score: The calculated score.
+
+        Raises:
+            ValueError: If settings, the complete integer response or weighted
+                token evidence are invalid. Failed weighting never returns a
+                sampled score, and malformed responses are never repaired.
         """
+        validate_score_range(self.min_score, self.max_score, normalise=self.normalise)
+        validate_weighting_settings(
+            self.logprobs, self.top_logprobs, self.min_score, self.max_score
+        )
         logprobs_config = GenerateConfig(
             logprobs=self.logprobs,
-            top_logprobs=self.top_logprobs,
+            top_logprobs=self.top_logprobs if self.logprobs else None,
+            max_tokens=1 if self.logprobs else None,
+            num_choices=1 if self.logprobs else None,
         )
         if metadata is None:
             metadata = {}
@@ -149,45 +192,42 @@ class GEvalScoreCalculator(ScoreCalculator):
         )
 
         raw_score = validate_rating(output, self.min_score, self.max_score)
+        weighted_rating = None
         if self.logprobs:
-            try:
-                raw_score = extract_weighted_score(
-                    output, min_score=self.min_score, max_score=self.max_score
-                )
-            except ValueError as e:
-                if not self.warned_weighted_score or self.debug:
-                    self.warned_weighted_score = True
-
-                    error_message = (
-                        f"❌  Cannot compute weighted evaluation score: {e} "
-                        "Falling back to standard score."
-                    )
-
-                    if not self.debug:
-                        error_message += (
-                            " Further errors will be suppressed "
-                            + "(set debug=True to see all errors)."
-                        )
-                    error_message += f" Offending output: {output.completion}"
-
-                    logger.error(error_message)
+            weighted_rating = extract_weighted_rating(
+                output, min_score=self.min_score, max_score=self.max_score
+            )
+            raw_score = weighted_rating.score
 
         if self.normalise:
             score = (raw_score - self.min_score) / (self.max_score - self.min_score)
         else:
             score = raw_score
 
-        return Score(
-            value=score,
-            answer=prediction,
-            metadata={
-                "prompt": llm_input,
-                "judge_input_protocol": PROTOCOL,
-                "judge_input_screening": self.input_screen is not None,
-                "output_text": output.completion,
-                "raw_score": raw_score,
-            },
-        )
+        score_metadata: dict[str, Any] = {
+            "prompt": llm_input,
+            "judge_input_protocol": PROTOCOL,
+            "judge_input_screening": self.input_screen is not None,
+            "output_text": output.completion,
+            "raw_score": raw_score,
+            "score_format": SCORE_FORMAT,
+            "estimator_format": ESTIMATOR_FORMAT,
+            "estimator": "weighted_rating_tokens"
+            if self.logprobs
+            else "sampled_rating",
+        }
+        if weighted_rating is not None:
+            score_metadata.update(
+                weighting_policy=WEIGHTING_POLICY,
+                rating_probabilities={
+                    str(rating): probability
+                    for rating, probability in sorted(
+                        weighted_rating.probabilities.items()
+                    )
+                },
+                rating_probability_mass=weighted_rating.probability_mass,
+            )
+        return Score(value=score, answer=prediction, metadata=score_metadata)
 
 
 class GEvalScorerFactory(ScorerFactory):
@@ -219,18 +259,24 @@ class GEvalScorerFactory(ScorerFactory):
             metrics (list[Metric | dict[str, list[Metric]]] | dict[str, list[Metric]] | None):
                 The metrics to use for the evaluation. If `None`, the default metric
                 will be used (G-Eval with mean aggregation).
-            logprobs (bool): Whether to use model log probabilities to compute weighted
-                evaluation score instead of a standard score.
-            top_logprobs (int): The number of top log probabilities to consider.
+            logprobs (bool): Use a one-token conditional mean over reported valid
+                rating alternatives. Every allowed rating must be present; missing
+                or inconsistent evidence raises ValueError. False uses the sampled
+                integer without a one-token limit.
+            top_logprobs (int): Positive integer alternative count, at least the
+                number of allowed ratings in weighted mode. Providers may impose
+                their own limit or omit low-probability ratings.
             min_score (int): The minimum valid score.
             max_score (int): The maximum valid score.
             normalise (bool): Whether to normalise the scores between 0 and 1.
-            debug (bool): Whether to report repeated errors in the log.
+            debug (bool): Retained for compatibility. Weighting failures always raise.
             system_prompt (str | None): Complete trusted system message. None retains
                 the legacy single user prompt. The system text is never formatted.
             input_screen (JudgeInputScreen | None): Optional predicate applied to
                 the rendered user prompt. True allows it; False rejects it.
         """
+        validate_score_range(min_score, max_score, normalise=normalise)
+        validate_weighting_settings(logprobs, top_logprobs, min_score, max_score)
         self.name = name
         self.prompt_template = prompt_template
         self.system_prompt = system_prompt
@@ -320,16 +366,22 @@ def get_g_eval_evaluator(
             be a format string with {prediction} and (optionally) {reference} as
             placeholders, as well as any additional placeholders for entries in
             Inspect AI sample/task state metadata. The template should instruct the
-            judge model to respond with a numerical score between the specified
-            min_score and max_score.
+            judge model to return only one non-negative integer between min_score
+            and max_score. Fractions, decimals, signs and explanatory text fail
+            validation. Outer whitespace is accepted. Leading zeroes are accepted
+            only when logprobs=False; weighted mode requires canonical labels.
         model_config (ModelConfig): The model configuration.
-        logprobs (bool): Whether to use model log probabilities to compute weighted
-            evaluation score instead of a standard score.
-        top_logprobs (int): The number of top log probabilities to consider.
+        logprobs (bool): Use a one-token conditional mean over reported valid
+            rating alternatives, requiring evidence for every allowed rating.
+            Missing evidence raises ValueError without a sampled-score fallback.
+            False explicitly uses the sampled integer.
+        top_logprobs (int): Positive integer alternative count, at least the
+            number of allowed ratings in weighted mode. This budget does not
+            guarantee the provider returns every rating.
         min_score (int): The minimum valid score.
         max_score (int): The maximum valid score.
         normalise (bool): Whether to normalise the scores between 0 and 1.
-        debug (bool): Whether to report repeated errors in the log.
+        debug (bool): Retained for compatibility. Weighting failures always raise.
 
         version (str | None): Cache version for custom code or external resources,
             including custom input screens.
@@ -341,10 +393,13 @@ def get_g_eval_evaluator(
             Supply and bump version for custom screening code.
 
     Returns:
-        Evaluator: The constructed G-Eval evaluator.
+        Evaluator: The constructed G-Eval evaluator. Cache identity includes the
+            estimator format and, for weighted mode, the weighting policy.
     """
     cache_parameters = {
         "method": "g_eval",
+        "score_format": SCORE_FORMAT,
+        "estimator_format": ESTIMATOR_FORMAT,
         "quality_name": quality_name,
         "metrics": metrics,
         "prompt_template": prompt_template,
@@ -358,6 +413,8 @@ def get_g_eval_evaluator(
         "normalise": normalise,
         "debug": debug,
     }
+    if logprobs:
+        cache_parameters["weighting_policy"] = WEIGHTING_POLICY
     metric_name = f"{name} ({quality_name}, {model_name or model_config.name})"
     return Evaluator(
         version=version,

@@ -1,8 +1,10 @@
+from pathlib import Path
 from typing import Any, cast
+from uuid import uuid4
 
 from inspect_ai import Task, eval, eval_retry, score, task
 from inspect_ai.dataset import Dataset
-from inspect_ai.log import EvalLog, read_eval_log, write_eval_log
+from inspect_ai.log import EvalLog, write_eval_log
 from inspect_ai.model import GenerateConfig, Model, get_model
 from tqdm.auto import tqdm
 
@@ -16,6 +18,7 @@ from evalsense.evaluation import (
 )
 from evalsense.logging import get_logger
 from evalsense.generation import ModelConfig
+from evalsense.utils.cache import fingerprint
 from evalsense.utils.files import to_safe_filename
 from evalsense.workflow.project import Project
 
@@ -180,8 +183,11 @@ class Pipeline:
                 to pass to the Inspect eval function for retrying failed tasks.
                 Defaults to empty dictionary when None.
         """
-        prev_record = self.project.get_record(experiment.generation_record)
-        interrupted = False
+        record_key = experiment.generation_record
+        generation_id = fingerprint(record_key)
+        attempt_dir = self.project.generation_log_path / generation_id / uuid4().hex
+        attempt_dir.mkdir(parents=True)
+        prev_record = self.project.get_record(record_key)
 
         # Inspect AI logs can only include serialisible task arguments, so we
         # need to use a closure to pass the dataset and solvers to the task.
@@ -199,56 +205,85 @@ class Pipeline:
                 dataset=inspect_dataset,
                 solver=experiment.generation_steps.steps,
                 name=task_name,
+                metadata={"evalsense_generation_id": generation_id},
             )
 
         # We need to create the task even when resuming from a previous log,
         # otherwise Inspect will not be able to resolve it.
-        inspect_task = create_task(to_safe_filename(experiment.generation_record.label))
-        if prev_record is None or prev_record.log_location is None or force_rerun:
-            self.project.update_record(experiment.generation_record, ResultRecord())
+        inspect_task = create_task(to_safe_filename(record_key.label))
+        previous_log = None
+        if not force_rerun and prev_record is not None and prev_record.log_location:
+            path = Path(prev_record.log_location)
+            if path.parent.parent.absolute() == attempt_dir.parent.absolute():
+                candidate = self.project._recover_generation_log(
+                    path.parent, inspect_task.name, generation_id
+                )
+                if (
+                    candidate is not None
+                    and Path(candidate.location) == path.absolute()
+                    and candidate.status != "success"
+                ):
+                    previous_log = candidate
 
-            # Try generating the model outputs.
-            try:
+        try:
+            if previous_log is None:
+                self.project.update_record(
+                    record_key, ResultRecord(), keep_previous_log=True
+                )
                 eval_logs = eval(
                     tasks=inspect_task,
                     model=self._active_model,
-                    log_dir=str(self.project.generation_log_path),
+                    log_dir=str(attempt_dir),
                     score=False,
                     **(eval_kwargs or dict()),
                 )
-            except BaseException as e:
-                eval_logs = self.project.get_incomplete_logs(type="generation")
-                interrupted = isinstance(e, KeyboardInterrupt)
-        else:
-            logger.info(
-                f"🔁  Retrying generation using log: {prev_record.log_location}"
-            )
-            prev_log = read_eval_log(prev_record.log_location)
-
-            # Retry generation using the previous log
-            try:
+            else:
+                logger.info(f"Retrying generation using log: {previous_log.location}")
                 eval_logs = eval_retry(
-                    tasks=prev_log,
-                    log_dir=str(self.project.generation_log_path),
+                    tasks=previous_log,
+                    log_dir=str(attempt_dir),
                     **(eval_retry_kwargs or dict()),
                 )
-            except BaseException as e:
-                eval_logs = self.project.get_incomplete_logs(type="generation")
-                interrupted = isinstance(e, KeyboardInterrupt)
+        except (Exception, KeyboardInterrupt) as exc:
+            message = str(exc) or type(exc).__name__
+            recovered = self.project._recover_generation_log(
+                attempt_dir, inspect_task.name, generation_id
+            )
+            if (
+                recovered is not None and previous_log is not None
+                and recovered.eval.task_id != previous_log.eval.task_id
+            ):
+                recovered = None
+            self.project.update_record(
+                record_key,
+                ResultRecord(
+                    status="error",
+                    error_message=message,
+                    log_location=recovered.location if recovered is not None else None,
+                ),
+                keep_previous_log=True,
+            )
+            logger.error(f"Generation failed: {message}")
+            if isinstance(exc, KeyboardInterrupt):
+                raise
+            return
 
         # Check generation status and update the project record
         status = "error"
         error_message = "Unknown error"
         log_location = None
-        if not eval_logs:
-            error_message = "No log returned from an experiment."
-            logger.error("❌  Generation failed: no log returned from an experiment.")
+        if len(eval_logs) != 1:
+            error_message = f"Expected one generation log, received {len(eval_logs)}."
+            logger.error(error_message)
+        elif (
+            not self.project._owns_generation_log(
+                eval_logs[0], attempt_dir, inspect_task.name, generation_id
+            )
+            or (previous_log and eval_logs[0].eval.task_id != previous_log.eval.task_id)
+        ):
+            error_message = "Returned generation log does not belong to this attempt."
+            logger.error(error_message)
         else:
-            if len(eval_logs) > 1:
-                logger.warning(
-                    f"⚠️  Unexpected number of eval logs ({len(eval_logs)} > 1), "
-                    "results may be ignored."
-                )
             eval_log = eval_logs[0]
             log_location = eval_log.location
 
@@ -268,20 +303,15 @@ class Pipeline:
                 status = "success"
                 error_message = None
                 logger.info(
-                    f"✅  Generation for {experiment.generation_record.label} "
+                    f"✅  Generation for {record_key.label} "
                     "completed successfully."
                 )
         self.project.update_record(
-            experiment.generation_record,
+            record_key,
             ResultRecord(
                 status=status, error_message=error_message, log_location=log_location
             ),
         )
-
-        # If user interrupted the generation, raise KeyboardInterrupt
-        if interrupted:
-            logger.critical("🛑  Execution was interrupted.")
-            raise KeyboardInterrupt()
 
     def generate(
         self,
@@ -373,8 +403,9 @@ class Pipeline:
         Args:
             show_progress (bool, optional): Whether to show a progress bar.
                 Defaults to True.
-            force_rerun (bool, optional): Whether to force rerun the experiments.
-                Defaults to False.
+            force_rerun (bool, optional): Rescore the current successful
+                generation even when its evaluation is already complete. Does
+                not generate new outputs. Defaults to False.
             score_kwargs (dict[str, Any], optional): Additional arguments to pass
                 to the Inspect score function. Defaults to empty dictionary when
                 None.
@@ -463,6 +494,11 @@ class Pipeline:
                 elif score_log.status == "cancelled":
                     error_message = "Evaluation was cancelled."
                     logger.error("❌  Evaluation was cancelled.")
+                elif score_log.status == "success" and not self.project._matches_generation_source(
+                    experiment.generation_record, prev_record.source_generation
+                ):
+                    error_message = "Generation source changed during evaluation. Rerun evaluation."
+                    logger.error(error_message)
                 elif score_log.status == "success":
                     status = "success"
                     error_message = None
@@ -476,6 +512,7 @@ class Pipeline:
                     status=status,
                     error_message=error_message,
                     log_location=log_location,
+                    source_generation=prev_record.source_generation,
                 ),
             )
 
@@ -511,8 +548,8 @@ class Pipeline:
         Args:
             show_progress (bool, optional): Whether to show a progress bar.
                 Defaults to True.
-            force_rerun (bool, optional): Whether to force rerun the experiments.
-                Defaults to False.
+            force_rerun (bool, optional): Generate new outputs and score that
+                new generation, replacing cached results. Defaults to False.
             force_reload (bool, optional): Whether to force reloading and
                 reprocessing the datasets. Defaults to False.
             eval_kwargs (dict[str, Any], optional): Additional arguments to pass

@@ -1,0 +1,353 @@
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from inspect_ai.log import EvalConfig, EvalDataset, EvalLog, EvalSpec, write_eval_log
+from inspect_ai.scorer import exact
+from inspect_ai.solver import generate
+
+from evalsense.datasets.managers.huggingface import HuggingFaceDatasetManager
+from evalsense.evaluation import Evaluator, ExperimentConfig, GenerationSource, ResultRecord
+from evalsense.generation import GenerationSteps, ModelConfig
+from evalsense.workflow import Pipeline, Project
+
+
+class EvaluationSourceTests(unittest.TestCase):
+    def setUp(self):
+        storage = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        self.enterContext(patch("evalsense.workflow.project.PROJECTS_PATH", storage))
+        self.project = Project("source")
+        self.experiment = ExperimentConfig(
+            HuggingFaceDatasetManager("fixture", version="1", splits=["test"]),
+            GenerationSteps("generate", generate()),
+            ModelConfig("mockllm/model"),
+            evaluator=Evaluator("exact", exact()),
+        )
+        self.generation_key = self.experiment.generation_record
+        self.evaluation_key = self.experiment.evaluation_record
+
+    def save_generation(self, name="2026_task_first.json", marker="first"):
+        path = self.project.generation_log_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        write_eval_log(
+            EvalLog(
+                status="success",
+                eval=EvalSpec(
+                    created="2026-01-01T00:00:00Z",
+                    task="task",
+                    model="model",
+                    dataset=EvalDataset(),
+                    config=EvalConfig(),
+                    metadata={"marker": marker},
+                ),
+                samples=[],
+            ),
+            location=str(path),
+        )
+        self.project.update_record(
+            self.generation_key,
+            ResultRecord(status="success", log_location=str(path)),
+        )
+        return path
+
+    def initialise(self):
+        result = self.project.get_record(
+            self.evaluation_key, init_eval_record_from_generations=True
+        )
+        assert result is not None and result.log_location is not None
+        return result
+
+    def test_source_is_saved_and_survives_scoring_and_reopening(self):
+        for suffix in ("json", "eval"):
+            with self.subTest(suffix=suffix):
+                self.project = Project("source-" + suffix)
+                path = self.save_generation("2026_task_first." + suffix)
+                contents = path.read_bytes()
+                initial = self.initialise()
+                expected = GenerationSource(
+                    log_location=str(path.resolve()),
+                    sha256=hashlib.sha256(contents).hexdigest(),
+                )
+                self.assertEqual(initial.source_generation, expected)
+                with patch(
+                    "evalsense.workflow.pipeline.score", side_effect=lambda log, **kw: log
+                ):
+                    Pipeline(self.experiment, self.project).evaluate(show_progress=False)
+                saved = Project(self.project.name).get_record(self.evaluation_key)
+                assert saved is not None
+                self.assertEqual(saved.status, "success")
+                self.assertEqual(saved.source_generation, expected)
+                self.assertEqual(path.read_bytes(), contents)
+
+    def test_old_metadata_without_source_remains_readable(self):
+        self.save_generation()
+        initial = self.initialise()
+        metadata_path = self.project.project_path / Project.METADATA_FILE
+        metadata = json.loads(metadata_path.read_text())
+        for _, record in metadata["evaluation"]:
+            record.pop("source_generation")
+        metadata_path.write_text(json.dumps(metadata))
+        reopened = Project(self.project.name).get_record(self.evaluation_key)
+        assert reopened is not None
+        self.assertIsNone(reopened.source_generation)
+        self.assertEqual(reopened.log_location, initial.log_location)
+
+    def test_manual_evaluator_names_cannot_overwrite_another_results_log(self):
+        self.save_generation()
+        first_key = self.evaluation_key.model_copy(
+            update={"evaluator_name": "a b", "evaluator_fingerprint": ""}
+        )
+        second_key = first_key.model_copy(update={"evaluator_name": "a-b"})
+        first = self.project.get_record(first_key, init_eval_record_from_generations=True)
+        assert first is not None and first.log_location
+        first_path = Path(first.log_location)
+        contents = first_path.read_bytes() + b"\n"
+        first_path.write_bytes(contents)
+        completed = first.model_copy(update={"status": "success"})
+        self.project.update_record(first_key, completed)
+        second = self.project.get_record(second_key, init_eval_record_from_generations=True)
+        assert second is not None
+        self.assertNotEqual(second.log_location, first.log_location)
+        self.assertEqual(self.project.get_record(first_key), completed)
+        self.assertEqual(first_path.read_bytes(), contents)
+
+    def test_long_generation_filename_uses_a_bounded_evaluation_name(self):
+        path = self.save_generation("2026_task_" + "x" * 150 + ".json")
+        result = self.initialise()
+        assert result.log_location
+        self.assertLessEqual(len(Path(result.log_location).name.encode("utf-8")), 255)
+        self.assertEqual(result.source_generation, GenerationSource.capture(path))
+
+    def test_mismatched_copy_cannot_receive_source_provenance(self):
+        self.save_generation()
+
+        def wrong_copy(source, destination):
+            Path(destination).write_text("unrelated bytes")
+
+        with patch("evalsense.workflow.project.shutil.copy", side_effect=wrong_copy):
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                self.initialise()
+        self.assertNotIn(self.evaluation_key, self.project.records.evaluation)
+        self.assertEqual(Project(self.project.name).records.evaluation, {})
+
+
+    def test_new_generation_refreshes_an_existing_success(self):
+        first_path = self.save_generation()
+        first = self.initialise()
+        self.project.update_record(
+            self.evaluation_key, first.model_copy(update={"status": "success"})
+        )
+        second_path = self.save_generation("2026_task_second.json", "second")
+        refreshed = self.initialise()
+        self.assertEqual(refreshed.status, "started")
+        self.assertEqual(refreshed.source_generation, GenerationSource.capture(second_path))
+        self.assertNotEqual(refreshed.source_generation, first.source_generation)
+        log = self.project.get_log(self.evaluation_key)
+        assert log is not None
+        self.assertEqual(log.eval.metadata, {"marker": "second"})
+        self.assertNotEqual(str(first_path), str(second_path))
+
+    def test_replaced_source_at_the_same_path_is_refreshed(self):
+        path = self.save_generation()
+        first = self.initialise()
+        self.save_generation(marker="replacement")
+        refreshed = self.initialise()
+        self.assertEqual(refreshed.source_generation, GenerationSource.capture(path))
+        self.assertNotEqual(refreshed.source_generation, first.source_generation)
+        log = self.project.get_log(self.evaluation_key)
+        assert log is not None
+        self.assertEqual(log.eval.metadata, {"marker": "replacement"})
+
+    def test_unchanged_source_reuses_success_without_copying(self):
+        self.save_generation()
+        first = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, first)
+        with patch("evalsense.workflow.project.shutil.copy") as copy:
+            self.assertEqual(self.initialise(), first)
+        copy.assert_not_called()
+
+    def test_legacy_success_is_refreshed_once(self):
+        path = self.save_generation()
+        legacy = self.initialise().model_copy(
+            update={"status": "success", "source_generation": None}
+        )
+        self.project.update_record(self.evaluation_key, legacy)
+        self.project = Project(self.project.name)
+        self.assertEqual(self.project.get_record(self.evaluation_key), legacy)
+        refreshed = self.initialise()
+        self.assertEqual(refreshed.status, "started")
+        self.assertEqual(refreshed.source_generation, GenerationSource.capture(path))
+        completed = refreshed.model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, completed)
+        self.project = Project(self.project.name)
+        self.assertEqual(self.initialise(), completed)
+
+    def test_each_evaluator_refreshes_its_own_copy(self):
+        self.save_generation()
+        self.initialise()
+        other_key = self.evaluation_key.model_copy(update={"evaluator_name": "other"})
+        other = self.project.get_record(other_key, init_eval_record_from_generations=True)
+        assert other is not None
+        path = self.save_generation("2026_task_second.json", "second")
+        first_new = self.initialise()
+        self.assertEqual(self.project.get_record(other_key), other)
+        other_new = self.project.get_record(other_key, init_eval_record_from_generations=True)
+        assert other_new is not None
+        self.assertEqual(first_new.source_generation, GenerationSource.capture(path))
+        self.assertEqual(other_new.source_generation, first_new.source_generation)
+        self.assertNotEqual(other_new.log_location, first_new.log_location)
+
+
+    def test_identical_files_in_different_attempts_have_separate_evaluation_logs(self):
+        first_path = self.save_generation("attempt-one/2026_task_same.json")
+        first = self.initialise()
+        second_path = self.project.generation_log_path / "attempt-two/2026_task_same.json"
+        second_path.parent.mkdir(parents=True)
+        shutil.copy(first_path, second_path)
+        self.project.update_record(
+            self.generation_key,
+            ResultRecord(status="success", log_location=str(second_path)),
+        )
+        second = self.initialise()
+        assert first.source_generation and second.source_generation
+        self.assertEqual(first.source_generation.sha256, second.source_generation.sha256)
+        self.assertNotEqual(first.source_generation, second.source_generation)
+        self.assertNotEqual(first.log_location, second.log_location)
+
+    def test_copy_failure_keeps_the_previous_record_and_complete_log(self):
+        self.save_generation()
+        first = self.initialise()
+        assert first.log_location
+        contents = Path(first.log_location).read_bytes()
+        self.save_generation(marker="replacement")
+        previous = self.project.get_record(self.evaluation_key)
+
+        def interrupted_copy(source, destination):
+            Path(destination).write_text("partial copy")
+            raise OSError("copy interrupted")
+
+        with patch("evalsense.workflow.project.shutil.copy", side_effect=interrupted_copy):
+            with self.assertRaisesRegex(OSError, "copy interrupted"):
+                self.initialise()
+        self.assertEqual(self.project.get_record(self.evaluation_key), previous)
+        self.assertEqual(Path(first.log_location).read_bytes(), contents)
+        self.assertEqual(list(self.project.evaluation_log_path.glob("*.tmp")), [])
+        self.assertEqual(
+            list(self.project.evaluation_log_path.glob("*.json")), [Path(first.log_location)]
+        )
+
+    def test_corrupt_copy_leaves_no_temporary_log_or_record(self):
+        self.save_generation()
+
+        def corrupt_copy(source, destination):
+            Path(destination).write_text("corrupt copy")
+
+        with patch("evalsense.workflow.project.shutil.copy", side_effect=corrupt_copy):
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                self.initialise()
+        self.assertNotIn(self.evaluation_key, self.project.records.evaluation)
+        self.assertEqual(list(self.project.evaluation_log_path.iterdir()), [])
+
+
+    def test_new_generation_invalidates_only_its_successful_evaluations(self):
+        old_path = self.save_generation()
+        first = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, first)
+        second_key = self.evaluation_key.model_copy(update={"evaluator_name": "other"})
+        second = self.project.get_record(second_key, init_eval_record_from_generations=True)
+        assert second is not None
+        self.project.update_record(second_key, second.model_copy(update={"status": "success"}))
+
+        unrelated_generation = self.generation_key.model_copy(update={"generator_name": "other"})
+        self.project.update_record(
+            unrelated_generation, ResultRecord(status="success", log_location=str(old_path))
+        )
+        unrelated_key = unrelated_generation.get_evaluation_record("exact")
+        unrelated = self.project.get_record(unrelated_key, init_eval_record_from_generations=True)
+        assert unrelated is not None
+        self.project.update_record(unrelated_key, unrelated.model_copy(update={"status": "success"}))
+
+        self.save_generation("2026_task_second.json", "replacement")
+        reopened = Project(self.project.name)
+        for key in (self.evaluation_key, second_key):
+            invalidated = reopened.get_record(key)
+            assert invalidated is not None
+            self.assertEqual(invalidated.status, "started")
+            self.assertEqual(invalidated.source_generation, first.source_generation)
+            self.assertIsNotNone(reopened.get_log(key))
+        self.assertEqual(set(reopened.get_logs("evaluation", status="success")), {unrelated_key})
+
+    def test_unchanged_generation_keeps_successful_evaluations(self):
+        path = self.save_generation()
+        completed = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, completed)
+        self.project.update_record(
+            self.generation_key, ResultRecord(status="success", log_location=str(path))
+        )
+        self.assertEqual(self.project.get_record(self.evaluation_key), completed)
+        self.assertIn(self.evaluation_key, self.project.get_logs("evaluation", status="success"))
+
+    def test_failed_generation_preserves_the_previous_evaluation_record(self):
+        self.save_generation()
+        completed = self.initialise().model_copy(update={"status": "success"})
+        self.project.update_record(self.evaluation_key, completed)
+        self.project.update_record(
+            self.generation_key,
+            ResultRecord(status="error", error_message="generation failed"),
+            keep_previous_log=True,
+        )
+        self.assertEqual(self.project.get_record(self.evaluation_key), completed)
+        self.assertIsNone(self.project.get_record(self.evaluation_key, init_eval_record_from_generations=True))
+
+
+    def test_replaced_generation_during_scoring_is_recorded_as_an_error(self):
+        for same_path in (False, True):
+            with self.subTest(same_path=same_path):
+                self.project = Project("source-change-" + str(same_path))
+                original = self.save_generation()
+                source = GenerationSource.capture(original)
+
+                def replace_generation(log, **kwargs):
+                    name = original.name if same_path else "2026_task_replacement.json"
+                    self.save_generation(name, "replacement")
+                    return log
+
+                with patch("evalsense.workflow.pipeline.score", side_effect=replace_generation):
+                    Pipeline(self.experiment, self.project).evaluate(show_progress=False)
+                failed = self.project.get_record(self.evaluation_key)
+                assert failed is not None
+                self.assertEqual(failed.status, "error")
+                self.assertEqual(failed.source_generation, source)
+                self.assertIn("Generation source changed", failed.error_message or "")
+                self.assertEqual(self.project.get_logs("evaluation", status="success"), {})
+
+                with patch("evalsense.workflow.pipeline.score", side_effect=lambda log, **kw: log):
+                    Pipeline(self.experiment, self.project).evaluate(show_progress=False)
+                completed = self.project.get_record(self.evaluation_key)
+                generation = self.project.get_record(self.generation_key)
+                assert completed is not None and generation is not None and generation.log_location
+                self.assertEqual(completed.status, "success")
+                self.assertEqual(completed.source_generation, GenerationSource.capture(generation.log_location))
+                self.assertNotEqual(completed.source_generation, source)
+
+    def test_removed_generation_during_scoring_cannot_record_success(self):
+        path = self.save_generation()
+
+        def remove_source(log, **kwargs):
+            path.unlink()
+            return log
+
+        with patch("evalsense.workflow.pipeline.score", side_effect=remove_source):
+            Pipeline(self.experiment, self.project).evaluate(show_progress=False)
+        result = self.project.get_record(self.evaluation_key)
+        assert result is not None
+        self.assertEqual(result.status, "error")
+        self.assertIn("Generation source changed", result.error_message or "")
+
+
+if __name__ == "__main__":
+    unittest.main()

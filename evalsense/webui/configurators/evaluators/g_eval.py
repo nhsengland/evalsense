@@ -1,3 +1,4 @@
+import math
 from typing import override
 
 import gradio as gr
@@ -12,6 +13,30 @@ from evalsense.webui.configurators.evaluator_configurator import (
     configurator,
 )
 from evalsense.webui.utils import dict_parser
+
+
+def _rating_bound(value: int | float) -> int:
+    """Accept integral UI numbers without truncating a fractional rating bound."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("Rating scale endpoints must be non-negative integers.")
+    if isinstance(value, float) and (
+        not math.isfinite(value) or not value.is_integer()
+    ):
+        raise ValueError("Rating scale endpoints must be non-negative integers.")
+    if value < 0:
+        raise ValueError("Rating scale endpoints must be non-negative integers.")
+    return int(value)
+
+
+def _top_logprobs(value: int | float) -> int:
+    """Require a positive integer without rounding the requested token budget."""
+    try:
+        count = _rating_bound(value)
+    except ValueError:
+        raise ValueError("Top log probabilities must be a positive integer.") from None
+    if count == 0:
+        raise ValueError("Top log probabilities must be a positive integer.")
+    return count
 
 
 @configurator
@@ -50,7 +75,7 @@ class GEvalConfigurator(EvaluatorConfigurator):
                 "input_name": "prompt_template",
                 "component": gr.TextArea(
                     label="User Prompt Template",
-                    info="The complete user message template. The supplied template should be a Python format string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. The template should instruct the judge model to respond with a numerical score between the specified `min_score` and `max_score`.",
+                    info="The complete user message template. The supplied template should be a Python format string with `{prediction}` and (optionally) `{reference}` as placeholders, as well as any additional placeholders for entries in Inspect AI sample/task state metadata. The template must request only one non-negative integer between `min_score` and `max_score`, without a denominator, sign, decimal or explanation.",
                     max_lines=15,
                 ),
                 "parser": None,
@@ -101,25 +126,25 @@ class GEvalConfigurator(EvaluatorConfigurator):
                 "input_name": "min_score",
                 "component": gr.Number(
                     label="Min Score",
-                    info="The minimum score on the G-Eval rating scale.",
+                    info="The minimum non-negative integer on the G-Eval rating scale.",
                     value=1,
                 ),
-                "parser": int,
+                "parser": _rating_bound,
             },
             {
                 "input_name": "max_score",
                 "component": gr.Number(
                     label="Max Score",
-                    info="The maximum score on the G-Eval rating scale.",
+                    info="The maximum non-negative integer on the G-Eval rating scale.",
                     value=5,
                 ),
-                "parser": int,
+                "parser": _rating_bound,
             },
             {
                 "input_name": "logprobs",
                 "component": gr.Checkbox(
-                    label="Log Probs",
-                    info="Whether to use log probabilities of the generated tokens to compute a weighted evaluation score.",
+                    label="Probability-weighted Ratings",
+                    info="Average the reported probabilities of complete, single-token ratings. Every rating on the scale must appear in the returned alternatives. Missing or split-token ratings fail. Untick to use the sampled integer instead.",
                     value=True,
                 ),
                 "parser": None,
@@ -127,11 +152,11 @@ class GEvalConfigurator(EvaluatorConfigurator):
             {
                 "input_name": "top_logprobs",
                 "component": gr.Number(
-                    label="Top Log Probs",
-                    info="The number of top log probabilities to consider for each generated token.",
+                    label="Top Log Probabilities",
+                    info="Positive integer number of token alternatives to request. For weighted ratings, this must be at least the number of ratings on the scale. The provider must still return every rating; its limit may require a smaller scale or sampled ratings.",
                     value=20,
                 ),
-                "parser": int,
+                "parser": _top_logprobs,
             },
             {
                 "input_name": "normalise",
