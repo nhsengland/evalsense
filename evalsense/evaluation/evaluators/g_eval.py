@@ -22,6 +22,8 @@ from evalsense.utils.text import extract_score, extract_weighted_score, format_t
 
 logger = get_logger(__name__)
 
+SCORE_FORMAT = "evalsense.g-eval.integer.v1"
+
 
 class GEvalScoreCalculator(ScoreCalculator):
     """G-Eval score calculator."""
@@ -158,6 +160,7 @@ class GEvalScoreCalculator(ScoreCalculator):
                 "prompt": llm_input,
                 "output_text": output.completion,
                 "raw_score": raw_score,
+                "score_format": SCORE_FORMAT,
             },
         )
 
@@ -297,6 +300,7 @@ def get_g_eval_evaluator(
     """
     cache_parameters = {
         "method": "g_eval",
+        "score_format": SCORE_FORMAT,
         "quality_name": quality_name,
         "metrics": metrics,
         "prompt_template": prompt_template,
