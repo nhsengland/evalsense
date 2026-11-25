@@ -250,9 +250,9 @@ class Project:
     ) -> ResultRecord | None:
         """Returns the generation or evaluation record for the given key.
 
-        Note: Calling this method may initialise a new evaluation record from
-        the matching generation record if the evaluation record does not exist
-        yet and `init_eval_record_from_generations` is set to True.
+        With `init_eval_record_from_generations=True`, ensure the evaluation
+        uses the current successful generation. Missing or outdated source
+        provenance causes the evaluation to be initialised again.
 
         Args:
             record_key (GenerationRecord | EvaluationRecord): The generation
@@ -283,18 +283,19 @@ class Project:
             ):
                 return None
 
+            source = GenerationSource.capture(generation_result.log_location)
             if retrieved_eval_record is not None and retrieved_eval_record.log_location:
                 # Older projects could store a failed generation as an evaluation.
                 evaluation_path = Path(retrieved_eval_record.log_location)
                 if (
-                    evaluation_path.resolve().parent == self.evaluation_log_path.resolve()
+                    retrieved_eval_record.source_generation == source
+                    and evaluation_path.resolve().parent == self.evaluation_log_path.resolve()
                     and evaluation_path.resolve() != Path(generation_result.log_location).resolve()
                 ):
                     return retrieved_eval_record
 
             # Create a new evaluation log based on the generation log
             log_path = Path(generation_result.log_location)
-            source = GenerationSource.capture(log_path)
             log_time = log_path.stem.split("_", 1)[0]
             new_log_path = self.evaluation_log_path / (
                 f"{log_time}_evaluation-{fingerprint(record_key)}_"

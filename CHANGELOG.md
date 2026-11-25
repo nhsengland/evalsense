@@ -28,6 +28,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Refresh evaluations when their source generation changes, including forced reruns and older results without recorded provenance.
 - Reject fractional or non-finite G-Eval scale inputs in the web UI instead of silently truncating them to integers.
 - Reject malformed G-Eval rating tokens without deleting internal characters. Invalid probability mass raises a validation error rather than relying on assertions. Complete multi-token rating probabilities remain tracked in #68.
 - Reject invalid G-Eval rating scales before requesting a judge response, including zero-width normalisation and non-integer endpoints.
