@@ -304,5 +304,50 @@ class EvaluationSourceTests(unittest.TestCase):
         self.assertIsNone(self.project.get_record(self.evaluation_key, init_eval_record_from_generations=True))
 
 
+    def test_replaced_generation_during_scoring_is_recorded_as_an_error(self):
+        for same_path in (False, True):
+            with self.subTest(same_path=same_path):
+                self.project = Project("source-change-" + str(same_path))
+                original = self.save_generation()
+                source = GenerationSource.capture(original)
+
+                def replace_generation(log, **kwargs):
+                    name = original.name if same_path else "2026_task_replacement.json"
+                    self.save_generation(name, "replacement")
+                    return log
+
+                with patch("evalsense.workflow.pipeline.score", side_effect=replace_generation):
+                    Pipeline(self.experiment, self.project).evaluate(show_progress=False)
+                failed = self.project.get_record(self.evaluation_key)
+                assert failed is not None
+                self.assertEqual(failed.status, "error")
+                self.assertEqual(failed.source_generation, source)
+                self.assertIn("Generation source changed", failed.error_message or "")
+                self.assertEqual(self.project.get_logs("evaluation", status="success"), {})
+
+                with patch("evalsense.workflow.pipeline.score", side_effect=lambda log, **kw: log):
+                    Pipeline(self.experiment, self.project).evaluate(show_progress=False)
+                completed = self.project.get_record(self.evaluation_key)
+                generation = self.project.get_record(self.generation_key)
+                assert completed is not None and generation is not None and generation.log_location
+                self.assertEqual(completed.status, "success")
+                self.assertEqual(completed.source_generation, GenerationSource.capture(generation.log_location))
+                self.assertNotEqual(completed.source_generation, source)
+
+    def test_removed_generation_during_scoring_cannot_record_success(self):
+        path = self.save_generation()
+
+        def remove_source(log, **kwargs):
+            path.unlink()
+            return log
+
+        with patch("evalsense.workflow.pipeline.score", side_effect=remove_source):
+            Pipeline(self.experiment, self.project).evaluate(show_progress=False)
+        result = self.project.get_record(self.evaluation_key)
+        assert result is not None
+        self.assertEqual(result.status, "error")
+        self.assertIn("Generation source changed", result.error_message or "")
+
+
 if __name__ == "__main__":
     unittest.main()

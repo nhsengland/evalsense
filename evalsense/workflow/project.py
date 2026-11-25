@@ -335,6 +335,23 @@ class Project:
         else:
             raise TypeError(f"Invalid record type: {type(record_key)}")
 
+    def _matches_generation_source(
+        self, record_key: GenerationRecord, source: GenerationSource | None
+    ) -> bool:
+        """Check that scoring still refers to the current successful generation."""
+        current = self.get_record(record_key)
+        if (
+            source is None
+            or current is None
+            or current.status != "success"
+            or current.log_location is None
+        ):
+            return False
+        try:
+            return GenerationSource.capture(current.log_location) == source
+        except OSError:
+            return False
+
     def _copy_generation_log(self, source: GenerationSource, destination: Path) -> None:
         """Publish a complete copy only after verifying its source bytes."""
         destination.parent.mkdir(parents=True, exist_ok=True)
