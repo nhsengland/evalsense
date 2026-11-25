@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 import math
 import regex
 from typing import Callable, Literal, overload
@@ -323,9 +324,18 @@ def extract_weighted_binary_answer(output: ModelOutput) -> float:
     return probabilities[True]
 
 
-def extract_weighted_score(
+@dataclass(frozen=True)
+class WeightedRating:
+    """A conditional mean and the returned rating probabilities that support it."""
+
+    score: float
+    probabilities: dict[int, float]
+    probability_mass: float
+
+
+def extract_weighted_rating(
     output: ModelOutput, min_score: int = 1, max_score: int = 10
-) -> float:
+) -> WeightedRating:
     """Average complete rating tokens from a one-token judge request.
 
     Every allowed rating must occur in the returned alternatives. The result is
@@ -426,6 +436,21 @@ def extract_weighted_score(
         raise ValueError(
             "Valid rating probabilities must have positive finite mass no greater than one."
         )
-    return math.fsum(
-        rating * (mass / rating_mass) for rating, mass in probabilities.items()
+    normalised = {rating: mass / rating_mass for rating, mass in probabilities.items()}
+    return WeightedRating(
+        score=math.fsum(
+            rating * probability for rating, probability in normalised.items()
+        ),
+        probabilities=normalised,
+        probability_mass=rating_mass,
     )
+
+
+def extract_weighted_score(
+    output: ModelOutput, min_score: int = 1, max_score: int = 10
+) -> float:
+    """Return the conditional rating mean from validated one-token evidence.
+
+    See extract_weighted_rating for the token and probability requirements.
+    """
+    return extract_weighted_rating(output, min_score, max_score).score
