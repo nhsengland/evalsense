@@ -18,7 +18,12 @@ from evalsense.evaluation import (
 )
 from evalsense.generation import ModelConfig
 from evalsense.logging import get_logger
-from evalsense.utils.text import extract_score, extract_weighted_score, format_template
+from evalsense.utils.text import (
+    extract_score,
+    extract_weighted_score,
+    format_template,
+    validate_score_range,
+)
 
 logger = get_logger(__name__)
 
@@ -53,6 +58,7 @@ class GEvalScoreCalculator(ScoreCalculator):
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
         """
+        validate_score_range(min_score, max_score, normalise=normalise)
         self.model = model
         self.prompt_template = prompt_template
         self.logprobs = logprobs
@@ -109,6 +115,7 @@ class GEvalScoreCalculator(ScoreCalculator):
         Returns:
             Score: The calculated score.
         """
+        validate_score_range(self.min_score, self.max_score, normalise=self.normalise)
         logprobs_config = GenerateConfig(
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,
@@ -199,6 +206,7 @@ class GEvalScorerFactory(ScorerFactory):
             normalise (bool): Whether to normalise the scores between 0 and 1.
             debug (bool): Whether to report repeated errors in the log.
         """
+        validate_score_range(min_score, max_score, normalise=normalise)
         self.name = name
         self.prompt_template = prompt_template
         if metrics is None:
