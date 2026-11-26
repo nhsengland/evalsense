@@ -120,7 +120,6 @@ class Project:
 
         with open(metadata_file, "r", encoding="utf-8") as f:
             self.records = ProjectRecords.model_validate_json(f.read())
-        self.cleanup_incomplete_logs()
 
     def _save(self) -> None:
         """Saves the project metadata to disk."""
@@ -490,6 +489,88 @@ class Project:
         if self._owns_generation_log(log, attempt_dir, task_name, generation_id):
             return log
         return None
+
+    def _referenced_log_paths(self) -> set[Path]:
+        """Return direct log and generation-source references across both maps."""
+        return {
+            Path(location).resolve()
+            for records in (self.records.generation, self.records.evaluation)
+            for record in records.values()
+            for location in (
+                record.log_location,
+                record.source_generation.log_location
+                if record.source_generation is not None
+                else None,
+            )
+            if location is not None
+        }
+
+    def _is_referenced_log_path(
+        self, path: Path, references: set[Path] | None = None
+    ) -> bool:
+        """Protect path aliases and files whose reference identity is uncertain."""
+        if references is None:
+            references = self._referenced_log_paths()
+        if path.resolve() in references:
+            return True
+        for reference in references:
+            try:
+                if path.samefile(reference):
+                    return True
+            except FileNotFoundError:
+                continue
+            except OSError:
+                return True
+        return False
+
+    def _is_project_log_path(self, path: Path) -> bool:
+        """Accept regular log files beneath a project log root without symlinks."""
+        path = path.absolute()
+        if self.project_path.is_symlink():
+            return False
+        for root in (self.generation_log_path, self.evaluation_log_path):
+            root = root.absolute()
+            if path.is_relative_to(root):
+                ancestors = path.parents[: path.parents.index(root) + 1]
+                return (
+                    path.suffix in {".json", ".eval"}
+                    and not any(item.is_symlink() for item in (path, *ancestors))
+                    and path.is_file()
+                )
+        return False
+
+    def get_untracked_log_paths(
+        self,
+        type: Literal["generation", "evaluation"],
+    ) -> list[Path]:
+        """List unreferenced log files without reading or changing their contents.
+
+        Searches nested attempt directories as well as the log root. Symbolic
+        links and non-files are excluded. A returned path does not establish
+        whether its contents are valid, complete or safe to delete.
+
+        Args:
+            type (Literal["generation", "evaluation"]): The log directory to inspect.
+
+        Returns:
+            list[Path]: Sorted paths of unreferenced JSON and Inspect log files.
+        """
+        if type == "generation":
+            log_path = self.generation_log_path
+        elif type == "evaluation":
+            log_path = self.evaluation_log_path
+        else:
+            raise ValueError(f"Invalid log type: {type}")
+
+        if self.project_path.is_symlink() or log_path.is_symlink():
+            return []
+        known_logs = self._referenced_log_paths()
+        return sorted(
+            path
+            for path in log_path.rglob("*")
+            if self._is_project_log_path(path)
+            and not self._is_referenced_log_path(path, known_logs)
+        )
 
     def get_incomplete_logs(
         self,
