@@ -120,7 +120,6 @@ class Project:
 
         with open(metadata_file, "r", encoding="utf-8") as f:
             self.records = ProjectRecords.model_validate_json(f.read())
-        self.cleanup_incomplete_logs()
 
     def _save(self) -> None:
         """Saves the project metadata to disk."""
@@ -491,17 +490,72 @@ class Project:
             return log
         return None
 
-    def get_incomplete_logs(
+    def _referenced_log_paths(self) -> set[Path]:
+        """Return direct log and generation-source references across both maps."""
+        return {
+            Path(location).resolve()
+            for records in (self.records.generation, self.records.evaluation)
+            for record in records.values()
+            for location in (
+                record.log_location,
+                record.source_generation.log_location
+                if record.source_generation is not None
+                else None,
+            )
+            if location is not None
+        }
+
+    def _is_referenced_log_path(
+        self, path: Path, references: set[Path] | None = None
+    ) -> bool:
+        """Protect path aliases and files whose reference identity is uncertain."""
+        if references is None:
+            references = self._referenced_log_paths()
+        if path.resolve() in references:
+            return True
+        for reference in references:
+            try:
+                if path.samefile(reference):
+                    return True
+            except FileNotFoundError:
+                continue
+            except OSError:
+                return True
+        return False
+
+    def _is_project_log_path(self, path: Path) -> bool:
+        """Accept regular log files beneath a project log root without symlinks."""
+        path = path.absolute()
+        if self.project_path.is_symlink():
+            return False
+        for root in (self.generation_log_path, self.evaluation_log_path):
+            root = root.absolute()
+            if path.is_relative_to(root):
+                if path == root or ".." in path.relative_to(root).parts:
+                    return False
+                ancestors = path.parents[: path.parents.index(root) + 1]
+                return (
+                    path.suffix in {".json", ".eval"}
+                    and not any(item.is_symlink() for item in (path, *ancestors))
+                    and path.is_file()
+                )
+        return False
+
+    def get_untracked_log_paths(
         self,
         type: Literal["generation", "evaluation"],
-    ) -> list[EvalLog]:
-        """Returns a list of incomplete logs in the project directory.
+    ) -> list[Path]:
+        """List unreferenced log files without reading or changing their contents.
+
+        Searches nested attempt directories as well as the log root. Symbolic
+        links and non-files are excluded. A returned path does not establish
+        whether its contents are valid, complete or safe to delete.
 
         Args:
-            type (Literal["generation", "evaluation"]): The type of logs to retrieve.
+            type (Literal["generation", "evaluation"]): The log directory to inspect.
 
         Returns:
-            list[EvalLog]: A list of incomplete logs.
+            list[Path]: Sorted paths of unreferenced JSON and Inspect log files.
         """
         if type == "generation":
             log_path = self.generation_log_path
@@ -510,27 +564,59 @@ class Project:
         else:
             raise ValueError(f"Invalid log type: {type}")
 
-        known_logs = {
-            Path(record.log_location).resolve()
-            for records in (self.records.generation, self.records.evaluation)
-            for record in records.values()
-            if record.log_location is not None
-        }
-        incomplete_logs = []
-        extensions = [".json", ".eval"]
-        for ext in extensions:
-            for log_file in log_path.glob(f"*{ext}"):
-                if log_file.resolve() not in known_logs:
-                    loaded_log = read_eval_log(str(log_file))
-                    incomplete_logs.append(loaded_log)
-        return incomplete_logs
+        if self.project_path.is_symlink() or log_path.is_symlink():
+            return []
+        known_logs = self._referenced_log_paths()
+        return sorted(
+            path
+            for path in log_path.rglob("*")
+            if self._is_project_log_path(path)
+            and not self._is_referenced_log_path(path, known_logs)
+        )
 
-    def cleanup_incomplete_logs(self):
-        """Removes all incomplete logs in the project directory."""
-        incomplete_logs = self.get_incomplete_logs(
-            "generation"
-        ) + self.get_incomplete_logs("evaluation")
-        for log in incomplete_logs:
-            log_path = Path(log.location)
-            if log_path.exists():
-                log_path.unlink()
+    def get_incomplete_logs(
+        self,
+        type: Literal["generation", "evaluation"],
+    ) -> list[EvalLog]:
+        """Read untracked logs, which may include completed, recoverable runs.
+
+        This compatibility method does not classify logs by status. An unreadable
+        log raises its reader error; use get_untracked_log_paths to inspect files
+        without parsing them.
+
+        Args:
+            type (Literal["generation", "evaluation"]): The log directory to inspect.
+
+        Returns:
+            list[EvalLog]: Untracked logs in path order.
+        """
+        return [
+            read_eval_log(str(path)) for path in self.get_untracked_log_paths(type)
+        ]
+
+    def cleanup_incomplete_logs(self) -> None:
+        """Explicitly remove readable, untracked error and cancelled logs.
+
+        Successful, started, unreadable and referenced logs are preserved.
+        Only regular project log files are eligible; symbolic links are ignored.
+        Inspect the untracked paths and stop project writers before calling this
+        destructive operation. Failed runs can still contain useful partial data.
+        """
+        for type in ("generation", "evaluation"):
+            for path in self.get_untracked_log_paths(type):
+                try:
+                    log = read_eval_log(str(path))
+                except Exception as exc:
+                    logger.warning(f"Preserving unreadable untracked log {path}: {exc}")
+                    continue
+                if log.status not in {"error", "cancelled"}:
+                    continue
+                if (
+                    not self._is_project_log_path(path)
+                    or self._is_referenced_log_path(path)
+                ):
+                    continue
+                try:
+                    path.unlink()
+                except OSError as exc:
+                    logger.warning(f"Could not remove untracked log {path}: {exc}")
