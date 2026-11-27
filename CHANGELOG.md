@@ -20,6 +20,7 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Per-sample BERTScore now rejects `idf=True` and IDF dictionaries. Only `idf=False` is supported by the current backend.
 
 ### Enhancements
+- Add read-only discovery of untracked JSON and Inspect log paths, including nested generation attempts.
 - Record the source generation log path and SHA256 in evaluation results, including failed scores. Older metadata remains readable.
 - Record the G-Eval integer-response protocol in score metadata and evaluator cache identities so new evaluations do not reuse scores parsed under the previous policy.
 - Show the dataset version and optional experiment name next to the generation ID in summary tables.
@@ -28,6 +29,9 @@ Instructions on how to update this Changelog are available in the `Updating the 
 - Deliberate two-tier meta-evaluations report pairwise ordering accuracy, concordant/discordant counts and Wilson intervals on the mean-correlation scale. Ties remain explicit exclusions. Three-or-more-tier designs retain sample-level bootstrap intervals.
 
 ### Bug fixes
+- Protect generation logs referenced only by evaluation provenance during untracked-log inspection and explicit cleanup.
+- Limit explicit untracked-log cleanup to readable error or cancelled logs inside the project. Preserve successful, started and unreadable files, and ignore symbolic links.
+- Preserve unregistered generation and evaluation logs when opening a project. Loading no longer deletes files that may be recoverable after an interrupted run.
 - Reject a successful evaluation if its generation was replaced or removed while scoring. Retain the attempted source for diagnosis and retry.
 - Mark previous successful evaluations as needing scoring after their generation is replaced. Preserve their source references and exclude them from successful result summaries.
 - Keep distinct generation attempts in separate evaluation logs, including byte-identical files in different attempt directories.
